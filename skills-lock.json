@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "skills": {
+    "design-systems-slds-validate": {
+      "source": "forcedotcom/sf-skills",
+      "sourceType": "github",
+      "skillPath": "skills/design-systems-slds-validate/SKILL.md",
+      "computedHash": "052eeabb4ec01fb8cd0f1ee53cd362b411c5ff1ba8e82aa36d13065f89e0669f",
+      "installMode": "copy"
+    },
+    "dx-scratch-def-configure": {
+      "source": "forcedotcom/sf-skills",
+      "sourceType": "github",
+      "skillPath": "skills/dx-scratch-def-configure/SKILL.md",
+      "computedHash": "9e3b8fc8d620a8d9aad16ad1218fefaa95b0f94e7884271dca930a85ca226cd8",
+      "installMode": "copy"
+    },
+    "experience-design-validate": {
+      "source": "forcedotcom/sf-skills",
+      "sourceType": "github",
+      "skillPath": "skills/experience-design-validate/SKILL.md",
+      "computedHash": "d0f073e22fa2bd4421905db0c19c6f0b16d06b871cab4faefe63596c2664d04e",
+      "installMode": "copy"
+    },
+    "experience-lwr-site-generate": {
+      "source": "forcedotcom/sf-skills",
+      "sourceType": "github",
+      "skillPath": "skills/experience-lwr-site-generate/SKILL.md",
+      "computedHash": "e795c79766e7840ad71ad05dbac7ec267ee80a5ef8b7df835b70d01a92d8de04",
+      "installMode": "copy"
+    }
+  }
+}
