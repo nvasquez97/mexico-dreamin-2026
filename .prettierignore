@@ -9,3 +9,5 @@
 .vscode
 
 coverage/
+# Claude Code skills/agents (vendored upstream content is kept byte-identical)
+.claude/

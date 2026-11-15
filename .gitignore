@@ -46,3 +46,6 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
+
+# Security audit reports (contain vulnerability details — never commit)
+.security-reports/
