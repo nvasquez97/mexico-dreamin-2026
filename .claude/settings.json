@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": {
+    "salesforce-development@salesforce": true,
+    "salesforce-code-quality@salesforce": true,
+    "experience-lwc@salesforce": true,
+    "integration@salesforce": true
+  }
+}
