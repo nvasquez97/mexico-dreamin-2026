@@ -9,3 +9,6 @@
 .vscode
 
 coverage/
+# Harness files must keep the exact content of docs/harness-guide.md
+CLAUDE.md
+.claude/
