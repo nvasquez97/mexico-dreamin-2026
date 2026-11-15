@@ -38,7 +38,13 @@ proven unreachable (no callers, no class access). Justified exceptions (see poli
 IDs: `CODE-###` (code reviewer), `ACC-###` (access reviewer), `EXP-###` (exposure reviewer). The orchestrator
 re-numbers to `SEC-###` in the final report.
 
-## Final report template (`.security-reports/<YYYY-MM-DD>-security-audit.md`)
+## Final report template (`.security-reports/<run>/security-audit.md`)
+
+The report is produced in two formats from this one Markdown source: `security-audit.md` (diffable, for agents and
+tooling) and `security-audit.html` (for human reading), rendered with
+`node .claude/skills/sf-security-audit/scripts/render-report-html.mjs <run>/security-audit.md`. The renderer relies
+on this template's shapes: finding headings `### [Severity] SEC-### — title`, a `## Findings` section, the
+one-row severity count table, and `Pass` / `Fail` / `Not verifiable` at the start of compliance status cells.
 
 ```markdown
 # Salesforce Security Audit — <project> — <YYYY-MM-DD>

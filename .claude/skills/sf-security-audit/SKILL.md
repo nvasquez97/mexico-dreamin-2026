@@ -96,8 +96,19 @@ Ask each to also return a short **cross-reference list** (e.g. "classes granted 
 
 ## 6. Report
 
-Write `$RUN/security-audit.md` using the template. Then reply to the user with: counts by severity, the top
-findings (≤ 5, one line each with file:line), what was not covered, and the report path. Offer to fix the
+Write `$RUN/security-audit.md` using the template, then render the human-readable HTML version next to it:
+
+```bash
+node .claude/skills/sf-security-audit/scripts/render-report-html.mjs "$RUN/security-audit.md"   # → $RUN/security-audit.html
+```
+
+The Markdown is the source of truth: edit it and re-run the renderer, never hand-edit the HTML. The HTML is a
+self-contained, offline page (no external requests, all report text escaped) with severity tiles, a findings
+filter and a table of contents. Keep both files local in `.security-reports/` — don't publish either as an
+Artifact, gist or upload; they describe exploitable weaknesses.
+
+Then reply to the user with: counts by severity, the top
+findings (≤ 5, one line each with file:line), what was not covered, and both report paths. Offer to fix the
 Critical/High items — remediation should follow the vendored Salesforce skills (`platform-apex-generate`,
 `platform-permission-set-generate`, `platform-sharing-owd-configure`, `integration-connectivity-generate`,
 `integration-connectivity-connected-app-configure`, `experience-lwc-security-validate`).
