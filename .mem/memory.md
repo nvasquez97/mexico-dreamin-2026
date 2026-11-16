@@ -59,3 +59,9 @@
 - What: Delivery details + throttle, commit dedae45, 12/12 as guest; security review pending (batched, L18).
 - Why / evidence: feature doc L19.
 - Next: T5 proof of delivery via Named Credential EntregaYa.
+
+## 2026-11-15 21:15 — T5 implemented; T6 next
+- Type: status
+- What: Proof of delivery via Named Credential EntregaYa, commit 1a7c12a; key and URL must be set manually in Setup.
+- Why / evidence: feature doc L20.
+- Next: T6 reschedule.
