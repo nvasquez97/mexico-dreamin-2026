@@ -53,3 +53,9 @@
 - What: Test DML/SOQL in API 67 runs in user mode; admin lacks FLS on new fields, so factory/setup uses AccessLevel.SYSTEM_MODE. AuraHandledException needs setMessage for tests to read the message (AuraErrors.of).
 - Why / evidence: 707Ec00002j36Rq failed with "fields being inaccessible on Sobject Account".
 - Next: none.
+
+## 2026-11-15 20:55 — T4 implemented; T5 next
+- Type: status
+- What: Delivery details + throttle, commit dedae45, 12/12 as guest; security review pending (batched, L18).
+- Why / evidence: feature doc L19.
+- Next: T5 proof of delivery via Named Credential EntregaYa.

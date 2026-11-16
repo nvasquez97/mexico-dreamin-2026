@@ -92,7 +92,7 @@ ID | S# covered | Task | Status | Commit
 T1 | S39, S37, S15 (history), S42 (rate config) | Data model: Account fields, Shipment__c, Shipping_Rate__mdt, settings, OWD, field history | done | 6f09a51
 T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar services + tests | done | cfa6b13
 T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | implemented, security review pending | fcb5ebb
-T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | todo | -
+T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | implemented, security review pending | dedae45
 T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | todo | -
 T6 | S11–S15, S36 | Reschedule + tests | todo | -
 T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | todo | -
@@ -124,3 +124,4 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L16 Environment: with API 67.0, Apex DML/SOQL in tests also runs in user mode; the admin profile has no FLS on new fields, so test data setup uses AccessLevel.SYSTEM_MODE / WITH SYSTEM_MODE. Code under test still runs as the real user (guest, customer, integration).
 - L17 Evidence T3 (fcb5ebb): RED 14/16 failing (707Ec00002j3NTU); GREEN 16/16 (707Ec00002j3OMS), PublicTrackingController 96%. Risk: item 2.
 - L18 Decision: the item-2 tasks that share the guest/customer/integration access surface (T3–T8, T11) get one security-reviewer + access-auditor pass with all their S#, run once T11 grants the permissions (the access auditor needs the real permission sets). Each of those tasks stays "security review pending" and is not closed until Critical and High findings are fixed.
+- L19 Evidence T4 (dedae45): RED 11/12 failing (707Ec00002j3BPf); GREEN 12/12 (707Ec00002j31vP), DeliveryController and DeliveryAccessService 100%. Risk: item 2.
