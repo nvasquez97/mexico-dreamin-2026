@@ -77,7 +77,10 @@ never stored in the repository.
   This is what BR-01 allows: only the AC-001.2 fields are public.
 - Recipient access is protected by the 5-digit destination postal code. From the 5th wrong code each
   further wrong code locks the shipment's delivery details for 15 minutes, and from the 10th for 24
-  hours, until the right code is entered. Anyone who knows a tracking number can trigger that lock.
+  hours. While a lock is active even the right code is refused; after it expires, the right code clears
+  the count. Anyone who knows a tracking number can keep a shipment locked, so a support agent can
+  unlock it by clearing "Failed Verification Attempts" and "Verification Locked Until" on the shipment.
+  Bot protection on the recipient form is recommended before going live.
 - Sign-up has no bot protection or email verification, and each sign-up uses a Customer Community
   licence (5 in this org). Add CAPTCHA / email verification before going live and monitor licence use.
 - The requesting customer sees the recipient data they entered on the shipment detail page

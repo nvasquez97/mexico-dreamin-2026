@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>RutaCargo support agent (internal): manages customers and shipments, sees internal fields and field history (AC-003.5). Carrier and throttle fields read-only. No delete.</description>
+    <description>RutaCargo support agent (internal): manages customers and shipments, sees internal fields and field history (AC-003.5). Carrier fields read-only; can clear a postal-code lock. No delete.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>RutaCargo Support Agent</label>
     <fieldPermissions>
@@ -159,12 +159,12 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Shipment__c.Failed_Verification_Attempts__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Shipment__c.Verification_Locked_Until__c</field>
         <readable>true</readable>
     </fieldPermissions>
