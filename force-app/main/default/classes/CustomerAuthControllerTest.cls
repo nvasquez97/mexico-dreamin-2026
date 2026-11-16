@@ -7,6 +7,7 @@
 @IsTest
 private class CustomerAuthControllerTest {
     private static final String PASSWORD = 'Cargo2026xyz';
+    private static final String SITE_HOME = '/rutacargo/my-shipments';
 
     /** Fake platform: records calls and returns fixed values or fails on demand. */
     private class FakeGateway extends SiteGateway {
@@ -14,6 +15,7 @@ private class CustomerAuthControllerTest {
         Id createdForAccount;
         String createdWithPassword;
         String loggedInAs;
+        String loggedInStartUrl = 'not called';
         String forgotFor;
         Boolean failCreate = false;
         Boolean failLogin = false;
@@ -33,6 +35,7 @@ private class CustomerAuthControllerTest {
                 throw new SiteGateway.SiteGatewayException('Your login attempt has failed');
             }
             loggedInAs = username;
+            loggedInStartUrl = startUrl;
             return 'https://example.com/secur/frontdoor.jsp?startURL=' + startUrl;
         }
 
@@ -61,7 +64,7 @@ private class CustomerAuthControllerTest {
     private static CustomerAuthController.AuthResult registerAsGuest(String customerType, String accountName, String email, String password) {
         CustomerAuthController.AuthResult result;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            result = CustomerAuthController.register(customerType, accountName, 'Marta', 'Ruiz', email, '+52 55 5555 0199', password);
+            result = CustomerAuthController.register(customerType, accountName, 'Marta', 'Ruiz', email, '+52 55 5555 0199', password, SITE_HOME);
         }
         return result;
     }
@@ -117,7 +120,7 @@ private class CustomerAuthControllerTest {
         useFakeGateway();
         Integer queued;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            CustomerAuthController.register('Business', 'Globex Test SA', 'Marta', 'Ruiz', 'marta.ruiz@example.com', '5555550199', PASSWORD);
+            CustomerAuthController.register('Business', 'Globex Test SA', 'Marta', 'Ruiz', 'marta.ruiz@example.com', '5555550199', PASSWORD, SITE_HOME);
             queued = Limits.getQueueableJobs();
         }
         Assert.areEqual(1, queued, 'One access job queued');
@@ -206,7 +209,7 @@ private class CustomerAuthControllerTest {
         FakeGateway fake = useFakeGateway();
         CustomerAuthController.AuthResult result;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            result = CustomerAuthController.login(' Ana.Lopez@example.com ', PASSWORD);
+            result = CustomerAuthController.login(' Ana.Lopez@example.com ', PASSWORD, SITE_HOME);
         }
         Assert.isTrue(result.success, 'Logged in');
         Assert.areEqual('ana.lopez@example.com.rutacargo', fake.loggedInAs, 'Username derived from the email');
@@ -220,7 +223,7 @@ private class CustomerAuthControllerTest {
         fake.failLogin = true;
         CustomerAuthController.AuthResult result;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            result = CustomerAuthController.login('ana.lopez@example.com', 'wrong');
+            result = CustomerAuthController.login('ana.lopez@example.com', 'wrong', SITE_HOME);
         }
         Assert.isFalse(result.success, 'Not logged in');
         Assert.areEqual('Invalid email or password.', result.message, 'Generic message');
@@ -256,7 +259,7 @@ private class CustomerAuthControllerTest {
         FakeGateway fake = useFakeGateway();
         CustomerAuthController.AuthResult result;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            result = CustomerAuthController.register('Business', 'No Last Name SA', 'Marta', '  ', 'nolast@example.com', '+52 55 5555 0199', PASSWORD);
+            result = CustomerAuthController.register('Business', 'No Last Name SA', 'Marta', '  ', 'nolast@example.com', '+52 55 5555 0199', PASSWORD, SITE_HOME);
         }
         Assert.areEqual('Enter the first and last name of the contact person.', result.message, 'Message');
         Assert.areEqual(0, accountsNamed('No Last Name SA').size(), 'No account created');
@@ -269,7 +272,7 @@ private class CustomerAuthControllerTest {
         FakeGateway fake = useFakeGateway();
         CustomerAuthController.AuthResult result;
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            result = CustomerAuthController.register('Business', 'Bad Phone SA', 'Marta', 'Ruiz', 'badphone@example.com', 'call me', PASSWORD);
+            result = CustomerAuthController.register('Business', 'Bad Phone SA', 'Marta', 'Ruiz', 'badphone@example.com', 'call me', PASSWORD, SITE_HOME);
         }
         Assert.areEqual('Enter a valid phone number.', result.message, 'Message');
         Assert.areEqual(0, accountsNamed('Bad Phone SA').size(), 'No account created');
@@ -297,9 +300,43 @@ private class CustomerAuthControllerTest {
     static void shouldRejectLogin_WhenEmailInvalidOrPasswordBlank() {
         FakeGateway fake = useFakeGateway();
         System.runAs(TestDataFactory.getSiteGuestUser()) {
-            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('not-an-email', PASSWORD).message, 'Invalid email');
-            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('ana.lopez@example.com', '').message, 'Blank password');
+            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('not-an-email', PASSWORD, SITE_HOME).message, 'Invalid email');
+            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('ana.lopez@example.com', '', SITE_HOME).message, 'Blank password');
         }
         Assert.isNull(fake.loggedInAs, 'Platform login never called');
+    }
+
+    // Covers AC-005.5: after login the customer lands on My shipments of the LWR site (the site path), not a classic page.
+    @IsTest
+    static void shouldStartOnSiteMyShipments_WhenLoggingIn() {
+        FakeGateway fake = useFakeGateway();
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            CustomerAuthController.login('ana.lopez@example.com', PASSWORD, SITE_HOME);
+        }
+        Assert.areEqual(SITE_HOME, fake.loggedInStartUrl, 'Start page is the site My shipments path');
+    }
+
+    // Covers AC-005.2, AC-005.5: sign-up logs in and starts on the site My shipments page too.
+    @IsTest
+    static void shouldStartOnSiteMyShipments_WhenSignedUp() {
+        FakeGateway fake = useFakeGateway();
+        registerAsGuest('Business', 'Globex Test SA', 'marta.ruiz@example.com', PASSWORD);
+        Assert.areEqual(SITE_HOME, fake.loggedInStartUrl, 'Start page is the site My shipments path');
+    }
+
+    // Covers AC-005.5 (no open redirect): any start page other than /<site>/my-shipments is ignored.
+    @IsTest
+    static void shouldIgnoreStartPage_WhenNotTheSiteMyShipmentsPath() {
+        FakeGateway fake = useFakeGateway();
+        for (String unsafe : new List<String>{
+            'https://evil.example/my-shipments', '//evil.example/my-shipments', '/rutacargo/../secur/x/my-shipments',
+            '/rutacargo/my-shipments?x=https://evil.example', '/rutacargo/other-page', null
+        }) {
+            fake.loggedInStartUrl = 'not called';
+            System.runAs(TestDataFactory.getSiteGuestUser()) {
+                CustomerAuthController.login('ana.lopez@example.com', PASSWORD, unsafe);
+            }
+            Assert.isNull(fake.loggedInStartUrl, 'Unsafe start page must be dropped: ' + unsafe);
+        }
     }
 }

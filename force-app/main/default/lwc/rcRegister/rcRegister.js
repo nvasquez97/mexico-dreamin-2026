@@ -54,7 +54,8 @@ export default class RcRegister extends LightningElement {
                 lastName: this.lastName,
                 email: this.email,
                 phone: this.phone,
-                password: this.password
+                password: this.password,
+                startPath: `${basePath}/my-shipments`
             });
             if (result.success && result.redirectUrl) {
                 window.location.assign(result.redirectUrl);

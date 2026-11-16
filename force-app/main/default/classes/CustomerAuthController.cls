@@ -12,7 +12,12 @@
  */
 public without sharing class CustomerAuthController {
     public static final String USERNAME_SUFFIX = '.rutacargo';
-    public static final String HOME_AFTER_LOGIN = '/my-shipments';
+    /**
+     * Start page after login: My shipments of the LWR site, sent by the browser as
+     * {basePath}/my-shipments. Only that exact shape is accepted (no scheme, host,
+     * dots or query), so the login cannot be used to redirect visitors elsewhere.
+     */
+    private static final Pattern START_PATH_PATTERN = Pattern.compile('^(/[A-Za-z0-9_-]{1,40})?/my-shipments$');
     public static final String CUSTOMER_PROFILE = 'RutaCargo Customer';
     private static final Set<String> CUSTOMER_TYPES = new Set<String>{ 'Individual', 'Business' };
     private static final Pattern EMAIL_PATTERN = Pattern.compile('^[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$');
@@ -36,12 +41,13 @@ public without sharing class CustomerAuthController {
 
     /**
      * Creates the customer: an account, its contact and the site user, then logs in (AC-005.1, AC-005.2).
+     * @param startPath {site base path}/my-shipments, where the customer lands after login
      * @return success with the login redirect, or a user-facing message
      */
     @AuraEnabled
     public static AuthResult register(
         String customerType, String accountName, String firstName, String lastName,
-        String email, String phone, String password
+        String email, String phone, String password, String startPath
     ) {
         AuthResult result = new AuthResult();
         String normalizedEmail = normalizeEmail(email);
@@ -69,7 +75,7 @@ public without sharing class CustomerAuthController {
         System.enqueueJob(new CustomerAccessQueueable(userId));
         result.success = true;
         try {
-            result.redirectUrl = gateway.login(toUsername(normalizedEmail), password, HOME_AFTER_LOGIN);
+            result.redirectUrl = gateway.login(toUsername(normalizedEmail), password, safeStartPath(startPath));
         } catch (SiteGateway.SiteGatewayException e) {
             result.message = 'Your account was created. Please log in.';
         }
@@ -78,10 +84,11 @@ public without sharing class CustomerAuthController {
 
     /**
      * Logs a customer in with email and password (AC-005.5).
+     * @param startPath {site base path}/my-shipments, where the customer lands after login
      * @return success with the redirect URL, or a generic message
      */
     @AuraEnabled
-    public static AuthResult login(String email, String password) {
+    public static AuthResult login(String email, String password, String startPath) {
         AuthResult result = new AuthResult();
         String normalizedEmail = normalizeEmail(email);
         if (!EMAIL_PATTERN.matcher(normalizedEmail).matches() || String.isBlank(password)) {
@@ -89,7 +96,7 @@ public without sharing class CustomerAuthController {
             return result;
         }
         try {
-            result.redirectUrl = gateway.login(toUsername(normalizedEmail), password, HOME_AFTER_LOGIN);
+            result.redirectUrl = gateway.login(toUsername(normalizedEmail), password, safeStartPath(startPath));
             result.success = true;
         } catch (SiteGateway.SiteGatewayException e) {
             result.message = 'Invalid email or password.';
@@ -111,6 +118,12 @@ public without sharing class CustomerAuthController {
         result.success = true;
         result.message = 'If the email is registered, you will receive a link to reset your password.';
         return result;
+    }
+
+    /** @return the start path when it is {site}/my-shipments; otherwise null (the site's default landing page). */
+    @TestVisible
+    private static String safeStartPath(String startPath) {
+        return startPath != null && START_PATH_PATTERN.matcher(startPath).matches() ? startPath : null;
     }
 
     private static String normalizeEmail(String email) {

@@ -24,7 +24,7 @@ export default class RcLogin extends LightningElement {
         }
         this.loading = true;
         try {
-            const result = await login({ email: this.email, password: this.password });
+            const result = await login({ email: this.email, password: this.password, startPath: `${basePath}/my-shipments` });
             if (result.success) {
                 window.location.assign(result.redirectUrl);
                 return;
