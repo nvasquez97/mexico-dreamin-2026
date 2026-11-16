@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failed_Verifications__c</fullName>
+    <label>Failed Verifications</label>
+    <description>Security: consecutive failed postal-code checks.</description>
+    <required>false</required>
+    <type>Number</type>
+    <precision>2</precision>
+    <scale>0</scale>
+    <defaultValue>0</defaultValue>
+</CustomField>

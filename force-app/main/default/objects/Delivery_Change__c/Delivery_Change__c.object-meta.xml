@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Delivery Change</label>
+    <pluralLabel>Delivery Changes</pluralLabel>
+    <description>The Delivery Change object records each reschedule a recipient makes on a shipment. It stores the previous and new Estimated Delivery dates and Delivery Instructions, and the creation time shows when each change was made. Commonly used by support agents to audit rescheduling.</description>
+    <enableReports>true</enableReports>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <visibility>Public</visibility>
+    <sharingModel>ControlledByParent</sharingModel>
+    <nameField>
+        <label>Change Number</label>
+        <type>AutoNumber</type>
+        <displayFormat>DC-{0000000}</displayFormat>
+        <startingNumber>1</startingNumber>
+    </nameField>
+</CustomObject>

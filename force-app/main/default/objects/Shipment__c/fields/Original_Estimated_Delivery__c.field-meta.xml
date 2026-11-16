@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Original_Estimated_Delivery__c</fullName>
+    <label>Original Estimated Delivery</label>
+    <description>Estimate at creation; base for the reschedule window (AC-003.2).</description>
+    <required>false</required>
+    <type>Date</type>
+</CustomField>

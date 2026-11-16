@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Shipment</label>
+    <pluralLabel>Shipments</pluralLabel>
+    <description>The Shipment object tracks door-to-door parcels requested by RutaCargo customers. It captures Status, Service Type, pickup and recipient details, Price and Estimated Delivery; the Margin field auto-calculates profitability. Carrier Cost, Margin and Internal Notes are internal. Commonly used for tracking, rescheduling and carrier updates.</description>
+    <enableActivities>true</enableActivities>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableBulkApi>true</enableBulkApi>
+    <enableStreamingApi>true</enableStreamingApi>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <visibility>Public</visibility>
+    <sharingModel>Private</sharingModel>
+    <externalSharingModel>Private</externalSharingModel>
+    <nameField>
+        <label>Tracking Number</label>
+        <type>AutoNumber</type>
+        <displayFormat>RC{000000000}</displayFormat>
+        <startingNumber>1001</startingNumber>
+    </nameField>
+</CustomObject>
