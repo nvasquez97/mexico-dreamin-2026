@@ -167,3 +167,9 @@
 - What: access-auditor APPROVED T15 (L52); both item-2 reviewers approved; T15 done (f7b28e5).
 - Why / evidence: feature doc L51-L52.
 - Next: user retests login on the site.
+
+## 2026-11-16 05:05 — T16 logged-in redirect
+- Type: status
+- What: "The Apex request is invalid" = logged-in user calling guest-only CustomerAuthController from the login page; visitor pages now redirect to My shipments (25ef1b2). Debug trace flags for Ana and guest expire ~03:00Z.
+- Why / evidence: feature doc L53.
+- Next: user retests in a private window.

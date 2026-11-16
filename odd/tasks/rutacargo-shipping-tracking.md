@@ -103,6 +103,7 @@ T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | do
 T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | done | b8f5205, 845e34d, 13b72b0, 23dc48a, 2f123b6, d75d73d
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
 T15 | S24, S21 | Fix: login/sign-up landed on a classic "URL No Longer Exists" page | done | f7b28e5
+T16 | S24 | Fix: logged-in user on the login page got "The Apex request is invalid" | done | 25ef1b2
 T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, c44119c, ff58312, 4979843
 
 ## Log
@@ -166,3 +167,5 @@ T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, 
 
 - L51 Review security-reviewer on T15 (f7b28e5): APPROVED, S24 PASS. 23 crafted start paths probed with the deployed pattern (schemes, //host, backslash, %2F, line breaks incl. , fragment, query, look-alike letters): all rejected except same-domain single-segment paths. Low: any single segment is accepted (e.g. /secur/my-shipments), harmless; could be pinned to the site prefix. Info: add a trailing-newline test case.
 - L52 Review access-auditor on T15 (f7b28e5): APPROVED, S24 PASS. Commit touches only CustomerAuthController(+Test), rcLogin, rcRegister; CustomerAuthController still granted only to System Administrator and RutaCargo_Guest; guest/customer object, user and class access unchanged in the org. T15 closed.
+- L53 Bug reported by the user: "The Apex request is invalid" on login. Browser trace: POST /webruntime/api/apex/execute?asGuest=false -> 400 from rcLogin.handleLogin. Cause: the browser still had Ana's session from the earlier (successful) login, so the login form called CustomerAuthController as Ana; the class is granted only to RutaCargo_Guest (by design). Fix 25ef1b2 (T16): visitor-only pages (login, sign-up, forgot password) redirect a logged-in user to {basePath}/my-shipments. Jest RED 1/2 -> GREEN, 13/13 total. Class access unchanged, so no new item-2 review.
+
