@@ -91,7 +91,7 @@ ID | S# covered | Task | Status | Commit
 --- | --- | --- | --- | ---
 T1 | S39, S37, S15 (history), S42 (rate config) | Data model: Account fields, Shipment__c, Shipping_Rate__mdt, settings, OWD, field history | done | 6f09a51
 T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar services + tests | done | cfa6b13
-T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | todo | -
+T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | implemented, security review pending | fcb5ebb
 T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | todo | -
 T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | todo | -
 T6 | S11–S15, S36 | Reschedule + tests | todo | -
@@ -100,7 +100,7 @@ T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | todo | -
 T9 | S26–S31, S43 | Request shipment Apex + tests | todo | -
 T10 | S32–S34, S37, S41 | My shipments Apex + tests | todo | -
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | todo | -
-T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | todo | -
+T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | in progress (base site b8f5205) | b8f5205
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | todo | -
 T14 | S47 | README with pending manual steps; closing reviews | todo | -
 
@@ -120,3 +120,7 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L12 Evidence T1: dry-run and deploy succeeded (0AfEc00000pyRBFKA2, 45 components). Tooling query: Shipment__c, Account, Contact internal ReadWrite / external Private. Risk: item 6.
 - L13 Evidence T2 (cfa6b13): RED 20/21 failing on stubs (test run 707Ec00002j3IVz); GREEN 21/21 (707Ec00002j3Pi8), coverage PricingService 100%, BusinessCalendar 93%. Risk: none.
 - L14 Decision: Apex classes use API 67.0, where user mode is the default; guest and integration paths that need system mode declare it explicitly (WITH SYSTEM_MODE / AccessLevel.SYSTEM_MODE) with a justification comment. Async work uses Queueable, not @future.
+- L15 Evidence T12 (part): site RutaCargo created (job 08PEc00000eB19xMAC, Network 0DBEc000000g9ZxOAI, guest profile "RutaCargo Profile"); metadata retrieved, commit b8f5205.
+- L16 Environment: with API 67.0, Apex DML/SOQL in tests also runs in user mode; the admin profile has no FLS on new fields, so test data setup uses AccessLevel.SYSTEM_MODE / WITH SYSTEM_MODE. Code under test still runs as the real user (guest, customer, integration).
+- L17 Evidence T3 (fcb5ebb): RED 14/16 failing (707Ec00002j3NTU); GREEN 16/16 (707Ec00002j3OMS), PublicTrackingController 96%. Risk: item 2.
+- L18 Decision: the item-2 tasks that share the guest/customer/integration access surface (T3–T8, T11) get one security-reviewer + access-auditor pass with all their S#, run once T11 grants the permissions (the access auditor needs the real permission sets). Each of those tasks stays "security review pending" and is not closed until Critical and High findings are fixed.
