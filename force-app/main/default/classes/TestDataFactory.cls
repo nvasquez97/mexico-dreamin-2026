@@ -124,7 +124,7 @@ public class TestDataFactory {
             ProfileId = adminProfile.Id,
             UserRoleId = role.Id,
             FirstName = 'Owner',
-            LastName = suffix,
+            LastName = 'Owner ' + suffix,
             Email = 'owner.' + suffix.toLowerCase() + '@example.com',
             Username = 'owner.' + suffix.toLowerCase() + '.' + System.currentTimeMillis() + '@example.com.rutacargo.test',
             Alias = ('o' + suffix).left(8),
