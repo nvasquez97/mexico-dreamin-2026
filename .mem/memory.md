@@ -101,3 +101,9 @@
 - What: My shipments, commit 9fba4fb; sharing set RutaCargo Customers.
 - Why / evidence: feature doc L26.
 - Next: T11 guest + support agent permission sets, OAuth app for EntregaYa, then batched security review.
+
+## 2026-11-15 23:25 — T11 implemented; T13 then T12 next
+- Type: status
+- What: Guest/agent perm sets, ECA, layout with history, network self-registration, commit 83065bb. Batched item-2 review moved to after T12+T13 (L28).
+- Why / evidence: feature doc L27-L28.
+- Next: T13 seed script (role, setting, users, 120 shipments, perm set assignments), then T12 UI.
