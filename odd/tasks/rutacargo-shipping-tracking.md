@@ -96,7 +96,7 @@ T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt t
 T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | implemented, security review pending | 1a7c12a
 T6 | S11–S15, S36 | Reschedule + tests | implemented, security review pending; AC-003.5 history to verify in org | f6e55ea
 T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | implemented, security review pending; OAuth app in T11 | 08da7ab
-T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | todo | -
+T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | implemented, security review pending; live sign-up to verify on the site | b7faada
 T9 | S26–S31, S43 | Request shipment Apex + tests | todo | -
 T10 | S32–S34, S37, S41 | My shipments Apex + tests | todo | -
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | todo | -
@@ -128,3 +128,5 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L20 Evidence T5 (1a7c12a): credentials deployed (0AfEc00000pySP3KAM); RED 9/11 failing (707Ec00002j3ST5); GREEN 23/23 with T4 (707Ec00002j3QWU), EntregaYaClient 90%. Pending manual: base URL + ApiKey in Setup (README). Risk: item 2.
 - L21 Evidence T6 (f6e55ea): RED 12/13 failing (707Ec00002j3TIo); GREEN 36/36 with T4/T5 (707Ec00002j2tl9). Field history rows are not created in Apex tests, so AC-003.5 is verified in the org after seeding (T13). Risk: item 2.
 - L22 Evidence T7 (08da7ab): RED 12/14 failing (707Ec00002j3PnY); GREEN 14/14 (707Ec00002j3Jdg), EntregaYaStatusResource 93%. Contract: POST /services/apexrest/entregaya/v1/shipment-status; 200 updated|ignored, 400/404 rejected with code. Risk: items 2, 3.
+- L23 Evidence T8 (b7faada): RED 16/20 failing (707Ec00002j3I3B); GREEN 20/20 (707Ec00002j3XxT); SiteGatewayTest 3/3 (707Ec00002j3IhL). Site.* calls can only be proven on the live site (T12 smoke test). Risk: item 2.
+- L24 Decision: site customers use the custom profile "RutaCargo Customer" (Customer Community license, no object permissions) because the org blocks standard external profiles for user creation; access comes from the RutaCargo_Customer permission set, assigned by CustomerAccessQueueable after sign-up. Site username = email + ".rutacargo".

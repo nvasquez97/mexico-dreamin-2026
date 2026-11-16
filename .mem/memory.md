@@ -77,3 +77,9 @@
 - What: EntregaYa status endpoint + EntregaYa_Integration permission set, commit 08da7ab. Test users: integration tests use Minimum Access - Salesforce (Salesforce license has 1 free seat); keep the Salesforce Integration license for the real integration user.
 - Why / evidence: feature doc L22.
 - Next: T8 sign-up, login, logout, forgot password.
+
+## 2026-11-15 22:15 — T8 implemented; T9 next
+- Type: status
+- What: Sign-up/login/forgot password, commit b7faada; custom profile RutaCargo Customer; customer permission set assigned by Queueable.
+- Why / evidence: feature doc L23-L24.
+- Next: T9 request shipment.
