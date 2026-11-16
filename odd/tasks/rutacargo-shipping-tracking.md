@@ -46,14 +46,14 @@
 ## Tasks
 
 - T1 | S35 | Data model: Account fields, Shipment__c, Delivery_Change__c | done (deployed 41 components, 0 errors) | see git log
-- T2 | S35 | Permission sets, custom permission, guest/external access config | todo | -
+- T2 | S35 | Permission sets, custom permission, guest/external access config | done (Permission sets, profile, role, custom permission deployed) | see git log
 - T3 | S27,S28,S29,S31 | Pricing + date services (Apex, tests) | done (9 tests pass) | see git log
-- T4 | S1-S5 | Public tracking Apex + tests | todo | -
-- T5 | S6-S10 | Delivery details + proof (Named Credential, callout, tests) | todo | -
-- T6 | S11-S15 | Reschedule Apex + tests | todo | -
-- T7 | S16-S19 | Inbound EntregaYa REST service + OAuth External Client App + tests | todo | -
-- T8 | S20-S25 | Sign-up / login / reset Apex + tests | todo | -
-- T9 | S26-S34 | Request shipment + my shipments Apex + tests | todo | -
+- T4 | S1-S5 | Public tracking Apex + tests | done (tests pass) | see git log
+- T5 | S6-S10 | Delivery details + proof (Named Credential, callout, tests) | done (tests pass (callout mocked)) | see git log
+- T6 | S11-S15 | Reschedule Apex + tests | done (tests pass) | see git log
+- T7 | S16-S19 | Inbound EntregaYa REST service + OAuth External Client App + tests | done (tests pass; OAuth External Client App pending (T13/README)) | see git log
+- T8 | S20-S25 | Sign-up / login / reset Apex + tests | done (tests pass; sign-up setPassword needs verified sender (manual)) | see git log
+- T9 | S26-S34 | Request shipment + my shipments Apex + tests | done (tests pass) | see git log
 - T10 | S36 | Brand assets, theme, LWCs | todo | -
 - T11 | S36 | Experience Cloud LWR site | todo | -
 - T12 | S35 | Test data script (120 shipments) | todo | -
@@ -70,3 +70,8 @@
 - L7 (assumption): EntregaYa may send Picked up, In transit, Out for delivery, Delivered, Exception; "Requested" is rejected as invalid (BR-09).
 - L8 (note): docs/functional-design.md contains a provider test API key in clear text. It must not be copied to code or metadata; it goes in the External Credential secret by hand. Recommend rotating it and removing it from the doc.
 - L9 (note): Daily Brew font file was not provided; display headlines fall back to Montserrat Black uppercase until the font file is supplied.
+- L10: Backend (T2-T9) deployed; full local test run: 73/73 pass, org-wide coverage 87%.
+- L11 (decision): guest cannot hold External Credential principal access (it exists only on permission sets), so EntregaYa uses a legacy Named Credential; its password field (placeholder REPLACE-IN-SETUP in metadata) holds the API key, entered by hand.
+- L12 (finding): the unfiled `sf community create` site has an unverified sender address (jhony...@adaptus.com.invalid); System.setPassword fails until the sender is verified in Setup. Sign-up tests bypass setPassword via a @TestVisible flag.
+- L13 (finding): the salesforce-metadata-experts MCP server failed to connect (HTTP 404), so site pages/views are written by hand from the retrieved default content instead of getSiteContentMetadata schemas.
+- L14 (finding): anonymous Apex cannot use SYSTEM_MODE, so the test-data script uses plain DML with the Support Agent permission set.
