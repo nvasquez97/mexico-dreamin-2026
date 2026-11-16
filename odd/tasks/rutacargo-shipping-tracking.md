@@ -90,7 +90,7 @@ Literal text from docs/functional-design.md.
 ID | S# covered | Task | Status | Commit
 --- | --- | --- | --- | ---
 T1 | S39, S37, S15 (history), S42 (rate config) | Data model: Account fields, Shipment__c, Shipping_Rate__mdt, settings, OWD, field history | done | 6f09a51
-T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar services + tests | todo | -
+T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar services + tests | done | cfa6b13
 T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | todo | -
 T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | todo | -
 T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | todo | -
@@ -118,3 +118,5 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L10 Decision: shipment price uses the actual weight (2 decimals), rounded half-up to 2 decimals; rates live in Shipping_Rate__mdt.
 - L11 Decision: OWD Shipment__c internal Read/Write (support agents), external Private; customers see their account's shipments via a sharing set; guest and EntregaYa access only through Apex with explicit field lists.
 - L12 Evidence T1: dry-run and deploy succeeded (0AfEc00000pyRBFKA2, 45 components). Tooling query: Shipment__c, Account, Contact internal ReadWrite / external Private. Risk: item 6.
+- L13 Evidence T2 (cfa6b13): RED 20/21 failing on stubs (test run 707Ec00002j3IVz); GREEN 21/21 (707Ec00002j3Pi8), coverage PricingService 100%, BusinessCalendar 93%. Risk: none.
+- L14 Decision: Apex classes use API 67.0, where user mode is the default; guest and integration paths that need system mode declare it explicitly (WITH SYSTEM_MODE / AccessLevel.SYSTEM_MODE) with a justification comment. Async work uses Queueable, not @future.

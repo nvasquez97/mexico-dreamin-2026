@@ -29,3 +29,15 @@
 - What: Data model deployed (deploy 0AfEc00000pyRBFKA2); commit 6f09a51. External OWD Private on Account, Contact, Shipment__c.
 - Why / evidence: feature doc L12.
 - Next: T2 pricing + business calendar (test-first).
+
+## 2026-11-15 20:10 — T2 done, T3 next
+- Type: status
+- What: Pricing + business calendar, commit cfa6b13, 21/21 tests pass.
+- Why / evidence: feature doc L13.
+- Next: T3 public tracking (guest, system mode with explicit public field list).
+
+## 2026-11-15 20:10 — Environment: skills-first hook
+- Type: environment
+- What: A PreToolUse hook blocks raw sf data query / apex run test until the owning skill (platform-soql-query, platform-apex-test-run, platform-metadata-deploy) is dispatched; a blocked compound command runs nothing, so re-run every step.
+- Why / evidence: BusinessCalendar sed skipped when the hook blocked the command.
+- Next: none.
