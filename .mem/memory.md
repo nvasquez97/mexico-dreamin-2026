@@ -65,3 +65,9 @@
 - What: Proof of delivery via Named Credential EntregaYa, commit 1a7c12a; key and URL must be set manually in Setup.
 - Why / evidence: feature doc L20.
 - Next: T6 reschedule.
+
+## 2026-11-15 21:30 — T6 implemented; T7 next
+- Type: status
+- What: Reschedule, commit f6e55ea; AC-003.5 (field history) still to verify in the org after seeding.
+- Why / evidence: feature doc L21.
+- Next: T7 EntregaYa status REST endpoint.

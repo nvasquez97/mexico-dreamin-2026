@@ -94,7 +94,7 @@ T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar se
 T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | implemented, security review pending | fcb5ebb
 T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | implemented, security review pending | dedae45
 T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | implemented, security review pending | 1a7c12a
-T6 | S11–S15, S36 | Reschedule + tests | todo | -
+T6 | S11–S15, S36 | Reschedule + tests | implemented, security review pending; AC-003.5 history to verify in org | f6e55ea
 T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | todo | -
 T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | todo | -
 T9 | S26–S31, S43 | Request shipment Apex + tests | todo | -
@@ -126,3 +126,4 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L18 Decision: the item-2 tasks that share the guest/customer/integration access surface (T3–T8, T11) get one security-reviewer + access-auditor pass with all their S#, run once T11 grants the permissions (the access auditor needs the real permission sets). Each of those tasks stays "security review pending" and is not closed until Critical and High findings are fixed.
 - L19 Evidence T4 (dedae45): RED 11/12 failing (707Ec00002j3BPf); GREEN 12/12 (707Ec00002j31vP), DeliveryController and DeliveryAccessService 100%. Risk: item 2.
 - L20 Evidence T5 (1a7c12a): credentials deployed (0AfEc00000pySP3KAM); RED 9/11 failing (707Ec00002j3ST5); GREEN 23/23 with T4 (707Ec00002j3QWU), EntregaYaClient 90%. Pending manual: base URL + ApiKey in Setup (README). Risk: item 2.
+- L21 Evidence T6 (f6e55ea): RED 12/13 failing (707Ec00002j3TIo); GREEN 36/36 with T4/T5 (707Ec00002j2tl9). Field history rows are not created in Apex tests, so AC-003.5 is verified in the org after seeding (T13). Risk: item 2.
