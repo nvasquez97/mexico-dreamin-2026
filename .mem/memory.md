@@ -113,3 +113,9 @@
 - What: Seed script scripts/seed/seed.sh, commit 4665bc7; data verified. Seeded site-user password is not in the repo (re-run seed.sh with PASSWORD_FILE to reset it).
 - Why / evidence: feature doc L29.
 - Next: T12 LWR pages, theme layout and LWC with the brand.
+
+## 2026-11-16 01:20 — T12 implemented, live smoke tests pass; reviews running
+- Type: status
+- What: Site published and Live; guest flows verified over HTTP; AC-003.5 history verified; 151/151 tests, 93% coverage. security-reviewer and access-auditor running on S1-S43.
+- Why / evidence: feature doc L30-L34.
+- Next: fix Critical/High findings, then test-reviewer, brand-reviewer, architecture-review; close T14.

@@ -100,9 +100,9 @@ T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | implemen
 T9 | S26–S31, S43 | Request shipment Apex + tests | implemented, security review pending | 98b26a8
 T10 | S32–S34, S37, S41 | My shipments Apex + tests | implemented, security review pending | 9fba4fb
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | implemented, security review pending; assignments in T13 | 83065bb
-T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | in progress (base site b8f5205) | b8f5205
+T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | implemented, security and brand review pending | b8f5205, 845e34d
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
-T14 | S47 | README with pending manual steps; closing reviews | todo | -
+T14 | S47 | README with pending manual steps; closing reviews | in progress (README done) | 41712d1
 
 ## Log
 
@@ -135,3 +135,8 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L27 Evidence T11 (83065bb): ECA deployed (0AfEc00000pyUPFKA2); tab, layout, guest and agent permission sets (0AfEc00000pyUaXKAU); network membership then self-registration profile (0AfEc00000pyUgzKAE, 0AfEc00000pyUibKAE). The network only accepts a self-registration profile that is already a member: deploy membership first.
 - L28 Decision (updates L18): the batched security-reviewer + access-auditor pass runs after T12 (LWC) and T13 (seeded assignments), so it covers the Apex, the LWC and the real org access in one pass. T3–T11 stay "security review pending" until then.
 - L29 Evidence T13 (4665bc7): seed run 1 created 3 assignments + 120 shipments + 2 site users; run 2 skipped everything (idempotent). SOQL: RC000001001..RC000001120, 60 per customer across 6 statuses, 14 Delivered with Proof_Id per customer. Password for the seeded site users kept outside the repo (scratchpad file, not committed).
+- L30 Evidence T12 (845e34d): site deployed (0AfEc00000pyVRlKAM) and published (job 08PEc00000eBJYAMA4 Complete). Anonymous HTTP checks: /, /login, /SelfRegister, /ForgotPassword return 200; /my-shipments redirects to login. Guest Apex through /webruntime/api/apex/execute: track returns only AC-001.2 fields and lists RC999999999 as not found; wrong postal code returns the AC-002.3 message; right code returns details; reschedule of RC000001003 saved; downloadProof returns the AC-002.5 message (EntregaYa URL and key still placeholders).
+- L31 Evidence S15 (AC-003.5) in the org: Shipment__History for RC000001003 shows Estimated_Delivery__c 2026-11-17 -> 2026-11-20, Reschedule_Count__c 0 -> 1 and Delivery_Instructions__c, created by the site guest at 2026-11-16T01:03:42Z; the Shipment layout shows the history related list.
+- L32 Evidence S16-S19 over HTTP (admin session): RC000001003 updated to Out for delivery, an older update ignored, RC999999999 rejected 404 UNKNOWN_TRACKING_NUMBER, "Lost" rejected 400 INVALID_STATUS. OAuth client credentials as the integration user is configured (policy 0AfEc00000pyVl7KAE) but not exercised: the consumer secret can only be read in Setup (README step 3).
+- L33 Evidence: RunLocalTests 151/151 pass, org-wide coverage 93% (707Ec00002j3Jlc).
+- L34 Assumption: the org currency stays USD (README step 5); the site formats amounts as MXN. Branding-set fonts accept only a family name, so the platform styles use "Montserrat" without fallbacks; LWC CSS keeps fallbacks.
