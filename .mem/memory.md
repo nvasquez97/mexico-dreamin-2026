@@ -107,3 +107,9 @@
 - What: Guest/agent perm sets, ECA, layout with history, network self-registration, commit 83065bb. Batched item-2 review moved to after T12+T13 (L28).
 - Why / evidence: feature doc L27-L28.
 - Next: T13 seed script (role, setting, users, 120 shipments, perm set assignments), then T12 UI.
+
+## 2026-11-15 23:50 — T13 done; T12 (UI) next
+- Type: status
+- What: Seed script scripts/seed/seed.sh, commit 4665bc7; data verified. Seeded site-user password is not in the repo (re-run seed.sh with PASSWORD_FILE to reset it).
+- Why / evidence: feature doc L29.
+- Next: T12 LWR pages, theme layout and LWC with the brand.

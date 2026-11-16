@@ -101,7 +101,7 @@ T9 | S26–S31, S43 | Request shipment Apex + tests | implemented, security revi
 T10 | S32–S34, S37, S41 | My shipments Apex + tests | implemented, security review pending | 9fba4fb
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | implemented, security review pending; assignments in T13 | 83065bb
 T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | in progress (base site b8f5205) | b8f5205
-T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | todo | -
+T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
 T14 | S47 | README with pending manual steps; closing reviews | todo | -
 
 ## Log
@@ -134,3 +134,4 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L26 Evidence T10 (9fba4fb): sharing set deployed (0AfEc00000pyU97KAE); RED 13/14 failing (707Ec00002j3Ump); GREEN 14/14 (707Ec00002j3Kkl), MyShipmentsController 100%. Risk: item 2.
 - L27 Evidence T11 (83065bb): ECA deployed (0AfEc00000pyUPFKA2); tab, layout, guest and agent permission sets (0AfEc00000pyUaXKAU); network membership then self-registration profile (0AfEc00000pyUgzKAE, 0AfEc00000pyUibKAE). The network only accepts a self-registration profile that is already a member: deploy membership first.
 - L28 Decision (updates L18): the batched security-reviewer + access-auditor pass runs after T12 (LWC) and T13 (seeded assignments), so it covers the Apex, the LWC and the real org access in one pass. T3–T11 stay "security review pending" until then.
+- L29 Evidence T13 (4665bc7): seed run 1 created 3 assignments + 120 shipments + 2 site users; run 2 skipped everything (idempotent). SOQL: RC000001001..RC000001120, 60 per customer across 6 statuses, 14 Delivered with Proof_Id per customer. Password for the seeded site users kept outside the repo (scratchpad file, not committed).
