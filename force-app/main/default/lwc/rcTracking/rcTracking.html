@@ -1,0 +1,66 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">Public tracking</p>
+        <h1 class="rc-title">Where is my package?</h1>
+        <p class="rc-lead">Search with your tracking number or your order reference. You can enter up to 10 values, separated by commas or line breaks.</p>
+
+        <form class="rc-card" onsubmit={handleSubmit}>
+            <fieldset class="rc-radio-group">
+                <legend class="rc-label">Search by</legend>
+                <label class="rc-radio"><input type="radio" name="searchBy" value="trackingNumber" checked={isByTracking} onchange={handleSearchBy} /> Tracking number</label>
+                <label class="rc-radio"><input type="radio" name="searchBy" value="reference" checked={isByReference} onchange={handleSearchBy} /> Order reference</label>
+            </fieldset>
+            <div class="rc-field">
+                <label class="rc-label" for="values">Values (up to 10)</label>
+                <textarea id="values" class="rc-textarea" placeholder={placeholder} onchange={handleValues}>{rawValues}</textarea>
+            </div>
+            <button type="submit" class="rc-btn rc-btn--block" disabled={isLoading}>{buttonLabel}</button>
+        </form>
+
+        <p lwc:if={error} class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {error}</p>
+
+        <template lwc:if={hasResults}>
+            <div class="toolbar">
+                <h2 class="rc-subtitle">Results</h2>
+                <div>
+                    <label class="rc-label" for="sort">Sort by</label>
+                    <select id="sort" class="rc-select sort" onchange={handleSort}>
+                        <option value="estimatedDelivery" selected={isSortDate}>Estimated delivery date</option>
+                        <option value="status" selected={isSortStatus}>Status</option>
+                    </select>
+                </div>
+            </div>
+            <ul class="list">
+                <template for:each={rows} for:item="row">
+                    <li key={row.trackingNumber} class="rc-card">
+                        <div class="head">
+                            <span class="tn">{row.trackingNumber}</span>
+                            <span class={row.pillClass}>{row.status}</span>
+                        </div>
+                        <dl class="rc-dl">
+                            <dt>Route</dt><dd>{row.originCity} to {row.destinationCity}</dd>
+                            <dt>Last location</dt><dd>{row.lastLocation}</dd>
+                            <dt>Last update</dt><dd>{row.lastUpdateLabel}</dd>
+                            <dt>Estimated delivery</dt><dd>{row.estimatedLabel}</dd>
+                        </dl>
+                        <button class="rc-btn rc-btn--ghost" data-tn={row.trackingNumber} onclick={handleOpenDelivery} aria-expanded={row.isOpen}>
+                            {row.toggleLabel}
+                        </button>
+                        <c-rc-delivery lwc:if={row.isOpen} tracking-number={row.trackingNumber}></c-rc-delivery>
+                    </li>
+                </template>
+            </ul>
+        </template>
+
+        <template lwc:if={notFound.length}>
+            <div class="rc-card">
+                <h2 class="rc-subtitle">Not found</h2>
+                <ul>
+                    <template for:each={notFound} for:item="value">
+                        <li key={value}>{value}: Not found</li>
+                    </template>
+                </ul>
+            </div>
+        </template>
+    </div>
+</template>

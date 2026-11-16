@@ -1,0 +1,55 @@
+<template>
+    <div class="panel">
+        <template lwc:if={isLocked}>
+            <p class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {message}</p>
+        </template>
+
+        <template lwc:if={showVerify}>
+            <form onsubmit={handleVerify}>
+                <p class="rc-note">Enter the destination postal code (5 digits) to see the delivery details.</p>
+                <div class="rc-field">
+                    <label class="rc-label" for="postal">Destination postal code</label>
+                    <input id="postal" class="rc-input" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" autocomplete="postal-code" onchange={handlePostal} value={postalCode} />
+                </div>
+                <p lwc:if={showMismatch} class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {message}</p>
+                <button type="submit" class="rc-btn" disabled={isBusy}>Open details</button>
+            </form>
+        </template>
+
+        <template lwc:if={details}>
+            <h3 class="rc-subtitle">Delivery details</h3>
+            <dl class="rc-dl">
+                <dt>Recipient</dt><dd>{details.recipientName}</dd>
+                <dt>Delivery address</dt><dd>{details.recipientAddress}</dd>
+                <dt>Contact phone</dt><dd>{details.recipientPhone}</dd>
+                <dt>Estimated date</dt><dd>{estimatedLabel}</dd>
+                <dt>Instructions</dt><dd>{instructionsLabel}</dd>
+            </dl>
+
+            <p lwc:if={message} class={messageClass} role="status">{message}</p>
+
+            <div class="rc-actions" lwc:if={details.hasProof}>
+                <button class="rc-btn" onclick={handleProof} disabled={isBusy}>Download proof of delivery</button>
+            </div>
+
+            <template lwc:if={details.canReschedule}>
+                <form onsubmit={handleReschedule} class="resched">
+                    <h3 class="rc-subtitle">Reschedule the delivery</h3>
+                    <p class="rc-note">Choose a date between {earliestLabel} and {latestLabel}. Rescheduled {details.rescheduleCount} of 2 times.</p>
+                    <div class="rc-grid rc-grid--2">
+                        <div class="rc-field">
+                            <label class="rc-label" for="newDate">New date</label>
+                            <input id="newDate" class="rc-input" type="date" min={details.earliestRescheduleDate} max={details.latestRescheduleDate} onchange={handleNewDate} value={newDate} required />
+                        </div>
+                        <div class="rc-field">
+                            <label class="rc-label" for="instr">Delivery instructions</label>
+                            <textarea id="instr" class="rc-textarea" maxlength="1000" onchange={handleInstructions}>{instructions}</textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="rc-btn" disabled={isBusy}>Save new date</button>
+                </form>
+            </template>
+            <p lwc:elseif={isNotReschedulable} class="rc-note">This delivery can no longer be rescheduled.</p>
+        </template>
+    </div>
+</template>

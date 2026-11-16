@@ -1,0 +1,56 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Shipment detail",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcHeader",
+              "id": "788bfcdb-4757-4846-aebc-61b5b8496d7e",
+              "type": "component"
+            },
+            {
+              "attributes": {},
+              "definition": "c:rcShipmentDetail",
+              "id": "dd7ba480-0f80-4da4-a58a-d1ca678014df",
+              "type": "component"
+            }
+          ],
+          "id": "536b7a7b-05c7-4339-a438-af0622e1e5d2",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Shipment detail",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "ec5bcfdb-cf4e-4860-aa0e-fcf8f7783a3c",
+              "type": "component"
+            }
+          ],
+          "id": "4ceca52e-d818-4fad-b6c6-a654c6a227fd",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "1885413c-54f7-4702-90eb-c648a5312d57",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-shipment"
+  },
+  "urlName": "shipment"
+}

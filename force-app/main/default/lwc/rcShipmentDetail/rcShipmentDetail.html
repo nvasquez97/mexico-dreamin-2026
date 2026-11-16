@@ -1,0 +1,46 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow"><a class="rc-link" href={listUrl}>My shipments</a></p>
+        <p lwc:if={error} class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {error}</p>
+        <template lwc:if={detail}>
+            <h1 class="rc-title">{detail.summary.trackingNumber}</h1>
+            <p><span class={pillClass}>{detail.summary.status}</span></p>
+            <div class="rc-card">
+                <h2 class="rc-subtitle">Shipment</h2>
+                <dl class="rc-dl">
+                    <dt>Service</dt><dd>{detail.summary.serviceType}</dd>
+                    <dt>Price</dt><dd>{priceLabel}</dd>
+                    <dt>Order reference</dt><dd>{detail.summary.customerReference}</dd>
+                    <dt>Requested</dt><dd>{requestedLabel}</dd>
+                    <dt>Estimated delivery</dt><dd>{estimatedLabel}</dd>
+                    <dt>Contents</dt><dd>{detail.packageDescription}</dd>
+                    <dt>Weight</dt><dd>{detail.weightKg} kg</dd>
+                    <dt>Declared value</dt><dd>{declaredLabel}</dd>
+                </dl>
+            </div>
+            <div class="rc-grid rc-grid--2">
+                <div class="rc-card">
+                    <h2 class="rc-subtitle">Pickup</h2>
+                    <dl class="rc-dl">
+                        <dt>Address</dt><dd>{detail.pickupAddress}</dd>
+                        <dt>City</dt><dd>{detail.originCity}</dd>
+                        <dt>Postal code</dt><dd>{detail.pickupPostalCode}</dd>
+                        <dt>Pickup date</dt><dd>{pickupLabel}</dd>
+                    </dl>
+                </div>
+                <div class="rc-card">
+                    <h2 class="rc-subtitle">Recipient</h2>
+                    <dl class="rc-dl">
+                        <dt>Name</dt><dd>{detail.summary.recipientName}</dd>
+                        <dt>Address</dt><dd>{detail.recipientAddress}</dd>
+                        <dt>City</dt><dd>{detail.summary.destinationCity}</dd>
+                        <dt>Postal code</dt><dd>{detail.destinationPostalCode}</dd>
+                        <dt>Phone</dt><dd>{detail.recipientPhone}</dd>
+                        <dt>Email</dt><dd>{detail.recipientEmail}</dd>
+                        <dt>Instructions</dt><dd>{detail.deliveryInstructions}</dd>
+                    </dl>
+                </div>
+            </div>
+        </template>
+    </div>
+</template>

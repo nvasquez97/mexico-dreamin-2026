@@ -1,0 +1,19 @@
+<template>
+    <header class="band">
+        <a class="logo-link" href={homeUrl} aria-label="RutaCargo home">
+            <img class="logo" src={logoUrl} alt="Coffee Blazers Summit: Tinto the mug with the logo" width="360" />
+        </a>
+        <nav class="nav" aria-label="Main">
+            <a class="nav-link" href={homeUrl}>Track a shipment</a>
+            <template lwc:if={isGuest}>
+                <a class="nav-link" href={registerUrl}>Sign up</a>
+                <a class="nav-link nav-link--cta" href={loginUrl}>Log in</a>
+            </template>
+            <template lwc:else>
+                <a class="nav-link" href={requestUrl}>Request a shipment</a>
+                <a class="nav-link" href={mineUrl}>My shipments</a>
+                <a class="nav-link nav-link--cta" href={logoutUrl}>Log out</a>
+            </template>
+        </nav>
+    </header>
+</template>

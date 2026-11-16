@@ -1,0 +1,77 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">Door to door</p>
+        <h1 class="rc-title">Request a shipment</h1>
+
+        <template lwc:if={created}>
+            <div class="rc-card rc-card--night" role="status">
+                <p class="rc-eyebrow done-eyebrow">Shipment requested</p>
+                <h2 class="rc-title done-title">{created.trackingNumber}</h2>
+                <p>Keep this tracking number. Price: <strong>{createdPrice}</strong>. Estimated delivery: <strong>{createdEstimate}</strong>.</p>
+                <div class="rc-actions">
+                    <a class="rc-btn rc-btn--ghost" href={mineUrl}>My shipments</a>
+                    <button class="rc-btn rc-btn--ghost" onclick={handleAnother}>Request another</button>
+                </div>
+            </div>
+        </template>
+
+        <form lwc:else class="rc-card" onsubmit={handleSubmit}>
+            <p lwc:if={message} class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {message}</p>
+
+            <h2 class="rc-subtitle">Pickup</h2>
+            <div class="rc-field"><label class="rc-label" for="pickupAddress">Pickup address</label>
+                <textarea id="pickupAddress" class="rc-textarea" maxlength="2000" required data-field="pickupAddress" onchange={handleField}></textarea></div>
+            <div class="rc-grid rc-grid--2">
+                <div class="rc-field"><label class="rc-label" for="pickupCity">City</label>
+                    <input id="pickupCity" class="rc-input" type="text" maxlength="80" required data-field="pickupCity" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="pickupPostalCode">Postal code</label>
+                    <input id="pickupPostalCode" class="rc-input" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required data-field="pickupPostalCode" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="pickupDate">Pickup date (business day)</label>
+                    <input id="pickupDate" class="rc-input" type="date" min={minPickup} max={maxPickup} required data-field="pickupDate" onchange={handleField} />
+                    <p class="rc-note">From tomorrow up to 15 days from today, Monday to Friday.</p></div>
+            </div>
+
+            <h2 class="rc-subtitle">Recipient</h2>
+            <div class="rc-grid rc-grid--2">
+                <div class="rc-field"><label class="rc-label" for="recipientName">Name</label>
+                    <input id="recipientName" class="rc-input" type="text" maxlength="120" required data-field="recipientName" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="recipientPhone">Phone</label>
+                    <input id="recipientPhone" class="rc-input" type="tel" maxlength="40" required data-field="recipientPhone" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="recipientEmail">Email</label>
+                    <input id="recipientEmail" class="rc-input" type="email" maxlength="80" required data-field="recipientEmail" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="recipientCity">City</label>
+                    <input id="recipientCity" class="rc-input" type="text" maxlength="80" required data-field="recipientCity" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="recipientPostalCode">Postal code</label>
+                    <input id="recipientPostalCode" class="rc-input" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required data-field="recipientPostalCode" onchange={handleField} /></div>
+            </div>
+            <div class="rc-field"><label class="rc-label" for="recipientAddress">Delivery address</label>
+                <textarea id="recipientAddress" class="rc-textarea" maxlength="2000" required data-field="recipientAddress" onchange={handleField}></textarea></div>
+            <div class="rc-field"><label class="rc-label" for="deliveryInstructions">Delivery instructions (optional)</label>
+                <textarea id="deliveryInstructions" class="rc-textarea" maxlength="1000" data-field="deliveryInstructions" onchange={handleField}></textarea></div>
+
+            <h2 class="rc-subtitle">Package</h2>
+            <div class="rc-grid rc-grid--2">
+                <div class="rc-field"><label class="rc-label" for="serviceType">Service</label>
+                    <select id="serviceType" class="rc-select" data-field="serviceType" onchange={handleField}>
+                        <option value="Standard">Standard (5 business days)</option>
+                        <option value="Express">Express (2 business days)</option>
+                    </select></div>
+                <div class="rc-field"><label class="rc-label" for="weightKg">Weight (kg, max 30)</label>
+                    <input id="weightKg" class="rc-input" type="number" min="0.1" max="30" step="0.1" required data-field="weightKg" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="declaredValue">Declared value (MXN, max 50,000)</label>
+                    <input id="declaredValue" class="rc-input" type="number" min="0" max="50000" step="0.01" required data-field="declaredValue" onchange={handleField} /></div>
+                <div class="rc-field"><label class="rc-label" for="customerReference">Order reference (optional)</label>
+                    <input id="customerReference" class="rc-input" type="text" maxlength="80" data-field="customerReference" onchange={handleField} /></div>
+            </div>
+            <div class="rc-field"><label class="rc-label" for="packageDescription">Contents</label>
+                <input id="packageDescription" class="rc-input" type="text" maxlength="255" required data-field="packageDescription" onchange={handleField} /></div>
+
+            <div class="rc-card quote" aria-live="polite">
+                <p class="rc-subtitle">Price</p>
+                <p lwc:if={quoteLabel} class="price">{quoteLabel}</p>
+                <p lwc:else class="rc-note">Fill in service, weight and declared value to see the price.</p>
+            </div>
+            <button type="submit" class="rc-btn rc-btn--block" disabled={isBusy}>Confirm shipment</button>
+        </form>
+    </div>
+</template>

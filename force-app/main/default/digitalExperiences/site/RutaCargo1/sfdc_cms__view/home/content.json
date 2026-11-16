@@ -1,70 +1,56 @@
 {
-  "type" : "sfdc_cms__view",
-  "title" : "Home",
-  "contentBody" : {
-    "component" : {
-      "children" : [ {
-        "children" : [ {
-          "attributes" : {
-            "backgroundImageConfig" : "",
-            "backgroundImageOverlay" : "rgba(0,0,0,0)",
-            "componentSpacerSize" : "",
-            "layoutDirectionDesktop" : "row",
-            "layoutDirectionMobile" : "column",
-            "layoutDirectionTablet" : "column",
-            "maxContentWidth" : "",
-            "sectionColumnGutterWidth" : "",
-            "sectionConfig" : "{\"UUID\":\"fcb2d666-d5ec-4215-a48b-1cb4dd4c84e9\",\"columns\":[{\"UUID\":\"c9bd3706-64a6-4a3c-8054-263674605f29\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
-            "sectionMinHeight" : "",
-            "sectionVerticalAlign" : "flex-start"
-          },
-          "children" : [ {
-            "children" : [ {
-              "attributes" : {
-                "imageInfos" : "",
-                "richTextValue" : "<div style=\"display: flex; justify-content: center; align-items: center; margin: 50px 0; flex-direction: column; text-align: center;\"><div style=\"background-image: url(assets/img/desert.svg) !important; background-size: cover; background-position: center; height: 300px; width: 100%; max-width: 600px; min-width: 300px;\"></div><h1 class=\"slds-text-heading_medium slds-p-bottom_x-small\">Start Building Your Page</h1> <div>Drag and drop a component into the content slots.</div></div>"
+  "type": "sfdc_cms__view",
+  "title": "Track a shipment",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcHeader",
+              "id": "6c5c4cdc-fe1c-47e1-a487-0abb4c828fb7",
+              "type": "component"
+            },
+            {
+              "attributes": {},
+              "definition": "c:rcTracking",
+              "id": "b7db6ffc-a8fa-47fe-8c95-35b0f78a022e",
+              "type": "component"
+            }
+          ],
+          "id": "9ff4438f-aafa-4b90-a5ba-f3bdebf5371d",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Track a shipment",
+                "recordId": "{!recordId}"
               },
-              "definition" : "community_builder:htmlEditor",
-              "id" : "60182ab0-b14a-4cf1-969a-8098982933c0",
-              "type" : "component"
-            } ],
-            "id" : "c9bd3706-64a6-4a3c-8054-263674605f29",
-            "name" : "col1",
-            "title" : "Column 1",
-            "type" : "region"
-          } ],
-          "definition" : "community_layout:section",
-          "id" : "fcb2d666-d5ec-4215-a48b-1cb4dd4c84e9",
-          "type" : "component"
-        } ],
-        "id" : "48d15edd-08c2-412f-953d-0b783964b595",
-        "name" : "content",
-        "title" : "Content",
-        "type" : "region"
-      }, {
-        "children" : [ {
-          "attributes" : {
-            "customHeadTags" : "",
-            "description" : "",
-            "pageTitle" : "Home",
-            "recordId" : "{!recordId}"
-          },
-          "definition" : "community_builder:seoAssistant",
-          "id" : "890b59d3-697f-4a4e-a93e-94601e9ffb9f",
-          "type" : "component"
-        } ],
-        "id" : "f012baad-e554-4500-bd03-637d8352107e",
-        "name" : "sfdcHiddenRegion",
-        "title" : "sfdcHiddenRegion",
-        "type" : "region"
-      } ],
-      "definition" : "community_layout:sldsFlexibleLayout",
-      "id" : "f8974134-2899-432d-8def-f208a472c0b2",
-      "type" : "component"
+              "definition": "community_builder:seoAssistant",
+              "id": "24863197-5c9a-4043-894e-ab14612f3704",
+              "type": "component"
+            }
+          ],
+          "id": "d73ea5c5-bece-47f4-aa98-cf573be66bea",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "b93578e0-3439-4968-bc57-2221eec7af3d",
+      "type": "component"
     },
-    "dataProviders" : [ ],
-    "themeLayoutType" : "Inner",
-    "viewType" : "home"
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "home"
   },
-  "urlName" : "home"
+  "urlName": "home"
 }

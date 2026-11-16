@@ -13,3 +13,9 @@ html {
 body {
     margin: 0;
 }
+
+/* Coffee Blazers Summit brand: Montserrat for text (loaded by the c-rc-header component), Azul noche for text. */
+body {
+    font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    color: #0d1f5f;
+}

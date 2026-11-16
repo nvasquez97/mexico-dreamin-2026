@@ -1,0 +1,39 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">My account</p>
+        <h1 class="rc-title">My shipments</h1>
+        <form class="rc-card filters" onsubmit={handleSubmit}>
+            <div class="rc-field">
+                <label class="rc-label" for="status">Status</label>
+                <select id="status" class="rc-select" onchange={handleStatus}>
+                    <option value="">All</option>
+                    <template for:each={statuses} for:item="s"><option key={s} value={s}>{s}</option></template>
+                </select>
+            </div>
+            <div class="rc-field grow">
+                <label class="rc-label" for="term">Search by tracking number, recipient or reference</label>
+                <input id="term" class="rc-input" type="search" maxlength="80" onchange={handleTerm} />
+            </div>
+            <button type="submit" class="rc-btn" disabled={isBusy}>Search</button>
+        </form>
+        <p lwc:if={error} class="rc-msg rc-msg--error" role="alert"><strong>Error.</strong> {error}</p>
+        <p lwc:if={isEmpty} class="rc-msg">No shipments found. <a class="rc-link" href={requestUrl}>Request a shipment</a></p>
+        <div lwc:if={rows.length} class="rc-card rc-table-wrap">
+            <table class="rc-table">
+                <thead><tr>
+                    <th scope="col">Tracking number</th><th scope="col">Requested</th><th scope="col">Recipient</th>
+                    <th scope="col">Destination</th><th scope="col">Status</th><th scope="col">Service</th><th scope="col">Price</th>
+                </tr></thead>
+                <tbody>
+                    <template for:each={rows} for:item="row">
+                        <tr key={row.trackingNumber}>
+                            <td><a class="rc-link" href={row.detailUrl}>{row.trackingNumber}</a></td>
+                            <td>{row.requestedLabel}</td><td>{row.recipientName}</td><td>{row.destinationCity}</td>
+                            <td><span class={row.pillClass}>{row.status}</span></td><td>{row.serviceType}</td><td>{row.priceLabel}</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</template>

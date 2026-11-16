@@ -1,0 +1,6 @@
+@import 'c/rcBrand';
+
+.quote { background: var(--rc-enamel); }
+.price { font-weight: 900; font-size: 2rem; margin: 0; }
+.done-eyebrow { color: var(--rc-cyan); }
+.done-title { color: var(--rc-white); }

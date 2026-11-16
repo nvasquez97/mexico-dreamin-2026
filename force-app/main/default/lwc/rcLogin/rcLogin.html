@@ -1,0 +1,22 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">Customers</p>
+        <h1 class="rc-title">{title}</h1>
+        <form class="rc-card" onsubmit={handleSubmit}>
+            <p lwc:if={message} class={messageClass} role="alert">{message}</p>
+            <div class="rc-field">
+                <label class="rc-label" for="email">Email</label>
+                <input id="email" class="rc-input" type="email" autocomplete="username" required onchange={handleEmail} />
+            </div>
+            <div class="rc-field" lwc:if={isLogin}>
+                <label class="rc-label" for="password">Password</label>
+                <input id="password" class="rc-input" type="password" autocomplete="current-password" required onchange={handlePassword} />
+            </div>
+            <button type="submit" class="rc-btn rc-btn--block" disabled={isBusy}>{buttonLabel}</button>
+            <p class="rc-note">
+                <button type="button" class="rc-link" onclick={toggleMode}>{toggleLabel}</button>
+                <span lwc:if={isLogin}> | <a class="rc-link" href={registerUrl}>Create an account</a></span>
+            </p>
+        </form>
+    </div>
+</template>

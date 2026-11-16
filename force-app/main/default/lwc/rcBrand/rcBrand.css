@@ -1,0 +1,91 @@
+/* Coffee Blazers Summit brand tokens and shared component styles (brand manual v1.0).
+   Blues lead. Yellow and red appear only as small details, never as backgrounds. */
+:host {
+    --rc-night: #0d1f5f;       /* Azul noche  - outlines, text, backgrounds */
+    --rc-electric: #016bfa;    /* Azul electrico - energy, accents */
+    --rc-cyan: #07e9f6;        /* Cian pixel - eyes, smile, shine */
+    --rc-white: #ffffff;       /* Blanco peltre */
+    --rc-enamel: #d6e0ea;      /* Gris esmalte - volume and shadow */
+    --rc-yellow: #ffc91d;      /* Amarillo - detail only */
+    --rc-red: #ff3636;         /* Rojo - detail only */
+    --rc-font: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    display: block;
+    font-family: var(--rc-font);
+    color: var(--rc-night);
+    font-weight: 400;
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+*, *::before, *::after { box-sizing: inherit; }
+
+.rc-wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
+
+/* Display voice: short, uppercase headlines (Daily Brew is not supplied; Montserrat Black stands in). */
+.rc-eyebrow { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--rc-electric); margin: 0 0 8px; }
+.rc-title { font-weight: 900; font-size: clamp(1.75rem, 6vw, 2.75rem); line-height: 1.05; text-transform: uppercase; margin: 0 0 12px; color: var(--rc-night); }
+.rc-subtitle { font-weight: 700; font-size: 1.125rem; margin: 0 0 8px; }
+.rc-lead { font-weight: 400; font-size: 1rem; margin: 0 0 20px; max-width: 60ch; }
+.rc-note { font-weight: 300; font-size: 0.875rem; }
+.rc-label { display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 4px; }
+
+.rc-card { background: var(--rc-white); border: 2px solid var(--rc-enamel); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+.rc-card--night { background: var(--rc-night); color: var(--rc-white); border-color: var(--rc-night); }
+
+.rc-field { margin-bottom: 16px; }
+.rc-input, .rc-select, .rc-textarea {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--rc-night); background: var(--rc-white);
+    border: 2px solid var(--rc-night); border-radius: 12px; padding: 12px 14px; min-height: 48px;
+}
+.rc-textarea { min-height: 96px; resize: vertical; }
+.rc-input:focus, .rc-select:focus, .rc-textarea:focus, .rc-btn:focus-visible, .rc-link:focus-visible, .rc-radio input:focus-visible {
+    outline: 3px solid var(--rc-cyan); outline-offset: 2px;
+}
+.rc-grid { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+@media (min-width: 640px) { .rc-grid--2 { grid-template-columns: 1fr 1fr; } }
+
+.rc-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 24px;
+    font: inherit; font-weight: 700; font-size: 1rem; border-radius: 999px; border: 2px solid var(--rc-night); cursor: pointer;
+    background: var(--rc-night); color: var(--rc-white); text-decoration: none;
+}
+.rc-btn:hover { background: var(--rc-electric); border-color: var(--rc-electric); }
+.rc-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.rc-btn--ghost { background: var(--rc-white); color: var(--rc-night); }
+.rc-btn--ghost:hover { background: var(--rc-enamel); border-color: var(--rc-night); color: var(--rc-night); }
+.rc-btn--block { width: 100%; }
+.rc-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+
+.rc-link { color: var(--rc-night); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; font-family: inherit; font-size: inherit; cursor: pointer; }
+.rc-link:hover { color: var(--rc-electric); }
+
+.rc-radio-group { display: flex; flex-wrap: wrap; gap: 8px 24px; border: 0; padding: 0; margin: 0 0 16px; }
+.rc-radio { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; min-height: 44px; }
+.rc-radio input { width: 20px; height: 20px; accent-color: var(--rc-electric); }
+
+.rc-pill { display: inline-block; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; background: var(--rc-enamel); color: var(--rc-night); border: 2px solid var(--rc-night); }
+.rc-pill--delivered { background: var(--rc-night); color: var(--rc-white); }
+.rc-pill--active { background: var(--rc-electric); border-color: var(--rc-electric); color: var(--rc-white); font-weight: 900; }
+
+/* Messages: status is conveyed by an icon word and a border, not by color alone. */
+.rc-msg { border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; font-weight: 500; border: 2px solid var(--rc-night); background: var(--rc-enamel); }
+.rc-msg--error { border-color: var(--rc-red); border-left-width: 8px; background: var(--rc-white); }
+.rc-msg--ok { border-color: var(--rc-cyan); border-left-width: 8px; background: var(--rc-white); }
+
+.rc-dl { display: grid; grid-template-columns: 1fr; gap: 4px 16px; margin: 0 0 16px; }
+@media (min-width: 640px) { .rc-dl { grid-template-columns: 200px 1fr; } }
+.rc-dl dt { font-weight: 700; }
+.rc-dl dd { margin: 0 0 8px; overflow-wrap: anywhere; }
+
+.rc-table-wrap { overflow-x: auto; }
+.rc-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+.rc-table th { text-align: left; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px; border-bottom: 3px solid var(--rc-night); }
+.rc-table td { padding: 10px 8px; border-bottom: 1px solid var(--rc-enamel); vertical-align: top; }
+
+.rc-steam { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 8px; }
+.rc-steam i { width: 6px; height: 22px; border-radius: 6px; display: block; }
+.rc-steam i:nth-child(1) { background: var(--rc-yellow); height: 16px; }
+.rc-steam i:nth-child(2) { background: var(--rc-electric); }
+.rc-steam i:nth-child(3) { background: var(--rc-red); height: 16px; }
+
+.rc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

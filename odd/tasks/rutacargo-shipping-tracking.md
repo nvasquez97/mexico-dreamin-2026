@@ -54,8 +54,8 @@
 - T7 | S16-S19 | Inbound EntregaYa REST service + OAuth External Client App + tests | done (tests pass; OAuth External Client App pending (T13/README)) | see git log
 - T8 | S20-S25 | Sign-up / login / reset Apex + tests | done (tests pass; sign-up setPassword needs verified sender (manual)) | see git log
 - T9 | S26-S34 | Request shipment + my shipments Apex + tests | done (tests pass) | see git log
-- T10 | S36 | Brand assets, theme, LWCs | todo | -
-- T11 | S36 | Experience Cloud LWR site | todo | -
+- T10 | S36 | Brand assets, theme, LWCs | done (LWCs, brand CSS, static resource deployed; Jest not written) | see git log
+- T11 | S36 | Experience Cloud LWR site | done (site Live, published; public home 301, login 200) | see git log
 - T12 | S35 | Test data script (120 shipments) | todo | -
 - T13 | all | Reviewers, README, close | todo | -
 
@@ -75,3 +75,4 @@
 - L12 (finding): the unfiled `sf community create` site has an unverified sender address (jhony...@adaptus.com.invalid); System.setPassword fails until the sender is verified in Setup. Sign-up tests bypass setPassword via a @TestVisible flag.
 - L13 (finding): the salesforce-metadata-experts MCP server failed to connect (HTTP 404), so site pages/views are written by hand from the retrieved default content instead of getSiteContentMetadata schemas.
 - L14 (finding): anonymous Apex cannot use SYSTEM_MODE, so the test-data script uses plain DML with the Support Agent permission set.
+- L15: Site URL https://flow-drive-2236-dev-ed.scratch.my.site.com/rutacargovforcesite (prefix rutacargovforcesite is assigned by the org; DigitalExperienceConfig prefix is rutacargo). Custom route ids need the __c suffix.
