@@ -91,18 +91,18 @@ ID | S# covered | Task | Status | Commit
 --- | --- | --- | --- | ---
 T1 | S39, S37, S15 (history), S42 (rate config) | Data model: Account fields, Shipment__c, Shipping_Rate__mdt, settings, OWD, field history | done | 6f09a51
 T2 | S27, S28, S29, S31, S42, S40 | Pricing and Mexico City business calendar services + tests | done | cfa6b13
-T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | implemented, security review pending | fcb5ebb
-T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | implemented, security review pending | dedae45
-T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | implemented, security review pending | 1a7c12a
-T6 | S11–S15, S36 | Reschedule + tests | implemented, security review pending; AC-003.5 history to verify in org | f6e55ea
-T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | implemented, security review pending; OAuth app in T11 | 08da7ab
-T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | implemented, security review pending; live sign-up to verify on the site | b7faada
-T9 | S26–S31, S43 | Request shipment Apex + tests | implemented, security review pending | 98b26a8
-T10 | S32–S34, S37, S41 | My shipments Apex + tests | implemented, security review pending | 9fba4fb
-T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | implemented, security review pending; assignments in T13 | 83065bb
-T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | implemented, security and brand review pending | b8f5205, 845e34d
+T3 | S1–S5, S35, S40 | Public tracking Apex + tests (guest) | done | fcb5ebb, 6df454c, d75d73d
+T4 | S6–S8, S36 | Delivery details with postal-code verification and attempt throttle + tests | done | dedae45, 6df454c, d75d73d
+T5 | S9, S10, S36 | Proof of delivery callout through Named Credential + tests | done | 1a7c12a, 13b72b0
+T6 | S11–S15, S36 | Reschedule + tests | done | f6e55ea, d75d73d
+T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | done | 08da7ab, 6df454c, d75d73d
+T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | done | b7faada, d75d73d
+T9 | S26–S31, S43 | Request shipment Apex + tests | done | 98b26a8, 6df454c, d75d73d
+T10 | S32–S34, S37, S41 | My shipments Apex + tests | done | 9fba4fb, d75d73d
+T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | done | 83065bb, 41712d1, 512b5d0, 7adff0f
+T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | done | b8f5205, 845e34d, 13b72b0, 23dc48a, 2f123b6, d75d73d
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
-T14 | S47 | README with pending manual steps; closing reviews | in progress (README done) | 41712d1
+T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, c44119c, ff58312, 4979843
 
 ## Log
 
@@ -159,3 +159,6 @@ T14 | S47 | README with pending manual steps; closing reviews | in progress (REA
 - L45 Review architecture-review (Well-Architected): PASS WITH FINDINGS; Trusted, Easy, Adaptable all WARN; 0 Critical/High. Medium M1 committed EntregaYa key (open until rotated), M2 no CI, M3 failures not logged / queueable without Finalizer. Low: leading-wildcard search, row lock across the 10 s callout, history on Status and Last Location (volume), owner skew, duplicated constants, no Custom Labels, org-specific ids in source, rollback comment (fixed). Recorded as go-live conditions in README "Before going live".
 - L46 Review brand-reviewer re-verification 3: APPROVED (S44 PASS, S45 PASS). #1 gray frame gone on all 6 views, #2 clear space met. Low check-email button font fixed afterwards in 2f123b6 (custom property through the shadow root). Brand-owner questions stay in L37.
 - L47 Decision: Account internal OWD stays Read/Write (support agents work all customers; external is Private) and the custom Shipment__c object is used instead of the standard Field Service Shipment because the design defines its own fields and the standard object needs Field Service; both recorded after the architecture review (L7, L9).
+- L48 Review test-reviewer re-verification: APPROVED. #1–#8 fixed; S15, S20, S22, S24, S38, S40, S41 PASS. The reviewer ran Jest itself (11/11 in UTC and America/Los_Angeles) but could not run Apex tests (hook); RunLocalTests 707Ec00002j3GBi (164/164, 93%) is the implementer's evidence, not reproduced by the reviewer. Follow-ups (Low): test review #9–#22, S39 "assigned consecutively" PARTIAL.
+- L49 Close: all closing reviewers recorded (security APPROVED L41, access APPROVED L42, brand APPROVED L46, test APPROVED L48, architecture PASS WITH FINDINGS L45). No Critical or High finding open. Open Mediums by decision, listed in README: EntregaYa key rotation and history clean-up (M-4/M1), no CI (M2), failures not logged and queueable without retry (M3), sign-up abuse (M-2), lockout availability risk (mitigated: agents can unlock). Pending manual steps: README "Manual steps still pending in the org" 1–8. Test customer "Smoke Test Logistics" (sara.prueba@smoke-test.example) left in the org from the live sign-up check (L40).
+

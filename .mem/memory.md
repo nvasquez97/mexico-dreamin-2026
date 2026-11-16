@@ -143,3 +143,9 @@
 - What: brand APPROVED (re-check 3), security APPROVED, access APPROVED, architecture PASS WITH FINDINGS (go-live conditions in README), test review CHANGES REQUIRED -> fixed (d75d73d), re-verification running. 164/164 Apex, 93%; Jest 11/11.
 - Why / evidence: feature doc L44-L47.
 - Next: record the test re-verification, close T3-T14, final report.
+
+## 2026-11-16 03:45 — Feature closed
+- Type: status
+- What: T1-T14 done; all reviewers recorded, no Critical/High open (feature doc L48-L49). 164/164 Apex 93%, Jest 11/11.
+- Why / evidence: odd/tasks/rutacargo-shipping-tracking.md Tasks + Log.
+- Next: owner actions in README (EntregaYa key/URL, OAuth secret, MXN, sender email, Chatter tab, logos) and go-live conditions; scratch org expires 2026-12-15.
