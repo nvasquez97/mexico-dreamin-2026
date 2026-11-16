@@ -2,8 +2,9 @@
 
 .rc-header { background: var(--rc-white); border-bottom: 4px solid var(--rc-night); }
 .rc-header__bar { display: flex; align-items: center; justify-content: space-between; }
-.rc-header__brand { display: block; line-height: 0; }
-/* Main logo: the artwork is ~85% of the PNG width, so 440 px keeps it at or above the 360 px minimum (manual 03). The PNG margins give the 1X clear space. */
+.rc-header__brand { display: block; line-height: 0; padding: 0.5rem 0.5rem 1rem; }
+/* Main logo: the artwork is ~85% of the PNG width, so 440 px keeps it at or above the 360 px minimum (manual 03).
+   X (height of SUMMIT) is ~28 px at this size; the PNG margins give 14-35 px, so padding adds the rest of the 1X clear space. */
 .rc-header__logo { display: none; width: 440px; height: auto; }
 /* Narrow screens: Tinto isotype, always on its electric blue background (manual 04). */
 .rc-header__isotype { display: block; background: var(--rc-electric); padding: 0; }

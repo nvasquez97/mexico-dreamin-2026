@@ -266,12 +266,12 @@
       "_TextColor1": "#0D1F5F",
       "_TextColor2": "#0D1F5F",
       "_TextColor3": "#0D1F5F",
-      "_WarningColor": "#FFC91D",
-      "_WarningColor1": "#FFC91D",
+      "_WarningColor": "#0D1F5F",
+      "_WarningColor1": "#0D1F5F",
       "_WarningColor2": "#0D1F5F",
       "_WarningColor3": "#0D1F5F",
-      "_WarningForegroundColor": "#0D1F5F",
-      "_WarningForegroundColor1": "#0D1F5F",
+      "_WarningForegroundColor": "#FFFFFF",
+      "_WarningForegroundColor1": "#FFFFFF",
       "_WarningForegroundColor2": "#FFFFFF",
       "_WarningForegroundColor3": "#FFFFFF"
     }

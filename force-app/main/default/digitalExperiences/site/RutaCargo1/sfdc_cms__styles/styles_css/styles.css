@@ -1,5 +1,7 @@
 /*
- * Your global styles here
+ * RutaCargo global styles (docs/brand-manual.pdf).
+ * Montserrat is self-hosted in the rcBrand static resource and loaded by c-rc-header;
+ * the fallbacks cover pages without the header (service-not-available pages).
  */
 html,
 body {
@@ -7,9 +9,20 @@ body {
 }
 
 html {
-    background: white;
+    background: #FFFFFF;
 }
 
 body {
     margin: 0;
+    color: #0D1F5F;
+    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* The platform layout paints #EFF0F2 (not in the palette) behind header and footer. */
+.community_byo-scoped-header-and-footer__header-content {
+    background-color: #FFFFFF;
+}
+
+.community_byo-scoped-header-and-footer__footer-content {
+    background-color: #0D1F5F;
 }

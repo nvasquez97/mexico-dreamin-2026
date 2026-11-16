@@ -52,8 +52,12 @@ export default class RcDeliveryPanel extends LightningElement {
                 return;
             }
             // The PDF stays in the browser only; it is not stored in Salesforce (AC-002.4).
+            const bytes = Uint8Array.from(atob(response.pdfBase64), (c) => c.charCodeAt(0));
+            if (this.proofHref) {
+                URL.revokeObjectURL(this.proofHref);
+            }
             this.proofFileName = response.fileName;
-            this.proofHref = `data:application/pdf;base64,${response.pdfBase64}`;
+            this.proofHref = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             await Promise.resolve();
             this.template.querySelector('.rc-proof-link')?.click();
             this.successText = 'Your proof of delivery was downloaded.';
@@ -80,6 +84,12 @@ export default class RcDeliveryPanel extends LightningElement {
                 this.errorText = response.message;
             }
         });
+    }
+
+    disconnectedCallback() {
+        if (this.proofHref) {
+            URL.revokeObjectURL(this.proofHref);
+        }
     }
 
     applyDetails(details) {

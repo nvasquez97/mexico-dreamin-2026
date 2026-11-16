@@ -1,54 +1,62 @@
 {
-  "type" : "sfdc_cms__view",
-  "title" : "Service Not Available",
-  "contentBody" : {
-    "component" : {
-      "children" : [ {
-        "children" : [ {
-          "attributes" : {
-            "backgroundImageConfig" : "",
-            "backgroundImageOverlay" : "rgba(0,0,0,0)",
-            "componentSpacerSize" : "",
-            "layoutDirectionDesktop" : "row",
-            "layoutDirectionMobile" : "column",
-            "layoutDirectionTablet" : "column",
-            "maxContentWidth" : "",
-            "sectionColumnGutterWidth" : "",
-            "sectionConfig" : "{\"UUID\":\"b5c34832-0e2c-4da1-8729-fcdb8e76c01a\",\"columns\":[{\"UUID\":\"2e91f9fe-466d-4e6a-8095-bdc32ea309ca\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
-            "sectionMinHeight" : "",
-            "sectionVerticalAlign" : "flex-start"
-          },
-          "children" : [ {
-            "children" : [ {
-              "attributes" : {
-                "imageInfos" : "",
-                "richTextValue" : "<div style=\"display: flex; align-items: center; flex-direction: column; margin: 60px 25px 40px 25px;\">\n\t<div style=\"background: url(assets/img/serviceNotAvailable.svg) center no-repeat !important; background-size: contain; height: 331px; width: 100%; max-width: 538px;\"></div>\n</div>\n<div style=\"margin: 0 25px; text-align: center;\">\n\t<h1><b style=\"font-size: 2em\">Looks like the site is temporarily unavailable</b></h1>\n\t<br/>\n\t<p><span style=\"font-size: 1.5em;\">Please try again in a bit.</span></p>\n</div>"
+  "type": "sfdc_cms__view",
+  "title": "Service Not Available",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"b5c34832-0e2c-4da1-8729-fcdb8e76c01a\",\"columns\":[{\"UUID\":\"2e91f9fe-466d-4e6a-8095-bdc32ea309ca\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
               },
-              "definition" : "community_builder:htmlEditor",
-              "id" : "a9699cb9-5a9f-42f4-bb9b-f24a51ed2e85",
-              "type" : "component"
-            } ],
-            "id" : "2e91f9fe-466d-4e6a-8095-bdc32ea309ca",
-            "name" : "col1",
-            "title" : "Column 1",
-            "type" : "region"
-          } ],
-          "definition" : "community_layout:section",
-          "id" : "b5c34832-0e2c-4da1-8729-fcdb8e76c01a",
-          "type" : "component"
-        } ],
-        "id" : "85f3192f-6849-44fc-ac95-d26cc585ccf5",
-        "name" : "content",
-        "title" : "Content",
-        "type" : "region"
-      } ],
-      "definition" : "community_layout:sldsFlexibleLayout",
-      "id" : "c6c509fc-e57d-4e8f-87f6-3a026f0ed53e",
-      "type" : "component"
+              "children": [
+                {
+                  "children": [
+                    {
+                      "attributes": {
+                        "imageInfos": "",
+                        "richTextValue": "<div style=\"margin: 60px 16px; text-align: center; font-family: Montserrat, Helvetica Neue, Arial, sans-serif; color: #0D1F5F;\"><p style=\"font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: #016BFA; margin: 0 0 8px;\">RutaCargo</p><h1 style=\"font-weight: 900; text-transform: uppercase; font-size: 2em; margin: 0 0 12px;\">The site is temporarily unavailable</h1><p style=\"font-size: 1.25em; margin: 0;\">Please try again in a bit.</p></div>"
+                      },
+                      "definition": "community_builder:htmlEditor",
+                      "id": "a9699cb9-5a9f-42f4-bb9b-f24a51ed2e85",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "2e91f9fe-466d-4e6a-8095-bdc32ea309ca",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "b5c34832-0e2c-4da1-8729-fcdb8e76c01a",
+              "type": "component"
+            }
+          ],
+          "id": "85f3192f-6849-44fc-ac95-d26cc585ccf5",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "c6c509fc-e57d-4e8f-87f6-3a026f0ed53e",
+      "type": "component"
     },
-    "dataProviders" : [ ],
-    "themeLayoutType" : "ServiceNotAvailable",
-    "viewType" : "service-not-available"
+    "dataProviders": [],
+    "themeLayoutType": "ServiceNotAvailable",
+    "viewType": "service-not-available"
   },
-  "urlName" : "service-not-available"
+  "urlName": "service-not-available"
 }
