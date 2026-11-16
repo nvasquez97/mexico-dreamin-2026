@@ -23,3 +23,9 @@
 - What: rutacargo-b-opus has no Network/site yet; admin user has no role (portal account owners need one); Customer Community license 5 seats, Salesforce Integration license 1 seat.
 - Why / evidence: SOQL on UserLicense, Network, User.
 - Next: T1/T13 create a role and assign it to the admin before creating portal users.
+
+## 2026-11-15 19:55 — T1 done, T2 next
+- Type: status
+- What: Data model deployed (deploy 0AfEc00000pyRBFKA2); commit 6f09a51. External OWD Private on Account, Contact, Shipment__c.
+- Why / evidence: feature doc L12.
+- Next: T2 pricing + business calendar (test-first).
