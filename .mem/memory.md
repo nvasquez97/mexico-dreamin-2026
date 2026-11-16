@@ -119,3 +119,9 @@
 - What: Site published and Live; guest flows verified over HTTP; AC-003.5 history verified; 151/151 tests, 93% coverage. security-reviewer and access-auditor running on S1-S43.
 - Why / evidence: feature doc L30-L34.
 - Next: fix Critical/High findings, then test-reviewer, brand-reviewer, architecture-review; close T14.
+
+## 2026-11-16 02:10 — Review fixes applied; re-verification next
+- Type: review
+- What: security, access and brand reviews all CHANGES REQUIRED; Highs fixed (6df454c, 512b5d0) plus most Mediums/Lows; brand fixes 13b72b0. 156/156 tests, 92%. Sign-up/login/reset verified live.
+- Why / evidence: feature doc L35-L40.
+- Next: reviewers re-verify; then test-reviewer and architecture-review; close T14.
