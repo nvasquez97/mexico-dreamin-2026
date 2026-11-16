@@ -1,0 +1,35 @@
+@import 'c/rcStyles';
+
+.rc-header { background: var(--rc-white); border-bottom: 4px solid var(--rc-night); }
+.rc-header__bar { display: flex; align-items: center; justify-content: space-between; }
+.rc-header__brand { display: block; line-height: 0; }
+/* Main logo: the artwork is ~85% of the PNG width, so 440 px keeps it at or above the 360 px minimum (manual 03). The PNG margins give the 1X clear space. */
+.rc-header__logo { display: none; width: 440px; height: auto; }
+/* Narrow screens: Tinto isotype, always on its electric blue background (manual 04). */
+.rc-header__isotype { display: block; background: var(--rc-electric); padding: 0; }
+.rc-header__isotype img { display: block; width: 88px; height: auto; }
+.rc-header__toggle {
+    margin-right: 1rem; min-height: 44px; padding: 0.5rem 1rem; font-family: var(--rc-font); font-weight: 700;
+    color: var(--rc-night); background: var(--rc-white); border: 2px solid var(--rc-night); border-radius: 999px; cursor: pointer;
+}
+.rc-header__nav { display: none; flex-direction: column; padding: 0 1rem 1rem; }
+.rc-header__nav_open { display: flex; }
+.rc-header__nav a {
+    display: flex; align-items: center; min-height: 44px; color: var(--rc-night); font-weight: 700;
+    text-decoration: none; border-bottom: 1px solid var(--rc-enamel);
+}
+.rc-header__nav a:hover { color: var(--rc-electric); }
+.rc-header__nav a.rc-header__cta { color: var(--rc-electric); }
+
+@media (min-width: 472px) {
+    .rc-header__logo { display: block; }
+    .rc-header__isotype { display: none; }
+}
+@media (min-width: 960px) {
+    .rc-header { display: flex; align-items: center; justify-content: space-between; padding-right: 1.5rem; }
+    .rc-header__toggle { display: none; }
+    .rc-header__nav { display: flex; flex-direction: row; gap: 1.5rem; padding: 0; }
+    .rc-header__nav a { border-bottom: 0; }
+    .rc-header__nav a.rc-header__cta { color: var(--rc-white); background: var(--rc-electric); border-radius: 999px; padding: 0 1.25rem; }
+    .rc-header__nav a.rc-header__cta:hover { background: var(--rc-night); color: var(--rc-white); }
+}

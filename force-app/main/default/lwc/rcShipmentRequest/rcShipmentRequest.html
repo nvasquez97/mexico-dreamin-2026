@@ -1,0 +1,121 @@
+<template>
+    <div class="rc-container">
+        <p class="rc-kicker">Door to door</p>
+        <h1 class="rc-title">Request a shipment</h1>
+        <template lwc:if={created}>
+            <div class="rc-card" aria-live="polite">
+                <p class="rc-message rc-message_success">Your shipment was requested.</p>
+                <p class="rc-label">Tracking number</p>
+                <p class="rc-tracking">{created.trackingNumber}</p>
+                <dl class="rc-data">
+                    <div><dt>Price</dt><dd>{createdPrice}</dd></div>
+                    <div><dt>Estimated delivery</dt><dd>{createdEstimate}</dd></div>
+                    <div><dt>Payment</dt><dd>At pickup</dd></div>
+                </dl>
+                <div class="rc-actions">
+                    <a class="rc-button" href={myShipmentsUrl}>Go to my shipments</a>
+                    <button class="rc-button rc-button_secondary" type="button" onclick={startOver}>Request another shipment</button>
+                </div>
+            </div>
+        </template>
+        <template lwc:else>
+            <form onsubmit={handleConfirm} onchange={clearQuote} novalidate>
+            <fieldset class="rc-card">
+                <legend class="rc-subtitle">Pickup</legend>
+                <div class="rc-field">
+                    <label class="rc-label" for="pickupAddress">Pickup address</label>
+                    <textarea id="pickupAddress" class="rc-textarea" data-field="pickupAddress" value={pickupAddress} oninput={handleField} maxlength="1000" autocomplete="street-address" required></textarea>
+                </div>
+                <div class="rc-grid">
+                <div class="rc-field">
+                    <label class="rc-label" for="pickupCity">City</label>
+                    <input id="pickupCity" class="rc-input" type="text" data-field="pickupCity" value={pickupCity} oninput={handleField} maxlength="80" autocomplete="address-level2" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="pickupPostalCode">Postal code</label>
+                    <input id="pickupPostalCode" class="rc-input" type="text" data-field="pickupPostalCode" value={pickupPostalCode} oninput={handleField} maxlength="5" inputmode="numeric" autocomplete="postal-code" required />
+                </div>
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="pickupDate">Pickup date</label>
+                    <input id="pickupDate" class="rc-input" type="date" data-field="pickupDate" value={pickupDate} oninput={handleField} min={minPickupDate} max={maxPickupDate} aria-describedby="pickupDate-help" required />
+                    <p id="pickupDate-help" class="rc-note">A business day (Monday to Friday) from tomorrow up to 15 days ahead.</p>
+                </div>
+            </fieldset>
+            <fieldset class="rc-card">
+                <legend class="rc-subtitle">Recipient</legend>
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientName">Recipient name</label>
+                    <input id="recipientName" class="rc-input" type="text" data-field="recipientName" value={recipientName} oninput={handleField} maxlength="120" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientAddress">Delivery address</label>
+                    <textarea id="recipientAddress" class="rc-textarea" data-field="recipientAddress" value={recipientAddress} oninput={handleField} maxlength="1000" required></textarea>
+                </div>
+                <div class="rc-grid">
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientCity">City</label>
+                    <input id="recipientCity" class="rc-input" type="text" data-field="recipientCity" value={recipientCity} oninput={handleField} maxlength="80" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientPostalCode">Postal code</label>
+                    <input id="recipientPostalCode" class="rc-input" type="text" data-field="recipientPostalCode" value={recipientPostalCode} oninput={handleField} maxlength="5" inputmode="numeric" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientPhone">Phone</label>
+                    <input id="recipientPhone" class="rc-input" type="tel" data-field="recipientPhone" value={recipientPhone} oninput={handleField} maxlength="20" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="recipientEmail">Email</label>
+                    <input id="recipientEmail" class="rc-input" type="email" data-field="recipientEmail" value={recipientEmail} oninput={handleField} maxlength="80" required />
+                </div>
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="deliveryInstructions">Delivery instructions <span class="rc-note">(optional)</span></label>
+                    <textarea id="deliveryInstructions" class="rc-textarea" data-field="deliveryInstructions" value={deliveryInstructions} oninput={handleField} maxlength="1000"></textarea>
+                </div>
+            </fieldset>
+            <fieldset class="rc-card">
+                <legend class="rc-subtitle">Package and service</legend>
+                <fieldset class="rc-fieldset">
+                    <legend>Service type</legend>
+                    <label class="rc-choice"><input type="radio" name="serviceType" value="Standard" checked={isStandard} onchange={handleService} /> Standard (5 business days)</label>
+                    <label class="rc-choice"><input type="radio" name="serviceType" value="Express" checked={isExpress} onchange={handleService} /> Express (2 business days)</label>
+                </fieldset>
+                <div class="rc-grid">
+                <div class="rc-field">
+                    <label class="rc-label" for="weightKg">Weight (kg)</label>
+                    <input id="weightKg" class="rc-input" type="number" data-field="weightKg" value={weightKg} oninput={handleField} min="0.01" max="30" step="0.01" inputmode="decimal" aria-describedby="weightKg-help" required />
+                    <p id="weightKg-help" class="rc-note">Maximum 30 kg.</p>
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="declaredValue">Declared value (MXN)</label>
+                    <input id="declaredValue" class="rc-input" type="number" data-field="declaredValue" value={declaredValue} oninput={handleField} min="0" max="50000" step="0.01" inputmode="decimal" aria-describedby="declaredValue-help" required />
+                    <p id="declaredValue-help" class="rc-note">Maximum 50,000 MXN.</p>
+                </div>
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="packageDescription">Description of the contents</label>
+                    <input id="packageDescription" class="rc-input" type="text" data-field="packageDescription" value={packageDescription} oninput={handleField} maxlength="255" required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="customerReference">Your order reference <span class="rc-note">(optional)</span></label>
+                    <input id="customerReference" class="rc-input" type="text" data-field="customerReference" value={customerReference} oninput={handleField} maxlength="50" />
+                </div>
+            </fieldset>
+                <div class="rc-card rc-card_enamel" aria-live="polite">
+                    <template lwc:if={errorText}><p class="rc-message rc-message_error" role="alert">{errorText}</p></template>
+                    <template lwc:if={quote}>
+                        <p class="rc-label">Price with the current rate</p>
+                        <p class="rc-price">{quotePrice}</p>
+                        <p class="rc-note">Estimated delivery: {quoteEstimate}. Includes 1.5% insurance on the declared value. Payment at pickup.</p>
+                    </template>
+                    <div class="rc-actions">
+                        <button class="rc-button rc-button_secondary" type="button" onclick={handleQuote} disabled={loading}>See price</button>
+                        <button class="rc-button" type="submit" disabled={confirmDisabled}>Confirm request</button>
+                    </div>
+                </div>
+            </form>
+        </template>
+    </div>
+</template>

@@ -1,0 +1,55 @@
+<template>
+    <div class="rc-panel">
+        <template lwc:if={showVerify}>
+            <form onsubmit={handleVerify} novalidate>
+                <div class="rc-field">
+                    <label class="rc-label" for="postal">Destination postal code</label>
+                    <input id="postal" class="rc-input rc-input_short" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" value={postalCode} oninput={handlePostal} aria-describedby="postal-help" required />
+                    <p id="postal-help" class="rc-note">Only the recipient knows it. We use it to show the delivery details.</p>
+                </div>
+                <button class="rc-button" type="submit" disabled={loading}>Open delivery details</button>
+            </form>
+        </template>
+        <div aria-live="polite">
+            <template lwc:if={errorText}>
+                <p class="rc-message rc-message_error" role="alert">{errorText}</p>
+            </template>
+            <template lwc:if={successText}>
+                <p class="rc-message rc-message_success">{successText}</p>
+            </template>
+        </div>
+        <template lwc:if={details}>
+            <h3 class="rc-subtitle">Delivery details</h3>
+            <dl class="rc-data">
+                <div><dt>Recipient</dt><dd>{details.recipientName}</dd></div>
+                <div><dt>Delivery address</dt><dd>{details.recipientAddress}</dd></div>
+                <div><dt>Contact phone</dt><dd>{details.recipientPhone}</dd></div>
+                <div><dt>Estimated date</dt><dd>{estimatedText}</dd></div>
+                <div><dt>Delivery instructions</dt><dd>{instructionsText}</dd></div>
+            </dl>
+            <template lwc:if={details.canDownloadProof}>
+                <div class="rc-actions">
+                    <button class="rc-button" type="button" onclick={handleDownload} disabled={loading}>Download proof of delivery</button>
+                    <template lwc:if={proofHref}>
+                        <a class="rc-link rc-proof-link" href={proofHref} download={proofFileName}>Save the PDF again</a>
+                    </template>
+                </div>
+            </template>
+            <template lwc:if={details.canReschedule}>
+                <form class="rc-reschedule" onsubmit={handleReschedule} novalidate>
+                    <h3 class="rc-subtitle">Reschedule the delivery</h3>
+                    <p class="rc-note">You can reschedule {details.reschedulesLeft} more time(s). Choose a date from {minText} to {maxText}.</p>
+                    <div class="rc-field">
+                        <label class="rc-label" for="newDate">New delivery date</label>
+                        <input id="newDate" class="rc-input rc-input_short" type="date" min={details.minRescheduleDate} max={details.maxRescheduleDate} value={newDate} onchange={handleNewDate} required />
+                    </div>
+                    <div class="rc-field">
+                        <label class="rc-label" for="instructions">Delivery instructions</label>
+                        <textarea id="instructions" class="rc-textarea" maxlength="1000" value={instructions} oninput={handleInstructions}></textarea>
+                    </div>
+                    <button class="rc-button" type="submit" disabled={loading}>Save new date</button>
+                </form>
+            </template>
+        </template>
+    </div>
+</template>

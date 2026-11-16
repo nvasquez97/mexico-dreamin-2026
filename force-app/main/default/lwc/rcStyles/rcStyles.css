@@ -1,0 +1,87 @@
+/*
+ * RutaCargo brand tokens and shared classes (docs/brand-manual.pdf).
+ * Colour roles: night blue = text, outlines and solid backgrounds; electric blue =
+ * energy (buttons, links, accents); cyan = small highlights on night blue only;
+ * white and enamel grey = surfaces; yellow and red = small details only, never
+ * backgrounds and never body text (red on white is 3.6:1, below WCAG AA).
+ * Typography: Montserrat (loaded by c-rc-header from the rcBrand static resource).
+ */
+:host {
+    --rc-night: #0D1F5F;
+    --rc-electric: #016BFA;
+    --rc-cyan: #07E9F6;
+    --rc-white: #FFFFFF;
+    --rc-enamel: #D6E0EA;
+    --rc-yellow: #FFC91D;
+    --rc-red: #FF3636;
+    --rc-font: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+    --rc-radius: 16px;
+    --rc-radius-small: 8px;
+    display: block;
+    font-family: var(--rc-font);
+    font-weight: 400;
+    color: var(--rc-night);
+    line-height: 1.5;
+}
+
+.rc-container { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
+.rc-kicker { font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; font-size: 0.8125rem; color: var(--rc-electric); margin: 0 0 0.5rem; }
+.rc-title { font-weight: 900; text-transform: uppercase; font-size: 2rem; line-height: 1.05; margin: 0 0 1rem; color: var(--rc-night); }
+.rc-subtitle { font-weight: 700; font-size: 1.25rem; margin: 0 0 0.75rem; color: var(--rc-night); }
+.rc-note { font-weight: 300; font-size: 0.875rem; margin: 0.25rem 0 0; }
+.rc-label { display: block; font-weight: 500; font-size: 0.9375rem; margin: 0 0 0.25rem; }
+.rc-required { color: var(--rc-night); font-weight: 700; }
+
+.rc-card { background: var(--rc-white); border: 1px solid var(--rc-enamel); border-radius: var(--rc-radius); padding: 1.25rem; margin: 0 0 1rem; }
+.rc-card_enamel { background: var(--rc-enamel); border-color: var(--rc-enamel); }
+
+.rc-field { margin: 0 0 1rem; }
+.rc-input, .rc-select, .rc-textarea {
+    box-sizing: border-box; width: 100%; min-height: 44px; padding: 0.5rem 0.75rem;
+    font-family: var(--rc-font); font-size: 1rem; color: var(--rc-night);
+    background: var(--rc-white); border: 1px solid var(--rc-night); border-radius: var(--rc-radius-small);
+}
+.rc-textarea { min-height: 6rem; resize: vertical; }
+.rc-input:focus, .rc-select:focus, .rc-textarea:focus, .rc-button:focus-visible, a:focus-visible {
+    outline: 3px solid var(--rc-electric); outline-offset: 2px;
+}
+.rc-fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+.rc-fieldset legend { font-weight: 500; margin: 0 0 0.5rem; padding: 0; }
+.rc-choice { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; margin-right: 1.25rem; font-weight: 500; }
+.rc-choice input { width: 1.25rem; height: 1.25rem; accent-color: var(--rc-electric); }
+.rc-grid { display: grid; grid-template-columns: 1fr; gap: 0 1rem; }
+
+.rc-button {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.5rem 1.5rem;
+    font-family: var(--rc-font); font-weight: 700; font-size: 1rem; text-decoration: none;
+    color: var(--rc-white); background: var(--rc-electric); border: 2px solid var(--rc-electric);
+    border-radius: 999px; cursor: pointer;
+}
+.rc-button:hover { background: var(--rc-night); border-color: var(--rc-night); color: var(--rc-white); }
+.rc-button[disabled] { opacity: 0.6; cursor: not-allowed; }
+.rc-button_secondary { color: var(--rc-night); background: var(--rc-white); border-color: var(--rc-night); }
+.rc-button_secondary:hover { color: var(--rc-white); }
+.rc-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 0; }
+.rc-link { color: var(--rc-electric); font-weight: 700; text-decoration: underline; }
+
+.rc-message { border-left: 6px solid var(--rc-electric); background: var(--rc-white); border-radius: var(--rc-radius-small); padding: 0.75rem 1rem; margin: 0 0 1rem; font-weight: 500; box-shadow: inset 0 0 0 1px var(--rc-enamel); }
+.rc-message_error { border-left-color: var(--rc-red); }
+.rc-message_error::before { content: '\2715'; color: var(--rc-red); font-weight: 900; margin-right: 0.5rem; }
+.rc-message_success::before { content: '\2713'; color: var(--rc-electric); font-weight: 900; margin-right: 0.5rem; }
+
+.rc-badge { display: inline-block; padding: 0.125rem 0.75rem; border-radius: 999px; font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.05em; text-transform: uppercase; background: var(--rc-night); color: var(--rc-white); border: 2px solid var(--rc-night); }
+.rc-badge_delivered { background: var(--rc-electric); border-color: var(--rc-electric); }
+.rc-badge_requested { background: var(--rc-white); color: var(--rc-night); }
+.rc-badge_exception { background: var(--rc-white); color: var(--rc-night); border-color: var(--rc-red); }
+
+.rc-data { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1rem; margin: 0.75rem 0 0; }
+.rc-data dt { font-weight: 500; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.rc-data dd { margin: 0; font-weight: 300; font-size: 1rem; }
+.rc-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+@media (min-width: 768px) {
+    .rc-container { padding: 2.5rem 1.5rem; }
+    .rc-title { font-size: 3rem; }
+    .rc-grid { grid-template-columns: 1fr 1fr; }
+    .rc-data { grid-template-columns: repeat(3, 1fr); }
+}

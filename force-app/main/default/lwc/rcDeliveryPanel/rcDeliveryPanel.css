@@ -1,0 +1,5 @@
+@import 'c/rcStyles';
+
+.rc-panel { border-top: 2px solid var(--rc-enamel); margin-top: 1rem; padding-top: 1rem; }
+.rc-input_short { max-width: 14rem; }
+.rc-reschedule { margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--rc-enamel); }

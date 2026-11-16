@@ -1,0 +1,55 @@
+<template>
+    <div class="rc-container">
+        <p><a class="rc-link" href={myShipmentsUrl}>← My shipments</a></p>
+        <div aria-live="polite">
+            <template lwc:if={errorText}><p class="rc-message rc-message_error" role="alert">{errorText}</p></template>
+        </div>
+        <template lwc:if={detail}>
+            <p class="rc-kicker">Shipment</p>
+            <h1 class="rc-title">{detail.trackingNumber}</h1>
+            <p><span class={badgeClass}>{detail.status}</span></p>
+            <section class="rc-card">
+                <h2 class="rc-subtitle">Status and price</h2>
+                <dl class="rc-data">
+                    <div><dt>Status</dt><dd>{detail.status}</dd></div>
+                    <div><dt>Price</dt><dd>{price}</dd></div>
+                    <div><dt>Service</dt><dd>{detail.serviceType}</dd></div>
+                    <div><dt>Requested</dt><dd>{requestDate}</dd></div>
+                    <div><dt>Estimated delivery</dt><dd>{estimated}</dd></div>
+                    <div><dt>Last location</dt><dd>{lastLocation}</dd></div>
+                    <div><dt>Last update</dt><dd>{lastUpdate}</dd></div>
+                </dl>
+            </section>
+            <section class="rc-card">
+                <h2 class="rc-subtitle">Pickup</h2>
+                <dl class="rc-data">
+                    <div><dt>Address</dt><dd>{detail.pickupAddress}</dd></div>
+                    <div><dt>City</dt><dd>{detail.originCity}</dd></div>
+                    <div><dt>Postal code</dt><dd>{detail.pickupPostalCode}</dd></div>
+                    <div><dt>Pickup date</dt><dd>{pickupDate}</dd></div>
+                </dl>
+            </section>
+            <section class="rc-card">
+                <h2 class="rc-subtitle">Recipient</h2>
+                <dl class="rc-data">
+                    <div><dt>Name</dt><dd>{detail.recipientName}</dd></div>
+                    <div><dt>Address</dt><dd>{detail.recipientAddress}</dd></div>
+                    <div><dt>City</dt><dd>{detail.destinationCity}</dd></div>
+                    <div><dt>Postal code</dt><dd>{detail.destinationPostalCode}</dd></div>
+                    <div><dt>Phone</dt><dd>{detail.recipientPhone}</dd></div>
+                    <div><dt>Email</dt><dd>{detail.recipientEmail}</dd></div>
+                    <div><dt>Instructions</dt><dd>{instructions}</dd></div>
+                </dl>
+            </section>
+            <section class="rc-card">
+                <h2 class="rc-subtitle">Package</h2>
+                <dl class="rc-data">
+                    <div><dt>Contents</dt><dd>{detail.packageDescription}</dd></div>
+                    <div><dt>Weight</dt><dd>{weight}</dd></div>
+                    <div><dt>Declared value</dt><dd>{declaredValue}</dd></div>
+                    <div><dt>Your reference</dt><dd>{reference}</dd></div>
+                </dl>
+            </section>
+        </template>
+    </div>
+</template>

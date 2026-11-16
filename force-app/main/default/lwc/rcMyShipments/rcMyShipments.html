@@ -1,0 +1,45 @@
+<template>
+    <div class="rc-container">
+        <p class="rc-kicker">Your account</p>
+        <h1 class="rc-title">My shipments</h1>
+        <form class="rc-card rc-filters" onsubmit={handleSearch} novalidate>
+            <div class="rc-field">
+                <label class="rc-label" for="status">Status</label>
+                <select id="status" class="rc-select" onchange={handleStatus}>
+                    <template for:each={statusOptions} for:item="option">
+                        <option key={option.value} value={option.value} selected={option.selected}>{option.label}</option>
+                    </template>
+                </select>
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="search">Tracking number, recipient or reference</label>
+                <input id="search" class="rc-input" type="search" maxlength="80" value={searchTerm} oninput={handleSearchTerm} />
+            </div>
+            <div class="rc-actions">
+                <button class="rc-button" type="submit" disabled={loading}>Search</button>
+            </div>
+        </form>
+        <div aria-live="polite">
+            <template lwc:if={errorText}><p class="rc-message rc-message_error" role="alert">{errorText}</p></template>
+            <template lwc:if={loading}><p class="rc-note">Loading…</p></template>
+            <template lwc:if={isEmpty}><p class="rc-card">No shipments match your search.</p></template>
+        </div>
+        <ul class="rc-list">
+            <template for:each={rows} for:item="row">
+                <li key={row.id} class="rc-card">
+                    <div class="rc-row__head">
+                        <a class="rc-row__tracking" href={row.detailUrl}>{row.trackingNumber}</a>
+                        <span class={row.badgeClass}>{row.status}</span>
+                    </div>
+                    <dl class="rc-data">
+                        <div><dt>Requested</dt><dd>{row.requestDate}</dd></div>
+                        <div><dt>Recipient</dt><dd>{row.recipientName}</dd></div>
+                        <div><dt>Destination</dt><dd>{row.destinationCity}</dd></div>
+                        <div><dt>Service</dt><dd>{row.serviceType}</dd></div>
+                        <div><dt>Price</dt><dd>{row.price}</dd></div>
+                    </dl>
+                </li>
+            </template>
+        </ul>
+    </div>
+</template>

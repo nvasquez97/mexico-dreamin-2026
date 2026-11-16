@@ -1,0 +1,24 @@
+<template>
+    <div class="rc-container rc-auth">
+        <p class="rc-kicker">Customers</p>
+        <h1 class="rc-title">Log in</h1>
+        <form class="rc-card" onsubmit={handleLogin} novalidate>
+            <div class="rc-field">
+                <label class="rc-label" for="email">Email</label>
+                <input id="email" class="rc-input" type="email" autocomplete="email" value={email} oninput={handleEmail} required />
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="password">Password</label>
+                <input id="password" class="rc-input" type="password" autocomplete="current-password" value={password} oninput={handlePassword} required />
+            </div>
+            <div aria-live="polite">
+                <template lwc:if={errorText}><p class="rc-message rc-message_error" role="alert">{errorText}</p></template>
+            </div>
+            <div class="rc-actions">
+                <button class="rc-button" type="submit" disabled={loading}>Log in</button>
+            </div>
+        </form>
+        <p><a class="rc-link" href={forgotUrl}>Forgot your password?</a></p>
+        <p>New to RutaCargo? <a class="rc-link" href={registerUrl}>Create your account</a></p>
+    </div>
+</template>

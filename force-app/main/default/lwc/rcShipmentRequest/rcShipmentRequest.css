@@ -1,0 +1,5 @@
+@import 'c/rcStyles';
+
+.rc-card legend.rc-subtitle { padding: 0; }
+.rc-price { font-weight: 900; font-size: 2rem; margin: 0; }
+.rc-tracking { font-weight: 900; font-size: 1.75rem; letter-spacing: 0.05em; margin: 0 0 0.5rem; }

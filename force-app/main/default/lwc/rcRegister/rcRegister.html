@@ -1,0 +1,57 @@
+<template>
+    <div class="rc-container rc-auth">
+        <p class="rc-kicker">Customers</p>
+        <h1 class="rc-title">Create your account</h1>
+        <form class="rc-card" onsubmit={handleRegister} novalidate>
+            <fieldset class="rc-fieldset">
+                <legend>Customer type</legend>
+                <label class="rc-choice"><input type="radio" name="customerType" value="Individual" checked={isIndividual} onchange={handleType} /> Individual</label>
+                <label class="rc-choice"><input type="radio" name="customerType" value="Business" checked={isBusiness} onchange={handleType} /> Business</label>
+            </fieldset>
+            <div class="rc-field">
+                <label class="rc-label" for="accountName">{accountNameLabel}</label>
+                <input id="accountName" class="rc-input" type="text" maxlength="255" autocomplete="organization" data-field="accountName" value={accountName} oninput={handleField} required />
+            </div>
+            <div class="rc-grid">
+                <div class="rc-field">
+                    <label class="rc-label" for="firstName">Contact first name</label>
+                    <input id="firstName" class="rc-input" type="text" maxlength="40" autocomplete="given-name" data-field="firstName" value={firstName} oninput={handleField} required />
+                </div>
+                <div class="rc-field">
+                    <label class="rc-label" for="lastName">Contact last name</label>
+                    <input id="lastName" class="rc-input" type="text" maxlength="80" autocomplete="family-name" data-field="lastName" value={lastName} oninput={handleField} required />
+                </div>
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="email">Email</label>
+                <input id="email" class="rc-input" type="email" maxlength="70" autocomplete="email" data-field="email" value={email} oninput={handleField} required />
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="phone">Phone</label>
+                <input id="phone" class="rc-input" type="tel" maxlength="20" autocomplete="tel" data-field="phone" value={phone} oninput={handleField} required />
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="password">Password</label>
+                <input id="password" class="rc-input" type="password" autocomplete="new-password" data-field="password" value={password} oninput={handleField} aria-describedby="password-help" required />
+                <p id="password-help" class="rc-note">At least 10 characters, with letters and numbers.</p>
+            </div>
+            <div class="rc-field">
+                <label class="rc-label" for="confirm">Confirm password</label>
+                <input id="confirm" class="rc-input" type="password" autocomplete="new-password" data-field="confirm" value={confirm} oninput={handleField} required />
+            </div>
+            <div aria-live="polite">
+                <template lwc:if={errorText}>
+                    <p class="rc-message rc-message_error" role="alert">
+                        {errorText}
+                        <template lwc:if={showLoginLink}> <a class="rc-link" href={loginUrl}>Log in</a></template>
+                    </p>
+                </template>
+                <template lwc:if={successText}><p class="rc-message rc-message_success">{successText}</p></template>
+            </div>
+            <div class="rc-actions">
+                <button class="rc-button" type="submit" disabled={loading}>Create account</button>
+            </div>
+        </form>
+        <p>Already a customer? <a class="rc-link" href={loginUrl}>Log in</a></p>
+    </div>
+</template>

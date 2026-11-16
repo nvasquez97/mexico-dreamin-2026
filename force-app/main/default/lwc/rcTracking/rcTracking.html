@@ -1,0 +1,79 @@
+<template>
+    <section class="rc-hero">
+        <div class="rc-container">
+            <p class="rc-hero__kicker">RutaCargo · Tracking</p>
+            <h1 class="rc-hero__title">Where is my package?</h1>
+            <p class="rc-hero__text">Enter up to 10 tracking numbers or order references, separated by commas or line breaks.</p>
+        </div>
+    </section>
+    <div class="rc-container">
+        <form class="rc-card" onsubmit={handleSearch} novalidate>
+            <fieldset class="rc-fieldset">
+                <legend>Search by</legend>
+                <label class="rc-choice"><input type="radio" name="searchBy" value="trackingNumber" checked={isByTracking} onchange={handleSearchBy} /> Tracking number</label>
+                <label class="rc-choice"><input type="radio" name="searchBy" value="reference" checked={isByReference} onchange={handleSearchBy} /> Order reference</label>
+            </fieldset>
+            <div class="rc-field">
+                <label class="rc-label" for="values">{valuesLabel}</label>
+                <textarea id="values" class="rc-textarea" value={rawValues} placeholder={placeholder} onchange={handleValues} oninput={handleValues} aria-describedby="values-help"></textarea>
+                <p id="values-help" class="rc-note">Up to 10 values. Upper or lower case and extra spaces do not matter.</p>
+            </div>
+            <div class="rc-field rc-field_inline">
+                <label class="rc-label" for="sortBy">Sort results by</label>
+                <select id="sortBy" class="rc-select" onchange={handleSort}>
+                    <option value="status" selected={isSortStatus}>Status</option>
+                    <option value="estimatedDelivery" selected={isSortEstimated}>Estimated delivery date</option>
+                </select>
+            </div>
+            <div class="rc-actions">
+                <button class="rc-button" type="submit" disabled={loading}>Track</button>
+            </div>
+        </form>
+
+        <div aria-live="polite">
+            <template lwc:if={errorText}>
+                <p class="rc-message rc-message_error" role="alert">{errorText}</p>
+            </template>
+            <template lwc:if={loading}>
+                <p class="rc-note">Searching…</p>
+            </template>
+            <template lwc:if={hasResults}>
+                <h2 class="rc-subtitle">Results</h2>
+                <ul class="rc-results">
+                    <template for:each={rows} for:item="row">
+                        <li key={row.trackingNumber} class="rc-card">
+                            <div class="rc-result__head">
+                                <p class="rc-result__tracking">{row.trackingNumber}</p>
+                                <span class={row.badgeClass}>{row.status}</span>
+                            </div>
+                            <p class="rc-result__route">{row.originCity} → {row.destinationCity}</p>
+                            <dl class="rc-data">
+                                <div><dt>Last location</dt><dd>{row.lastLocation}</dd></div>
+                                <div><dt>Last update</dt><dd>{row.lastUpdate}</dd></div>
+                                <div><dt>Estimated delivery</dt><dd>{row.estimatedDelivery}</dd></div>
+                            </dl>
+                            <div class="rc-actions">
+                                <button class="rc-button rc-button_secondary" type="button" data-tracking={row.trackingNumber} aria-expanded={row.expanded} onclick={toggleDelivery}>
+                                    {row.toggleLabel}
+                                </button>
+                            </div>
+                            <template lwc:if={row.isOpen}>
+                                <c-rc-delivery-panel tracking-number={row.trackingNumber}></c-rc-delivery-panel>
+                            </template>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+            <template lwc:if={hasNotFound}>
+                <div class="rc-card rc-card_enamel">
+                    <h2 class="rc-subtitle">Not found</h2>
+                    <ul class="rc-notfound">
+                        <template for:each={notFound} for:item="value">
+                            <li key={value}>{value} — Not found</li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

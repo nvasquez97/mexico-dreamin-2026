@@ -1,0 +1,15 @@
+@import 'c/rcStyles';
+
+.rc-hero { background: var(--rc-night); color: var(--rc-white); }
+.rc-hero__kicker { font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; font-size: 0.8125rem; color: var(--rc-cyan); margin: 0 0 0.5rem; }
+.rc-hero__title { font-weight: 900; text-transform: uppercase; font-size: 2.25rem; line-height: 1.05; margin: 0 0 0.75rem; color: var(--rc-white); }
+.rc-hero__text { font-weight: 400; margin: 0; color: var(--rc-white); }
+.rc-results, .rc-notfound { list-style: none; margin: 0; padding: 0; }
+.rc-notfound li { font-weight: 500; padding: 0.25rem 0; }
+.rc-result__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.rc-result__tracking { font-weight: 900; font-size: 1.25rem; letter-spacing: 0.05em; margin: 0; }
+.rc-result__route { font-weight: 700; margin: 0.5rem 0 0; }
+@media (min-width: 768px) {
+    .rc-hero__title { font-size: 3.5rem; }
+    .rc-field_inline { max-width: 320px; }
+}

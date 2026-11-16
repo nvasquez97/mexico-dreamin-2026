@@ -1,0 +1,77 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Shipment Detail",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"4ad4aabf-8e3f-4b81-95fa-85133b5278db\",\"columns\":[{\"UUID\":\"c17b878f-008f-4018-9476-d37709f08745\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
+              },
+              "children": [
+                {
+                  "children": [
+                    {
+                      "definition": "c:rcShipmentDetail",
+                      "id": "cb5381d4-8f8d-4ec4-9ef8-5dd9ae6db05e",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "c17b878f-008f-4018-9476-d37709f08745",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "4ad4aabf-8e3f-4b81-95fa-85133b5278db",
+              "type": "component"
+            }
+          ],
+          "id": "bb17a52b-dc2f-4245-9b1c-04efe52837ab",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Shipment Detail",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "a99c21c8-5c21-488c-8f3e-5c6549ec80c2",
+              "type": "component"
+            }
+          ],
+          "id": "56bc9c32-5de5-4af8-850f-35773a2feff1",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "5b86fdc2-bd6f-42fe-bf35-580bc6ba0747",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-shipment"
+  },
+  "urlName": "shipment"
+}

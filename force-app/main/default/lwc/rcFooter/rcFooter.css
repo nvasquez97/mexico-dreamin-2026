@@ -1,0 +1,5 @@
+@import 'c/rcStyles';
+
+.rc-footer { background: var(--rc-night); color: var(--rc-white); border-top: 4px solid var(--rc-cyan); }
+.rc-footer__name { font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 0.5rem; color: var(--rc-cyan); }
+.rc-footer__text { font-weight: 300; margin: 0 0 0.25rem; color: var(--rc-white); }
