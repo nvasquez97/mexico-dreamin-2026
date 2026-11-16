@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isGuest}>
     <div class="rc-container rc-auth">
         <p class="rc-kicker">Customers</p>
         <h1 class="rc-title">Log in</h1>
@@ -21,4 +22,5 @@
         <p><a class="rc-link" href={forgotUrl}>Forgot your password?</a></p>
         <p>New to RutaCargo? <a class="rc-link" href={registerUrl}>Create your account</a></p>
     </div>
+    </template>
 </template>

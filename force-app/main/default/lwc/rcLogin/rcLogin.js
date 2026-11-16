@@ -1,10 +1,20 @@
 import { LightningElement } from 'lwc';
 import basePath from '@salesforce/community/basePath';
+import isGuest from '@salesforce/user/isGuest';
 import login from '@salesforce/apex/CustomerAuthController.login';
 import { errorMessage } from 'c/rcFormat';
 
 /** Customer login with email and password (AC-005.5). */
 export default class RcLogin extends LightningElement {
+    isGuest = isGuest;
+
+    /** Visitor-only page: a logged-in customer goes to My shipments (the auth Apex is only available to visitors). */
+    connectedCallback() {
+        if (!this.isGuest) {
+            window.location.assign(`${basePath}/my-shipments`);
+        }
+    }
+
     email = '';
     password = '';
     errorText;

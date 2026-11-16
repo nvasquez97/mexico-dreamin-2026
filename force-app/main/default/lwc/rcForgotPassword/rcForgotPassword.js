@@ -1,10 +1,20 @@
 import { LightningElement } from 'lwc';
 import basePath from '@salesforce/community/basePath';
+import isGuest from '@salesforce/user/isGuest';
 import forgotPassword from '@salesforce/apex/CustomerAuthController.forgotPassword';
 import { errorMessage } from 'c/rcFormat';
 
 /** Password reset by email link (AC-005.6). The answer never reveals whether the email exists. */
 export default class RcForgotPassword extends LightningElement {
+    isGuest = isGuest;
+
+    /** Visitor-only page: a logged-in customer goes to My shipments (the auth Apex is only available to visitors). */
+    connectedCallback() {
+        if (!this.isGuest) {
+            window.location.assign(`${basePath}/my-shipments`);
+        }
+    }
+
     email = '';
     errorText;
     successText;

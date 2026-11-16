@@ -1,5 +1,6 @@
 import { LightningElement } from 'lwc';
 import basePath from '@salesforce/community/basePath';
+import isGuest from '@salesforce/user/isGuest';
 import register from '@salesforce/apex/CustomerAuthController.register';
 import { errorMessage } from 'c/rcFormat';
 
@@ -7,6 +8,15 @@ const STRONG_PASSWORD = /^(?=.*[A-Za-z])(?=.*[0-9]).{10,}$/;
 
 /** Customer sign-up (AC-005.1 to AC-005.4). The server repeats every check. */
 export default class RcRegister extends LightningElement {
+    isGuest = isGuest;
+
+    /** Visitor-only page: a logged-in customer goes to My shipments (the auth Apex is only available to visitors). */
+    connectedCallback() {
+        if (!this.isGuest) {
+            window.location.assign(`${basePath}/my-shipments`);
+        }
+    }
+
     customerType = 'Individual';
     accountName = '';
     firstName = '';
