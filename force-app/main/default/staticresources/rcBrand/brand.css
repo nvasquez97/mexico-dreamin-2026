@@ -18,7 +18,7 @@ html body .community_byo-scoped-header-and-footer__header-content.community_byo-
 html body .community_byo-scoped-header-and-footer__footer-content.community_byo-scoped-header-and-footer__footer-content {
     background-color: #0D1F5F;
 }
-/* Standard check-email button (CheckPasswordResetEmail page) uses the system font. */
-html body .comm-check-email_return-button {
-    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+/* Standard check-email page: its button is inside a shadow root; custom properties inherit into it. */
+community_login-check-email {
+    --lwc-fontFamily: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
 }
