@@ -18,11 +18,15 @@ body {
     font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* The platform layout paints #EFF0F2 (not in the palette) behind header and footer. */
-.community_byo-scoped-header-and-footer__header-content {
+/* Platform layout paints #EFF0F2 (not in the palette) behind header and footer; the
+   repeated class beats the platform rule (0,2,0) without depending on its hash class. */
+html body .community_byo-scoped-header-and-footer__header-content.community_byo-scoped-header-and-footer__header-content {
     background-color: #FFFFFF;
 }
-
-.community_byo-scoped-header-and-footer__footer-content {
+html body .community_byo-scoped-header-and-footer__footer-content.community_byo-scoped-header-and-footer__footer-content {
     background-color: #0D1F5F;
+}
+/* Standard check-email button (CheckPasswordResetEmail page) uses the system font. */
+html body .comm-check-email_return-button {
+    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
 }
