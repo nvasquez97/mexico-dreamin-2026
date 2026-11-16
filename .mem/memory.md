@@ -83,3 +83,15 @@
 - What: Sign-up/login/forgot password, commit b7faada; custom profile RutaCargo Customer; customer permission set assigned by Queueable.
 - Why / evidence: feature doc L23-L24.
 - Next: T9 request shipment.
+
+## 2026-11-15 22:40 — T9 implemented; T10 next
+- Type: status
+- What: Shipment request, commit 98b26a8.
+- Why / evidence: feature doc L25.
+- Next: T10 my shipments (list + detail, sharing set).
+
+## 2026-11-15 22:40 — runAs and describe
+- Type: environment
+- What: System.runAs does not apply object permissions to Schema describe; use USER_MODE DML/SOQL to prove access in tests.
+- Why / evidence: ShipmentRequestControllerTest first run, 707Ec00002j2fUy.
+- Next: none.
