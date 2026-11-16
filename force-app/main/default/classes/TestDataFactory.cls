@@ -82,7 +82,14 @@ public class TestDataFactory {
      * @return the customer site user
      */
     public static User createCustomerUser(String accountName, String lastName, String permissionSetName) {
-        User owner = createAccountOwner(lastName);
+        return createCustomerUser(accountName, lastName, permissionSetName, createAccountOwner(lastName));
+    }
+
+    /**
+     * Same as above with an existing owner, to create several customers in one test.
+     * @return the customer site user
+     */
+    public static User createCustomerUser(String accountName, String lastName, String permissionSetName, User owner) {
         User customer;
         System.runAs(owner) {
             Account acct = buildCustomerAccount(accountName);

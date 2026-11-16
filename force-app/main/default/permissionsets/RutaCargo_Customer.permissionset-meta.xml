@@ -5,6 +5,10 @@
     <label>RutaCargo Customer</label>
     <license>Customer Community</license>
     <classAccesses>
+        <apexClass>MyShipmentsController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>ShipmentRequestController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
