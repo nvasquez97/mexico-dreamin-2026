@@ -97,6 +97,72 @@ public without sharing class DeliveryController {
         return response;
     }
 
+    public static final Integer MAX_INSTRUCTIONS_LENGTH = 1000;
+
+    /**
+     * Changes the delivery date and instructions (REQ-003). Every rule is
+     * checked here on the server with the shipment row locked. The change is
+     * recorded by field history on the shipment (AC-003.5).
+     * @param trackingNumber tracking number of the shipment
+     * @param postalCode destination postal code typed by the recipient
+     * @param newDate new delivery date: from tomorrow (Mexico City) to the original estimate + 7 days
+     * @param instructions new delivery instructions, at most 1,000 characters
+     * @return the updated details, or a user-facing message
+     */
+    @AuraEnabled
+    public static DeliveryResponse reschedule(String trackingNumber, String postalCode, Date newDate, String instructions) {
+        DeliveryAccessService.AccessResult access = DeliveryAccessService.verify(trackingNumber, postalCode);
+        if (!access.granted) {
+            return failure(access.message);
+        }
+        Shipment__c shipment = access.shipment;
+        String problem = validateReschedule(shipment, newDate, instructions);
+        if (problem != null) {
+            return failure(problem);
+        }
+        shipment.Original_Estimated_Delivery__c = shipment.Original_Estimated_Delivery__c ?? shipment.Estimated_Delivery__c;
+        shipment.Estimated_Delivery__c = newDate;
+        shipment.Delivery_Instructions__c = instructions?.trim();
+        shipment.Reschedule_Count__c = (shipment.Reschedule_Count__c ?? 0) + 1;
+        // System mode: the guest has no object permissions (see class comment). Only these four fields change.
+        Database.update(
+            new Shipment__c(
+                Id = shipment.Id,
+                Original_Estimated_Delivery__c = shipment.Original_Estimated_Delivery__c,
+                Estimated_Delivery__c = shipment.Estimated_Delivery__c,
+                Delivery_Instructions__c = shipment.Delivery_Instructions__c,
+                Reschedule_Count__c = shipment.Reschedule_Count__c
+            ),
+            AccessLevel.SYSTEM_MODE
+        );
+        DeliveryResponse response = new DeliveryResponse();
+        response.success = true;
+        response.details = toDetails(shipment);
+        return response;
+    }
+
+    private static String validateReschedule(Shipment__c shipment, Date newDate, String instructions) {
+        if (!RESCHEDULABLE_STATUSES.contains(shipment.Status__c)) {
+            return 'Only shipments that are picked up or in transit can be rescheduled.';
+        }
+        if ((shipment.Reschedule_Count__c ?? 0) >= MAX_RESCHEDULES) {
+            return 'This delivery has already been rescheduled 2 times.';
+        }
+        DeliveryDetails window = toDetails(shipment);
+        if (newDate == null || window.maxRescheduleDate == null ||
+            newDate < window.minRescheduleDate || newDate > window.maxRescheduleDate) {
+            return 'Choose a date between ' + formatDate(window.minRescheduleDate) + ' and ' + formatDate(window.maxRescheduleDate) + '.';
+        }
+        if (instructions != null && instructions.trim().length() > MAX_INSTRUCTIONS_LENGTH) {
+            return 'Delivery instructions can have up to 1,000 characters.';
+        }
+        return null;
+    }
+
+    private static String formatDate(Date value) {
+        return value == null ? '' : Datetime.newInstanceGmt(value, Time.newInstance(12, 0, 0, 0)).formatGmt('MMM d, yyyy');
+    }
+
     @TestVisible
     private static DeliveryResponse failure(String message) {
         DeliveryResponse response = new DeliveryResponse();
