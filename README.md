@@ -75,7 +75,12 @@ never stored in the repository.
 
 - Tracking numbers are consecutive (BR-05), so anyone can enumerate the public status of shipments.
   This is what BR-01 allows: only the AC-001.2 fields are public.
-- Recipient access is protected by the 5-digit destination postal code. After 5 wrong codes the
-  shipment's delivery details are locked for 15 minutes.
+- Recipient access is protected by the 5-digit destination postal code. From the 5th wrong code each
+  further wrong code locks the shipment's delivery details for 15 minutes, and from the 10th for 24
+  hours, until the right code is entered. Anyone who knows a tracking number can trigger that lock.
+- Sign-up has no bot protection or email verification, and each sign-up uses a Customer Community
+  licence (5 in this org). Add CAPTCHA / email verification before going live and monitor licence use.
+- The requesting customer sees the recipient data they entered on the shipment detail page
+  (AC-007.3); only the recipient can open the recipient views and change the delivery (BR-02).
 - Business days are Monday to Friday; public holidays are not considered.
 - "My shipments" shows the 200 most recent shipments that match the filter.
