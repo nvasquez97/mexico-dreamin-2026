@@ -138,4 +138,30 @@ public class TestDataFactory {
         }
         return owner;
     }
+
+    /**
+     * @return an internal API user with only the EntregaYa Integration permission set,
+     * as the real EntregaYa integration user (Minimum Access profile, no other access).
+     */
+    public static User createIntegrationUser() {
+        Profile minimum = [SELECT Id FROM Profile WHERE Name = 'Minimum Access - Salesforce' LIMIT 1];
+        User integration = new User(
+            ProfileId = minimum.Id,
+            FirstName = 'EntregaYa',
+            LastName = 'Integration',
+            Email = 'entregaya.integration@example.com',
+            Username = 'entregaya.' + System.currentTimeMillis() + '@example.com.rutacargo.test',
+            Alias = 'eyint',
+            TimeZoneSidKey = 'America/Mexico_City',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = 'en_US'
+        );
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            Database.insert(integration, AccessLevel.SYSTEM_MODE);
+            PermissionSet permSet = [SELECT Id FROM PermissionSet WHERE Name = 'EntregaYa_Integration' LIMIT 1];
+            Database.insert(new PermissionSetAssignment(AssigneeId = integration.Id, PermissionSetId = permSet.Id), AccessLevel.SYSTEM_MODE);
+        }
+        return integration;
+    }
 }
