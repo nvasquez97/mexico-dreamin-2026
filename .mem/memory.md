@@ -95,3 +95,9 @@
 - What: System.runAs does not apply object permissions to Schema describe; use USER_MODE DML/SOQL to prove access in tests.
 - Why / evidence: ShipmentRequestControllerTest first run, 707Ec00002j2fUy.
 - Next: none.
+
+## 2026-11-15 23:00 — T10 implemented; T11 next
+- Type: status
+- What: My shipments, commit 9fba4fb; sharing set RutaCargo Customers.
+- Why / evidence: feature doc L26.
+- Next: T11 guest + support agent permission sets, OAuth app for EntregaYa, then batched security review.

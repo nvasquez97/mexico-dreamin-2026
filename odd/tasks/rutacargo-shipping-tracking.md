@@ -98,7 +98,7 @@ T6 | S11–S15, S36 | Reschedule + tests | implemented, security review pending;
 T7 | S16–S19, S38, S43 | EntregaYa status REST endpoint + integration access + tests | implemented, security review pending; OAuth app in T11 | 08da7ab
 T8 | S20–S25 | Sign-up, login, logout, forgot password Apex + tests | implemented, security review pending; live sign-up to verify on the site | b7faada
 T9 | S26–S31, S43 | Request shipment Apex + tests | implemented, security review pending | 98b26a8
-T10 | S32–S34, S37, S41 | My shipments Apex + tests | todo | -
+T10 | S32–S34, S37, S41 | My shipments Apex + tests | implemented, security review pending | 9fba4fb
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | todo | -
 T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | in progress (base site b8f5205) | b8f5205
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | todo | -
@@ -131,3 +131,4 @@ T14 | S47 | README with pending manual steps; closing reviews | todo | -
 - L23 Evidence T8 (b7faada): RED 16/20 failing (707Ec00002j3I3B); GREEN 20/20 (707Ec00002j3XxT); SiteGatewayTest 3/3 (707Ec00002j3IhL). Site.* calls can only be proven on the live site (T12 smoke test). Risk: item 2.
 - L24 Decision: site customers use the custom profile "RutaCargo Customer" (Customer Community license, no object permissions) because the org blocks standard external profiles for user creation; access comes from the RutaCargo_Customer permission set, assigned by CustomerAccessQueueable after sign-up. Site username = email + ".rutacargo".
 - L25 Evidence T9 (98b26a8): RED 15/16 failing (707Ec00002j2fUy); GREEN 37/37 with T8 tests (707Ec00002j3Rqr), ShipmentRequestController 96%. Lesson: System.runAs does not apply object permissions to describe calls; prove permissions with USER_MODE DML. Risk: item 2.
+- L26 Evidence T10 (9fba4fb): sharing set deployed (0AfEc00000pyU97KAE); RED 13/14 failing (707Ec00002j3Ump); GREEN 14/14 (707Ec00002j3Kkl), MyShipmentsController 100%. Risk: item 2.
