@@ -37,23 +37,28 @@ public without sharing class DeliveryAccessService {
      * @return granted with the shipment, or denied with a user-facing message
      */
     public static AccessResult verify(String trackingNumber, String postalCode) {
+        return verify(trackingNumber, postalCode, true);
+    }
+
+    /**
+     * Same verification for flows that must make a callout afterwards: the row
+     * is not locked and, on success, earlier failed attempts are NOT cleared
+     * (DML before a callout is not allowed); the caller clears them with
+     * clearFailedAttempts() after the callout.
+     * @return granted with the shipment, or denied with a user-facing message
+     */
+    public static AccessResult verifyBeforeCallout(String trackingNumber, String postalCode) {
+        return verify(trackingNumber, postalCode, false);
+    }
+
+    private static AccessResult verify(String trackingNumber, String postalCode, Boolean forWrite) {
         AccessResult result = new AccessResult();
         result.message = NOT_MATCHING;
         String tracking = (trackingNumber ?? '').trim().toUpperCase();
         if (!TRACKING_PATTERN.matcher(tracking).matches()) {
             return result;
         }
-        List<Shipment__c> rows = [
-            SELECT Id, Name, Status__c, Recipient_Name__c, Recipient_Address__c, Recipient_Phone__c,
-                Destination_Postal_Code__c, Delivery_Instructions__c, Estimated_Delivery__c,
-                Original_Estimated_Delivery__c, Reschedule_Count__c, Proof_Id__c,
-                Failed_Verification_Attempts__c, Verification_Locked_Until__c
-            FROM Shipment__c
-            WHERE Name = :tracking
-            WITH SYSTEM_MODE
-            LIMIT 1
-            FOR UPDATE
-        ];
+        List<Shipment__c> rows = forWrite ? queryForUpdate(tracking) : queryForRead(tracking);
         if (rows.isEmpty()) {
             return result;
         }
@@ -67,11 +72,40 @@ public without sharing class DeliveryAccessService {
             recordFailedAttempt(shipment, now);
             return result;
         }
-        clearFailedAttempts(shipment);
+        if (forWrite) {
+            clearFailedAttempts(shipment);
+        }
         result.granted = true;
         result.message = null;
         result.shipment = shipment;
         return result;
+    }
+
+    private static List<Shipment__c> queryForUpdate(String tracking) {
+        return [
+            SELECT Id, Name, Status__c, Recipient_Name__c, Recipient_Address__c, Recipient_Phone__c,
+                Destination_Postal_Code__c, Delivery_Instructions__c, Estimated_Delivery__c,
+                Original_Estimated_Delivery__c, Reschedule_Count__c, Proof_Id__c,
+                Failed_Verification_Attempts__c, Verification_Locked_Until__c
+            FROM Shipment__c
+            WHERE Name = :tracking
+            WITH SYSTEM_MODE
+            LIMIT 1
+            FOR UPDATE
+        ];
+    }
+
+    private static List<Shipment__c> queryForRead(String tracking) {
+        return [
+            SELECT Id, Name, Status__c, Recipient_Name__c, Recipient_Address__c, Recipient_Phone__c,
+                Destination_Postal_Code__c, Delivery_Instructions__c, Estimated_Delivery__c,
+                Original_Estimated_Delivery__c, Reschedule_Count__c, Proof_Id__c,
+                Failed_Verification_Attempts__c, Verification_Locked_Until__c
+            FROM Shipment__c
+            WHERE Name = :tracking
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
     }
 
     private static Boolean postalCodeMatches(String expected, String typed) {
@@ -91,7 +125,11 @@ public without sharing class DeliveryAccessService {
         Database.update(change, AccessLevel.SYSTEM_MODE);
     }
 
-    private static void clearFailedAttempts(Shipment__c shipment) {
+    /**
+     * Clears earlier failed attempts after a successful verification.
+     * @param shipment the shipment returned by a granted verification
+     */
+    public static void clearFailedAttempts(Shipment__c shipment) {
         if ((shipment.Failed_Verification_Attempts__c ?? 0) == 0 && shipment.Verification_Locked_Until__c == null) {
             return;
         }

@@ -36,6 +36,50 @@ public without sharing class DeliveryController {
         @AuraEnabled public Date maxRescheduleDate;
     }
 
+    /** Proof of delivery download result (AC-002.4, AC-002.5). */
+    public class ProofResponse {
+        @AuraEnabled public Boolean success = false;
+        @AuraEnabled public String message;
+        @AuraEnabled public String fileName;
+        @AuraEnabled public String pdfBase64;
+    }
+
+    public static final String PROOF_UNAVAILABLE = 'We could not get the proof of delivery, please try again later';
+    public static final String PROOF_NOT_READY = 'The proof of delivery is available once the shipment is delivered.';
+
+    /**
+     * Fetches the signed proof of delivery from EntregaYa for a Delivered
+     * shipment (AC-002.4). The PDF is returned to the browser and never stored.
+     * @param trackingNumber tracking number of the shipment
+     * @param postalCode destination postal code typed by the recipient
+     * @return the PDF as base64, or a user-facing message (AC-002.5)
+     */
+    @AuraEnabled
+    public static ProofResponse downloadProof(String trackingNumber, String postalCode) {
+        ProofResponse response = new ProofResponse();
+        DeliveryAccessService.AccessResult access = DeliveryAccessService.verifyBeforeCallout(trackingNumber, postalCode);
+        if (!access.granted) {
+            response.message = access.message;
+            return response;
+        }
+        Shipment__c shipment = access.shipment;
+        if (shipment.Status__c != 'Delivered' || String.isBlank(shipment.Proof_Id__c)) {
+            response.message = PROOF_NOT_READY;
+            return response;
+        }
+        try {
+            EntregaYaClient.ProofFile proof = EntregaYaClient.getProof(shipment.Proof_Id__c, shipment.Name);
+            response.success = true;
+            response.pdfBase64 = proof.pdfBase64;
+            response.fileName = 'proof-of-delivery-' + shipment.Name + '.pdf';
+        } catch (EntregaYaClient.EntregaYaException e) {
+            // Provider details stay on the server; the visitor sees the AC-002.5 message.
+            response.message = PROOF_UNAVAILABLE;
+        }
+        DeliveryAccessService.clearFailedAttempts(shipment);
+        return response;
+    }
+
     /**
      * @param trackingNumber tracking number of the shipment
      * @param postalCode destination postal code typed by the recipient (AC-002.1)
