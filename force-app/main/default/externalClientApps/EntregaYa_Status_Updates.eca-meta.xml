@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>integrations@rutacargo.example.com</contactEmail>
+    <description>EntregaYa sends shipment status changes to /services/apexrest/entregaya/v1/shipment-status with OAuth 2.0 client credentials, running as the EntregaYa integration user (REQ-004, BR-04).</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>EntregaYa Status Updates</label>
+</ExternalClientApplication>

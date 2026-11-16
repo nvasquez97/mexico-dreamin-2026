@@ -37,6 +37,7 @@
     <headlessRegistrationTemplate>unfiled$public/CommunityHeadlessRegistrationTemplate</headlessRegistrationTemplate>
     <networkMemberGroups>
         <profile>admin</profile>
+        <profile>RutaCargo Customer</profile>
     </networkMemberGroups>
     <networkPageOverrides>
         <changePasswordPageOverrideSetting>Standard</changePasswordPageOverrideSetting>
@@ -48,8 +49,9 @@
     <newSenderAddress>jhony.atehortua1@gmail.com</newSenderAddress>
     <picassoSite>RutaCargo1</picassoSite>
     <secondaryEmailSenderEnabled>false</secondaryEmailSenderEnabled>
-    <selfRegistration>false</selfRegistration>
-    <sendWelcomeEmail>true</sendWelcomeEmail>
+    <selfRegProfile>RutaCargo Customer</selfRegProfile>
+    <selfRegistration>true</selfRegistration>
+    <sendWelcomeEmail>false</sendWelcomeEmail>
     <site>RutaCargo</site>
     <siteArchiveStatus>NotArchived</siteArchiveStatus>
     <status>UnderConstruction</status>
