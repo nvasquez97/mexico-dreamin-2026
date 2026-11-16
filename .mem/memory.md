@@ -137,3 +137,9 @@
 - What: access-auditor APPROVED; Chatter tab removal added to README manual steps.
 - Why / evidence: feature doc L42.
 - Next: brand re-check, test-reviewer, architecture-review.
+
+## 2026-11-16 03:30 — Closing reviews in; test re-verification pending
+- Type: review
+- What: brand APPROVED (re-check 3), security APPROVED, access APPROVED, architecture PASS WITH FINDINGS (go-live conditions in README), test review CHANGES REQUIRED -> fixed (d75d73d), re-verification running. 164/164 Apex, 93%; Jest 11/11.
+- Why / evidence: feature doc L44-L47.
+- Next: record the test re-verification, close T3-T14, final report.

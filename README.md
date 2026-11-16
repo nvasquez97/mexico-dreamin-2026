@@ -74,6 +74,19 @@ never stored in the repository.
    Daily Brew is not available as a web font, so headlines use Montserrat Black, which the manual
    assigns to headlines.
 
+## Before going live (from the reviews)
+
+- Rotate the EntregaYa key and remove it from the repository history (step 2 above).
+- Add a CI pipeline: Code Analyzer, deploy validation with `RunLocalTests`, and `npm run test:unit` (Jest).
+- Log and alert on failures that are only returned today: the carrier endpoint's 500 answers, failed
+  sign-ups, failed proof downloads, and a failed `CustomerAccessQueueable` (add a Finalizer with retry or
+  alert), so support learns about them.
+- Bot protection (CAPTCHA) on sign-up and on the recipient postal-code form; email verification on sign-up.
+- Restrict the EntregaYa integration user's login IP ranges to EntregaYa's egress IPs.
+- Load-test tracking and lists against the 2-second target for the November/December peak; plan
+  archiving for about 200,000 shipments and several million field-history rows a year.
+- Add the privacy notice (LFPDPPP) to sign-up and classify recipient personal data with a retention period.
+
 ## Known limits
 
 - Tracking numbers are consecutive (BR-05), so anyone can enumerate the public status of shipments.
