@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Shipment</label>
+    <pluralLabel>Shipments</pluralLabel>
+    <description>The Shipment object tracks a door-to-door parcel requested by a customer account, from pickup to delivery. It captures Tracking Number (RC plus 9 digits, auto-assigned), Status, pickup and recipient details, Price and Carrier Cost; the Margin field calculates profitability. Commonly used for public tracking, rescheduling and carrier updates.</description>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <externalSharingModel>Private</externalSharingModel>
+    <nameField>
+        <displayFormat>RC{000000000}</displayFormat>
+        <startingNumber>1001</startingNumber>
+        <label>Tracking Number</label>
+        <trackHistory>false</trackHistory>
+        <type>AutoNumber</type>
+    </nameField>
+    <sharingModel>ReadWrite</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

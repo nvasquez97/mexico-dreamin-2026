@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Last_Update__c</fullName>
+    <label>Last Update</label>
+    <description>Date and time of the last carrier status update (AC-004.2, AC-004.4).</description>
+    <trackHistory>false</trackHistory>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

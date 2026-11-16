@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Proof_Id__c</fullName>
+    <label>Proof Id</label>
+    <description>Identifier of the proof of delivery in EntregaYa (AC-004.2, AC-002.4).</description>
+    <trackHistory>false</trackHistory>
+    <length>50</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

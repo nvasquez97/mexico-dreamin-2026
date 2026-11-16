@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Customer_Reference__c</fullName>
+    <label>Customer Reference</label>
+    <description>Order reference assigned by the customer (optional). Indexed for public tracking by reference (AC-001.1).</description>
+    <trackHistory>false</trackHistory>
+    <length>50</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+    <externalId>true</externalId>
+</CustomField>

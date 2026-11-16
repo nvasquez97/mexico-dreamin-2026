@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Shipping Rate</label>
+    <pluralLabel>Shipping Rates</pluralLabel>
+    <description>Current RutaCargo rate per service type (BR-08) and transit time in business days (AC-006.6). Admins change it without a deploy.</description>
+    <visibility>Public</visibility>
+</CustomObject>
