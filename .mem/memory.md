@@ -71,3 +71,9 @@
 - What: Reschedule, commit f6e55ea; AC-003.5 (field history) still to verify in the org after seeding.
 - Why / evidence: feature doc L21.
 - Next: T7 EntregaYa status REST endpoint.
+
+## 2026-11-15 21:50 — T7 implemented; T8 next
+- Type: status
+- What: EntregaYa status endpoint + EntregaYa_Integration permission set, commit 08da7ab. Test users: integration tests use Minimum Access - Salesforce (Salesforce license has 1 free seat); keep the Salesforce Integration license for the real integration user.
+- Why / evidence: feature doc L22.
+- Next: T8 sign-up, login, logout, forgot password.
