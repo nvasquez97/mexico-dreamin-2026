@@ -102,6 +102,7 @@ T10 | S32–S34, S37, S41 | My shipments Apex + tests | done | 9fba4fb, d75d73d
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | done | 83065bb, 41712d1, 512b5d0, 7adff0f
 T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | done | b8f5205, 845e34d, 13b72b0, 23dc48a, 2f123b6, d75d73d
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
+T15 | S24, S21 | Fix: login/sign-up landed on a classic "URL No Longer Exists" page | done, security re-check pending | f7b28e5
 T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, c44119c, ff58312, 4979843
 
 ## Log
@@ -161,4 +162,5 @@ T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, 
 - L47 Decision: Account internal OWD stays Read/Write (support agents work all customers; external is Private) and the custom Shipment__c object is used instead of the standard Field Service Shipment because the design defines its own fields and the standard object needs Field Service; both recorded after the architecture review (L7, L9).
 - L48 Review test-reviewer re-verification: APPROVED. #1–#8 fixed; S15, S20, S22, S24, S38, S40, S41 PASS. The reviewer ran Jest itself (11/11 in UTC and America/Los_Angeles) but could not run Apex tests (hook); RunLocalTests 707Ec00002j3GBi (164/164, 93%) is the implementer's evidence, not reproduced by the reviewer. Follow-ups (Low): test review #9–#22, S39 "assigned consecutively" PARTIAL.
 - L49 Close: all closing reviewers recorded (security APPROVED L41, access APPROVED L42, brand APPROVED L46, test APPROVED L48, architecture PASS WITH FINDINGS L45). No Critical or High finding open. Open Mediums by decision, listed in README: EntregaYa key rotation and history clean-up (M-4/M1), no CI (M2), failures not logged and queueable without retry (M3), sign-up abuse (M-2), lockout availability risk (mitigated: agents can unlock). Pending manual steps: README "Manual steps still pending in the org" 1–8. Test customer "Smoke Test Logistics" (sara.prueba@smoke-test.example) left in the org from the live sign-up check (L40).
+- L50 Bug reported by the user after close: logging in as Ana showed the classic "URL No Longer Exists" page. Cause: Site.login got the relative start page "/my-shipments", resolved against the classic prefix /rutacargovforcesite. Earlier evidence (L40) only checked that a redirect URL came back, not where it led. Fix f7b28e5 (T15): LWC sends {basePath}/my-shipments, server accepts only ^(/site)?/my-shipments$. RED 3/24 -> GREEN 24/24; RunLocalTests 167/167, 93% (707Ec00002j3QVl). Live: frontdoor retURL = /rutacargo/my-shipments. Risk: item 2 -> security-reviewer and access-auditor requested for S24.
 

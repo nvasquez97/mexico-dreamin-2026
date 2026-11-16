@@ -149,3 +149,9 @@
 - What: T1-T14 done; all reviewers recorded, no Critical/High open (feature doc L48-L49). 164/164 Apex 93%, Jest 11/11.
 - Why / evidence: odd/tasks/rutacargo-shipping-tracking.md Tasks + Log.
 - Next: owner actions in README (EntregaYa key/URL, OAuth secret, MXN, sender email, Chatter tab, logos) and go-live conditions; scratch org expires 2026-12-15.
+
+## 2026-11-16 04:10 — T15 login landing fix
+- Type: status
+- What: login/sign-up start page now /rutacargo/my-shipments (validated server side), commit f7b28e5; reviewers for item 2 running.
+- Why / evidence: feature doc L50.
+- Next: record reviewer verdicts; user retests login.
