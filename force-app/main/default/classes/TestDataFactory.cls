@@ -5,7 +5,7 @@
 @IsTest
 public class TestDataFactory {
     public static final String SITE_GUEST_PROFILE = 'RutaCargo Profile';
-    public static final String CUSTOMER_PROFILE = 'Customer Community User';
+    public static final String CUSTOMER_PROFILE = 'RutaCargo Customer';
 
     /**
      * @return a business customer account (not inserted).

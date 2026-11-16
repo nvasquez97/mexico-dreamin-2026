@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>EntregaYa integration user (REQ-004, BR-04): calls the status REST endpoint and updates only the status, location, last update, delivery moment and proof id of shipments. Assign only to the EntregaYa integration user.</description>
+    <description>EntregaYa integration user (BR-04): status REST endpoint; edits only status, location, last update, delivered at and proof id on shipments.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>EntregaYa Integration</label>
     <classAccesses>
