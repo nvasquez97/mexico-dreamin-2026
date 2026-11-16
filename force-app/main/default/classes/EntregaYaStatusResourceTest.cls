@@ -176,4 +176,19 @@ private class EntregaYaStatusResourceTest {
         Assert.areEqual(1, grants.size(), 'One permission set grants the endpoint');
         Assert.areEqual('EntregaYa_Integration', grants[0].Parent.Name, 'Only the integration permission set');
     }
+
+    // Covers BR-04, BR-09 (security review L-3): the integration user cannot bypass the endpoint with direct DML.
+    @IsTest
+    static void shouldRejectDirectEdit_WhenIntegrationUserUsesUserMode() {
+        Shipment__c shipment = loadShipment();
+        System.runAs(TestDataFactory.createIntegrationUser()) {
+            try {
+                Database.update(new Shipment__c(Id = shipment.Id, Status__c = 'Requested'), AccessLevel.USER_MODE);
+                Assert.fail('Direct edit must be rejected');
+            } catch (Exception e) {
+                Assert.isTrue(e.getMessage().length() > 0, 'Rejected: ' + e.getMessage());
+            }
+        }
+        Assert.areEqual('In transit', loadShipment().Status__c, 'Status unchanged');
+    }
 }

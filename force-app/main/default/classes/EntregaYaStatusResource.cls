@@ -7,15 +7,17 @@
  * Authentication: OAuth 2.0 client credentials through the EntregaYa external
  * client app, which runs as the EntregaYa integration user. Only the
  * EntregaYa_Integration permission set grants access to this class (BR-04).
- * WITH SHARING and USER MODE: that permission set grants read/edit on
- * Shipment__c and edit only on the five carrier fields, so CRUD and FLS are
- * enforced by the platform.
+ * WITHOUT SHARING and SYSTEM MODE on purpose (security review L-3): the
+ * integration user has NO object permissions, so it cannot edit shipments
+ * through the standard API and skip this endpoint's rules (carrier statuses
+ * only, older updates ignored, proof id on Delivered). This endpoint is the
+ * only write path, and it writes exactly the five carrier fields below.
  *
  * Responses: 200 {"result":"updated"} or {"result":"ignored"} (older update,
  * AC-004.4); 400/404 {"result":"rejected","code":...,"message":...} (AC-004.3).
  */
 @RestResource(urlMapping='/entregaya/v1/shipment-status')
-global with sharing class EntregaYaStatusResource {
+global without sharing class EntregaYaStatusResource {
     /** Statuses the carrier may send. Requested is set only at creation (BR-09). */
     @TestVisible
     private static final List<String> CARRIER_STATUSES = new List<String>{
@@ -64,6 +66,12 @@ global with sharing class EntregaYaStatusResource {
             });
         } catch (RejectedException e) {
             respond(e.httpStatus, new Map<String, Object>{ 'result' => 'rejected', 'code' => e.code, 'message' => e.getMessage() });
+        } catch (Exception e) {
+            // No internal details for the partner (security review L-2); the transaction is rolled back.
+            respond(500, new Map<String, Object>{
+                'result' => 'error', 'code' => 'INTERNAL_ERROR',
+                'message' => 'The update could not be saved. Retry later; contact RutaCargo if it persists.'
+            });
         }
     }
 
@@ -118,7 +126,7 @@ global with sharing class EntregaYaStatusResource {
             SELECT Id, Last_Update__c
             FROM Shipment__c
             WHERE Name = :change.trackingNumber
-            WITH USER_MODE
+            WITH SYSTEM_MODE
             LIMIT 1
             FOR UPDATE
         ];
@@ -139,7 +147,7 @@ global with sharing class EntregaYaStatusResource {
             updated.Delivered_At__c = eventTime;
             updated.Proof_Id__c = change.proofId;
         }
-        Database.update(updated, AccessLevel.USER_MODE);
+        Database.update(updated, AccessLevel.SYSTEM_MODE);
         return true;
     }
 

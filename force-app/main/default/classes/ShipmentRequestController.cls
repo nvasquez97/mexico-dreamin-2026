@@ -84,8 +84,8 @@ public with sharing class ShipmentRequestController {
             Recipient_Phone__c = recipientPhone.trim(),
             Recipient_Email__c = recipientEmail.trim().toLowerCase(),
             Package_Description__c = packageDescription.trim(),
-            Weight_Kg__c = weightKg,
-            Declared_Value__c = declaredValue,
+            Weight_Kg__c = roundToCents(weightKg),
+            Declared_Value__c = roundToCents(declaredValue),
             Customer_Reference__c = String.isBlank(customerReference) ? null : customerReference.trim(),
             Delivery_Instructions__c = String.isBlank(deliveryInstructions) ? null : deliveryInstructions.trim(),
             Price__c = priced.price,
@@ -105,6 +105,8 @@ public with sharing class ShipmentRequestController {
 
     private static QuoteResult quote(String serviceType, Decimal weightKg, Decimal declaredValue, Date pickupDate) {
         QuoteResult result = new QuoteResult();
+        weightKg = roundToCents(weightKg);
+        declaredValue = roundToCents(declaredValue);
         try {
             result.price = PricingService.calculatePrice(serviceType, weightKg, declaredValue);
             result.estimatedDelivery = BusinessCalendar.addBusinessDays(pickupDate, PricingService.getTransitBusinessDays(serviceType));
@@ -112,6 +114,11 @@ public with sharing class ShipmentRequestController {
             throw AuraErrors.of(e.getMessage());
         }
         return result;
+    }
+
+    /** Inputs are stored with 2 decimals, so they are priced and validated with 2 decimals too (security review L-4). */
+    private static Decimal roundToCents(Decimal value) {
+        return value?.setScale(2, System.RoundingMode.HALF_UP);
     }
 
     private static void validatePickupDate(Date pickupDate) {

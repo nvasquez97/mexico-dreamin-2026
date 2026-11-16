@@ -167,4 +167,21 @@ private class ProofOfDeliveryTest {
         DeliveryController.ProofResponse response = downloadAsGuest(shipment.Name, POSTAL_CODE, new EntregaYaMock(200, body, false));
         Assert.areEqual(UNAVAILABLE, response.message, 'Exact message');
     }
+
+    // Covers BR-02 (security review H-1): wrong codes on the proof path are counted and lock the shipment like the details path.
+    @IsTest
+    static void shouldCountAndLock_WhenProofRequestedWithWrongCodes() {
+        Shipment__c shipment = loadShipment('Delivered');
+        EntregaYaMock mock = new EntregaYaMock(200, successBody(shipment.Name), false);
+        Test.setMock(HttpCalloutMock.class, mock);
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            for (Integer i = 0; i < 5; i++) {
+                DeliveryController.downloadProof(shipment.Name, '0100' + i);
+            }
+            DeliveryController.ProofResponse locked = DeliveryController.downloadProof(shipment.Name, POSTAL_CODE);
+            Assert.isTrue(locked.message.contains('Too many attempts'), 'Locked: ' + locked.message);
+        }
+        Assert.isNull(mock.lastRequest, 'EntregaYa never called');
+        Assert.isNotNull([SELECT Verification_Locked_Until__c FROM Shipment__c WHERE Id = :shipment.Id WITH SYSTEM_MODE].Verification_Locked_Until__c, 'Lock saved');
+    }
 }

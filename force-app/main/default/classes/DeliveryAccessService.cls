@@ -3,8 +3,11 @@
  * plus destination postal code (AC-002.1, BR-02). Every recipient operation
  * (details, proof of delivery, reschedule) calls verify() again on the server.
  *
- * Throttle (feature document L9): 5 wrong postal codes lock the shipment's
- * delivery details for 15 minutes, to limit guessing of the 5-digit code.
+ * Throttle (feature document L9, escalated after the security review): from the
+ * 5th wrong postal code every further wrong code locks the shipment's delivery
+ * details for 15 minutes, and from the 10th for 24 hours. The count is cleared
+ * only by a correct code. The row is always read FOR UPDATE, so concurrent
+ * requests cannot lose failed attempts (security review H-1).
  *
  * WITHOUT SHARING and SYSTEM MODE on purpose: the caller is the site guest
  * user, who has no object permissions. Only the fields the recipient flows
@@ -12,9 +15,11 @@
  */
 public without sharing class DeliveryAccessService {
     public static final String NOT_MATCHING = 'The details do not match this shipment';
-    public static final String LOCKED = 'Too many attempts. Please try again in 15 minutes.';
+    public static final String LOCKED = 'Too many attempts. Please try again later.';
     public static final Integer MAX_FAILED_ATTEMPTS = 5;
     public static final Integer LOCK_MINUTES = 15;
+    public static final Integer DAY_LOCK_FAILED_ATTEMPTS = 10;
+    public static final Integer DAY_LOCK_HOURS = 24;
     private static final Pattern TRACKING_PATTERN = Pattern.compile('^RC[0-9]{9}$');
     private static final Pattern POSTAL_PATTERN = Pattern.compile('^[0-9]{5}$');
 
@@ -41,10 +46,10 @@ public without sharing class DeliveryAccessService {
     }
 
     /**
-     * Same verification for flows that must make a callout afterwards: the row
-     * is not locked and, on success, earlier failed attempts are NOT cleared
-     * (DML before a callout is not allowed); the caller clears them with
-     * clearFailedAttempts() after the callout.
+     * Same verification for flows that must make a callout afterwards. The row is
+     * locked too (a row lock is not pending work), but on success earlier failed
+     * attempts are NOT cleared, because DML before a callout is not allowed; the
+     * caller clears them with clearFailedAttempts() after the callout.
      * @return granted with the shipment, or denied with a user-facing message
      */
     public static AccessResult verifyBeforeCallout(String trackingNumber, String postalCode) {
@@ -58,7 +63,7 @@ public without sharing class DeliveryAccessService {
         if (!TRACKING_PATTERN.matcher(tracking).matches()) {
             return result;
         }
-        List<Shipment__c> rows = forWrite ? queryForUpdate(tracking) : queryForRead(tracking);
+        List<Shipment__c> rows = queryForUpdate(tracking);
         if (rows.isEmpty()) {
             return result;
         }
@@ -95,18 +100,6 @@ public without sharing class DeliveryAccessService {
         ];
     }
 
-    private static List<Shipment__c> queryForRead(String tracking) {
-        return [
-            SELECT Id, Name, Status__c, Recipient_Name__c, Recipient_Address__c, Recipient_Phone__c,
-                Destination_Postal_Code__c, Delivery_Instructions__c, Estimated_Delivery__c,
-                Original_Estimated_Delivery__c, Reschedule_Count__c, Proof_Id__c,
-                Failed_Verification_Attempts__c, Verification_Locked_Until__c
-            FROM Shipment__c
-            WHERE Name = :tracking
-            WITH SYSTEM_MODE
-            LIMIT 1
-        ];
-    }
 
     private static Boolean postalCodeMatches(String expected, String typed) {
         String normalized = (typed ?? '').deleteWhitespace();
@@ -115,12 +108,11 @@ public without sharing class DeliveryAccessService {
 
     private static void recordFailedAttempt(Shipment__c shipment, Datetime now) {
         Integer failures = (shipment.Failed_Verification_Attempts__c ?? 0).intValue() + 1;
-        Shipment__c change = new Shipment__c(Id = shipment.Id);
-        if (failures >= MAX_FAILED_ATTEMPTS) {
-            change.Failed_Verification_Attempts__c = 0;
+        Shipment__c change = new Shipment__c(Id = shipment.Id, Failed_Verification_Attempts__c = failures);
+        if (failures >= DAY_LOCK_FAILED_ATTEMPTS) {
+            change.Verification_Locked_Until__c = now.addHours(DAY_LOCK_HOURS);
+        } else if (failures >= MAX_FAILED_ATTEMPTS) {
             change.Verification_Locked_Until__c = now.addMinutes(LOCK_MINUTES);
-        } else {
-            change.Failed_Verification_Attempts__c = failures;
         }
         Database.update(change, AccessLevel.SYSTEM_MODE);
     }

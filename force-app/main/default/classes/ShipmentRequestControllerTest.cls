@@ -218,4 +218,10 @@ private class ShipmentRequestControllerTest {
         }
         Assert.areEqual('Requested', [SELECT Status__c FROM Shipment__c WITH SYSTEM_MODE LIMIT 1].Status__c, 'Status unchanged');
     }
+
+    // Covers AC-006.4 (security review L-4): a weight that rounds to 0.00 kg is rejected.
+    @IsTest
+    static void shouldReject_WhenWeightRoundsToZero() {
+        assertCreateRejected('Standard', 0.004, 1000, WEDNESDAY, '64000', 'weight');
+    }
 }

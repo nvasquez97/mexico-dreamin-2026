@@ -139,4 +139,27 @@ private class DeliveryControllerTest {
         Assert.isFalse(response.success, 'Access denied');
         Assert.isNull(response.details, 'No details');
     }
+
+    // Covers BR-02 (security review M-1): 10 wrong codes in total lock the details for 24 hours.
+    @IsTest
+    static void shouldLockForADay_WhenTenWrongAttemptsInTotal() {
+        Shipment__c shipment = loadShipment();
+        shipment.Failed_Verification_Attempts__c = 9;
+        Database.update(shipment, AccessLevel.SYSTEM_MODE);
+        openAsGuest(shipment.Name, '01000');
+        Datetime lockedUntil = loadShipment().Verification_Locked_Until__c;
+        Assert.isNotNull(lockedUntil, 'Locked');
+        Assert.isTrue(lockedUntil > Datetime.now().addHours(23), 'Locked for about 24 hours: ' + lockedUntil);
+    }
+
+    // Covers BR-02 (security review M-1): the failure count is kept across a 15-minute lock, so guesses escalate.
+    @IsTest
+    static void shouldKeepCountingAfterShortLock_WhenWrongAgain() {
+        Shipment__c shipment = loadShipment();
+        shipment.Failed_Verification_Attempts__c = 5;
+        shipment.Verification_Locked_Until__c = Datetime.now().addMinutes(-1);
+        Database.update(shipment, AccessLevel.SYSTEM_MODE);
+        openAsGuest(shipment.Name, '01000');
+        Assert.areEqual(6, loadShipment().Failed_Verification_Attempts__c, 'Count continues after the short lock');
+    }
 }
