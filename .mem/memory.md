@@ -161,3 +161,9 @@
 - What: security-reviewer APPROVED the login start-path fix (L51); access-auditor re-check pending.
 - Why / evidence: feature doc L51.
 - Next: record access verdict, close T15.
+
+## 2026-11-16 04:35 — T15 closed
+- Type: status
+- What: access-auditor APPROVED T15 (L52); both item-2 reviewers approved; T15 done (f7b28e5).
+- Why / evidence: feature doc L51-L52.
+- Next: user retests login on the site.

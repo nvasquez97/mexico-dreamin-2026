@@ -102,7 +102,7 @@ T10 | S32–S34, S37, S41 | My shipments Apex + tests | done | 9fba4fb, d75d73d
 T11 | S35–S38, S41 | Permission sets per actor, guest access, sharing set | done | 83065bb, 41712d1, 512b5d0, 7adff0f
 T12 | S44, S45, S1–S34 UI | LWR site, theme layout, LWC components with brand | done | b8f5205, 845e34d, 13b72b0, 23dc48a, 2f123b6, d75d73d
 T13 | S46 | Reproducible seed script: 2 customers, 2 site users, 120 shipments | done | 4665bc7
-T15 | S24, S21 | Fix: login/sign-up landed on a classic "URL No Longer Exists" page | done, security re-check pending | f7b28e5
+T15 | S24, S21 | Fix: login/sign-up landed on a classic "URL No Longer Exists" page | done | f7b28e5
 T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, c44119c, ff58312, 4979843
 
 ## Log
@@ -165,3 +165,4 @@ T14 | S47 | README with pending manual steps; closing reviews | done | 41712d1, 
 - L50 Bug reported by the user after close: logging in as Ana showed the classic "URL No Longer Exists" page. Cause: Site.login got the relative start page "/my-shipments", resolved against the classic prefix /rutacargovforcesite. Earlier evidence (L40) only checked that a redirect URL came back, not where it led. Fix f7b28e5 (T15): LWC sends {basePath}/my-shipments, server accepts only ^(/site)?/my-shipments$. RED 3/24 -> GREEN 24/24; RunLocalTests 167/167, 93% (707Ec00002j3QVl). Live: frontdoor retURL = /rutacargo/my-shipments. Risk: item 2 -> security-reviewer and access-auditor requested for S24.
 
 - L51 Review security-reviewer on T15 (f7b28e5): APPROVED, S24 PASS. 23 crafted start paths probed with the deployed pattern (schemes, //host, backslash, %2F, line breaks incl. , fragment, query, look-alike letters): all rejected except same-domain single-segment paths. Low: any single segment is accepted (e.g. /secur/my-shipments), harmless; could be pinned to the site prefix. Info: add a trailing-newline test case.
+- L52 Review access-auditor on T15 (f7b28e5): APPROVED, S24 PASS. Commit touches only CustomerAuthController(+Test), rcLogin, rcRegister; CustomerAuthController still granted only to System Administrator and RutaCargo_Guest; guest/customer object, user and class access unchanged in the org. T15 closed.
