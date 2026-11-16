@@ -10,7 +10,6 @@ private class CustomerServiceTest {
     }
 
     private static RutaCargoDtos.ActionResult register(String email, String password) {
-        CustomerService.skipSetPasswordInTest = true;
         return CustomerService.register('Business', 'Acme SA', 'Ana', 'Lopez', email, '8112345678', password);
     }
 

@@ -14,13 +14,6 @@ public without sharing class CustomerService {
     public static final String USERNAME_SUFFIX = '.rutacargo';
     private static final Pattern EMAIL_PATTERN = Pattern.compile('^[A-Za-z0-9._%+\'-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$');
 
-    /**
-     * Tests set this because System.setPassword needs the site's sender address to be verified, which is a manual
-     * org step. The real call is covered by the manual check in the README.
-     */
-    @TestVisible
-    private static Boolean skipSetPasswordInTest = false;
-
     public class CustomerException extends Exception {
     }
 
@@ -78,9 +71,7 @@ public without sharing class CustomerService {
                 LanguageLocaleKey = 'en_US'
             );
             Database.insert(customer, AccessLevel.SYSTEM_MODE);
-            if (!skipSetPasswordInTest) {
-                System.setPassword(customer.Id, password);
-            }
+            System.setPassword(customer.Id, password);
         } catch (Exception e) {
             Database.rollback(savepoint);
             return fail('We could not create your account. Check your data and try again.');

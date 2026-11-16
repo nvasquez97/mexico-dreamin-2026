@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>jhony.atehortua@adaptus.com</contactEmail>
+    <description>Inbound OAuth 2.0 (client credentials) for EntregaYa to post shipment status changes to /services/apexrest/entregaya/v1/status.</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>EntregaYa Status</label>
+</ExternalClientApplication>
