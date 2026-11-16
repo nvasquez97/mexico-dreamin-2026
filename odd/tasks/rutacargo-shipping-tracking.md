@@ -47,7 +47,7 @@
 
 - T1 | S35 | Data model: Account fields, Shipment__c, Delivery_Change__c | done (deployed 41 components, 0 errors) | see git log
 - T2 | S35 | Permission sets, custom permission, guest/external access config | todo | -
-- T3 | S27,S28,S29,S31 | Pricing + date services (Apex, tests) | todo | -
+- T3 | S27,S28,S29,S31 | Pricing + date services (Apex, tests) | done (9 tests pass) | see git log
 - T4 | S1-S5 | Public tracking Apex + tests | todo | -
 - T5 | S6-S10 | Delivery details + proof (Named Credential, callout, tests) | todo | -
 - T6 | S11-S15 | Reschedule Apex + tests | todo | -
