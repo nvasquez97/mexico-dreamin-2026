@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>RutaCargo support agent (internal): manages customers and shipments in Salesforce, including internal fields, and sees shipment field history (AC-003.5). No delete.</description>
+    <description>RutaCargo support agent (internal): manages customers and shipments, sees internal fields and field history (AC-003.5). Carrier and throttle fields read-only. No delete.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>RutaCargo Support Agent</label>
     <fieldPermissions>
@@ -119,7 +119,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Original_Estimated_Delivery__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -134,17 +134,17 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Last_Update__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Delivered_At__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Proof_Id__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -159,12 +159,12 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Failed_Verification_Attempts__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Verification_Locked_Until__c</field>
         <readable>true</readable>
     </fieldPermissions>

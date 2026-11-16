@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Site customer: read-only own shipments (via sharing set), entered data, price and status. No cost, margin, notes or credit data (BR-03). Shipments are created only through Apex.</description>
+    <description>Site customer: read-only own shipments (via sharing set), entered data, price and status. Account read only for the Customer lookup; no credit fields (BR-03). Shipments are created only through Apex.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>RutaCargo Customer</label>
     <license>Customer Community</license>
@@ -127,6 +127,16 @@
         <field>Shipment__c.Delivered_At__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <objectPermissions>
+        <allowCreate>false</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>Account</object>
+        <viewAllFields>false</viewAllFields>
+        <viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
     <objectPermissions>
         <allowCreate>false</allowCreate>
         <allowDelete>false</allowDelete>
