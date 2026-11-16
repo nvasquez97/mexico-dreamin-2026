@@ -125,3 +125,9 @@
 - What: security, access and brand reviews all CHANGES REQUIRED; Highs fixed (6df454c, 512b5d0) plus most Mediums/Lows; brand fixes 13b72b0. 156/156 tests, 92%. Sign-up/login/reset verified live.
 - Why / evidence: feature doc L35-L40.
 - Next: reviewers re-verify; then test-reviewer and architecture-review; close T14.
+
+## 2026-11-16 02:35 — Security re-verification APPROVED
+- Type: review
+- What: security-reviewer APPROVED after fixes; lockout Medium fixed in 7adff0f. Waiting on access-auditor and brand-reviewer re-checks, test-reviewer and architecture-review.
+- Why / evidence: feature doc L41.
+- Next: act on remaining verdicts, then close T3-T14.
