@@ -60,7 +60,12 @@ private class PublicTrackingControllerTest {
     static void shouldNotExposeRecipientPriceOrInternalData_WhenGuestTracks() {
         Shipment__c first = loadShipments()[0];
         String json = JSON.serialize(trackAsGuest('trackingNumber', first.Name, 'status'));
-        for (String secret : new List<String>{ 'Laura', 'Hidalgo', '64000', '5555', 'laura.garza', 'Ring twice', '171', 'VIP', 'Acme' }) {
+        Map<String, Object> result = (Map<String, Object>) System.JSON.deserializeUntyped(json);
+        Map<String, Object> shipment = (Map<String, Object>) ((List<Object>) result.get('shipments'))[0];
+        Assert.areEqual(
+            new Set<String>{ 'trackingNumber', 'status', 'originCity', 'destinationCity', 'lastLocation', 'lastUpdate', 'estimatedDelivery' },
+            shipment.keySet(), 'Exactly the AC-001.2 fields');
+        for (String secret : new List<String>{ 'Laura', 'Hidalgo', 'laura.garza', 'Ring twice', 'VIP', 'Acme', 'Books' }) {
             Assert.isFalse(json.contains(secret), 'Response must not contain ' + secret + ': ' + json);
         }
     }

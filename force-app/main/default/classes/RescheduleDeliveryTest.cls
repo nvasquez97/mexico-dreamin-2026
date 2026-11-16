@@ -149,4 +149,21 @@ private class RescheduleDeliveryTest {
         Assert.isFalse(response.success, 'Long instructions rejected');
         Assert.isTrue(response.message.contains('1,000'), 'Message: ' + response.message);
     }
+
+    // Covers AC-003.5: the reschedule fields keep field history on, so agents see when each change was made.
+    @IsTest
+    static void shouldTrackHistory_OnRescheduleFields() {
+        Map<String, Boolean> trackedByField = new Map<String, Boolean>();
+        for (FieldDefinition field : [
+            SELECT QualifiedApiName, IsFieldHistoryTracked FROM FieldDefinition
+            WHERE EntityDefinition.QualifiedApiName = 'Shipment__c'
+            AND QualifiedApiName IN ('Estimated_Delivery__c', 'Delivery_Instructions__c', 'Reschedule_Count__c')
+        ]) {
+            trackedByField.put(field.QualifiedApiName, field.IsFieldHistoryTracked);
+        }
+        Assert.areEqual(3, trackedByField.size(), 'All three fields found');
+        for (String field : trackedByField.keySet()) {
+            Assert.isTrue(trackedByField.get(field), field + ' must keep field history');
+        }
+    }
 }

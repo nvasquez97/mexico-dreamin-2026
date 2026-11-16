@@ -193,7 +193,8 @@ private class ShipmentRequestControllerTest {
         User requester = customer();
         System.runAs(requester) {
             try {
-                Database.insert(new Shipment__c(Account__c = requester.Contact.AccountId, Status__c = 'Delivered', Price__c = 1), AccessLevel.USER_MODE);
+                // No field values: only the object create permission can block this insert.
+                Database.insert(new Shipment__c(), AccessLevel.USER_MODE);
                 Assert.fail('Customer must not create shipments directly');
             } catch (Exception e) {
                 Assert.isTrue(e.getMessage().length() > 0, 'Insert rejected: ' + e.getMessage());
@@ -223,5 +224,19 @@ private class ShipmentRequestControllerTest {
     @IsTest
     static void shouldReject_WhenWeightRoundsToZero() {
         assertCreateRejected('Standard', 0.004, 1000, WEDNESDAY, '64000', 'weight');
+    }
+
+    // Covers BR-07: the site guest (not logged in) cannot quote or request shipments.
+    @IsTest
+    static void shouldReject_WhenSiteGuestRequestsShipment() {
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            try {
+                create('Standard', 2, 1000, WEDNESDAY, '64000');
+                Assert.fail('Expected AuraHandledException');
+            } catch (AuraHandledException e) {
+                Assert.areEqual('Only registered customers can use this page.', e.getMessage(), 'Guest rejected');
+            }
+        }
+        Assert.areEqual(0, [SELECT COUNT() FROM Shipment__c WITH SYSTEM_MODE], 'Nothing created');
     }
 }

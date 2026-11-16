@@ -193,4 +193,39 @@ private class MyShipmentsControllerTest {
             Assert.isTrue(e.getMessage().contains('customers'), 'Message: ' + e.getMessage());
         }
     }
+
+    // Covers BR-07: the site guest (not logged in) cannot list or open customer shipments.
+    @IsTest
+    static void shouldReject_WhenSiteGuestOpensMyShipments() {
+        Id anyShipment = [SELECT Id FROM Shipment__c WITH SYSTEM_MODE LIMIT 1].Id;
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            try {
+                MyShipmentsController.getMyShipments(null, null);
+                Assert.fail('Expected AuraHandledException for the list');
+            } catch (AuraHandledException e) {
+                Assert.areEqual('Only registered customers can use this page.', e.getMessage(), 'List rejected');
+            }
+            try {
+                MyShipmentsController.getShipmentDetail(anyShipment);
+                Assert.fail('Expected AuraHandledException for the detail');
+            } catch (AuraHandledException e) {
+                Assert.areEqual('Only registered customers can use this page.', e.getMessage(), 'Detail rejected');
+            }
+        }
+    }
+
+    // Covers BR-07: the customer-only classes are granted only to RutaCargo_Customer (and System Administrator), never to the guest.
+    @IsTest
+    static void shouldGrantCustomerClassesOnlyToCustomerPermissionSet() {
+        Set<String> grantees = new Set<String>();
+        for (SetupEntityAccess grant : [
+            SELECT Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name FROM SetupEntityAccess
+            WHERE SetupEntityId IN (SELECT Id FROM ApexClass WHERE Name IN ('MyShipmentsController', 'ShipmentRequestController'))
+            WITH SYSTEM_MODE
+        ]) {
+            grantees.add(grant.Parent.IsOwnedByProfile ? 'profile:' + grant.Parent.Profile.Name : grant.Parent.Name);
+        }
+        grantees.remove('profile:System Administrator');
+        Assert.areEqual(new Set<String>{ 'RutaCargo_Customer' }, grantees, 'Only the customer permission set: ' + grantees);
+    }
 }

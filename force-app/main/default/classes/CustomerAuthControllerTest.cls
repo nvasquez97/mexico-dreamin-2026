@@ -249,4 +249,57 @@ private class CustomerAuthControllerTest {
         Assert.isNull(fake.forgotFor, 'No reset request');
         Assert.isTrue(result.success, 'Neutral success');
     }
+
+    // Covers AC-005.1: a missing contact last name is rejected and nothing is created.
+    @IsTest
+    static void shouldReject_WhenContactLastNameMissing() {
+        FakeGateway fake = useFakeGateway();
+        CustomerAuthController.AuthResult result;
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            result = CustomerAuthController.register('Business', 'No Last Name SA', 'Marta', '  ', 'nolast@example.com', '+52 55 5555 0199', PASSWORD);
+        }
+        Assert.areEqual('Enter the first and last name of the contact person.', result.message, 'Message');
+        Assert.areEqual(0, accountsNamed('No Last Name SA').size(), 'No account created');
+        Assert.isNull(fake.createdUser, 'No user requested');
+    }
+
+    // Covers AC-005.1: an invalid phone is rejected and nothing is created.
+    @IsTest
+    static void shouldReject_WhenPhoneInvalid() {
+        FakeGateway fake = useFakeGateway();
+        CustomerAuthController.AuthResult result;
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            result = CustomerAuthController.register('Business', 'Bad Phone SA', 'Marta', 'Ruiz', 'badphone@example.com', 'call me', PASSWORD);
+        }
+        Assert.areEqual('Enter a valid phone number.', result.message, 'Message');
+        Assert.areEqual(0, accountsNamed('Bad Phone SA').size(), 'No account created');
+        Assert.isNull(fake.createdUser, 'No user requested');
+    }
+
+    // Covers AC-005.3: an email already used by a site username (with no matching contact email) is rejected.
+    @IsTest
+    static void shouldOfferLogin_WhenEmailIsAlreadyASiteUsername() {
+        User owner = [SELECT Id FROM User WHERE LastName = 'Owner RegOwner' LIMIT 1];
+        User existing = TestDataFactory.createCustomerUser('Username Taken SA', 'Takenuser', 'RutaCargo_Customer', owner);
+        existing.Username = 'taken.user@example.com' + CustomerAuthController.USERNAME_SUFFIX;
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            Database.update(existing, AccessLevel.SYSTEM_MODE);
+        }
+        FakeGateway fake = useFakeGateway();
+        CustomerAuthController.AuthResult result = registerAsGuest('Business', 'Second Try SA', 'Taken.User@example.com', PASSWORD);
+        Assert.isTrue(result.emailAlreadyRegistered, 'Login offered');
+        Assert.areEqual(0, accountsNamed('Second Try SA').size(), 'No account created');
+        Assert.isNull(fake.createdUser, 'No user requested');
+    }
+
+    // Covers AC-005.5: an invalid email or a blank password is rejected without calling the platform.
+    @IsTest
+    static void shouldRejectLogin_WhenEmailInvalidOrPasswordBlank() {
+        FakeGateway fake = useFakeGateway();
+        System.runAs(TestDataFactory.getSiteGuestUser()) {
+            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('not-an-email', PASSWORD).message, 'Invalid email');
+            Assert.areEqual('Invalid email or password.', CustomerAuthController.login('ana.lopez@example.com', '').message, 'Blank password');
+        }
+        Assert.isNull(fake.loggedInAs, 'Platform login never called');
+    }
 }

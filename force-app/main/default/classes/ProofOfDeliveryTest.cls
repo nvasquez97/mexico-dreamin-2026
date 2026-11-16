@@ -82,7 +82,7 @@ private class ProofOfDeliveryTest {
         Assert.areEqual('proof-of-delivery-' + shipment.Name + '.pdf', response.fileName, 'Safe file name');
     }
 
-    // Covers AC-002.4: the request goes through the EntregaYa Named Credential with GET /proofs/{proofId} and a 10 s timeout.
+    // Covers AC-002.4: the request goes through the EntregaYa Named Credential with GET /proofs/{proofId}; the API key is never set by Apex.
     @IsTest
     static void shouldCallProofEndpointThroughNamedCredential_WhenDownloading() {
         Shipment__c shipment = loadShipment('Delivered');

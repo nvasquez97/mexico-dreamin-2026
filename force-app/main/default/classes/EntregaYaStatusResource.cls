@@ -67,7 +67,7 @@ global without sharing class EntregaYaStatusResource {
         } catch (RejectedException e) {
             respond(e.httpStatus, new Map<String, Object>{ 'result' => 'rejected', 'code' => e.code, 'message' => e.getMessage() });
         } catch (Exception e) {
-            // No internal details for the partner (security review L-2); the transaction is rolled back.
+            // No internal details for the partner (security review L-2). The only DML is the last statement of apply(), so nothing was saved.
             respond(500, new Map<String, Object>{
                 'result' => 'error', 'code' => 'INTERNAL_ERROR',
                 'message' => 'The update could not be saved. Retry later; contact RutaCargo if it persists.'

@@ -76,7 +76,12 @@ private class DeliveryControllerTest {
         DeliveryController.DeliveryResponse response = openAsGuest(loadShipment().Name, RIGHT_POSTAL_CODE);
         Assert.isTrue(response.success, 'Access granted');
         String json = JSON.serialize(response);
-        for (String secret : new List<String>{ '171', 'VIP', 'Acme', 'laura.garza@example.com', 'Books' }) {
+        Map<String, Object> details = (Map<String, Object>) ((Map<String, Object>) System.JSON.deserializeUntyped(json)).get('details');
+        Assert.areEqual(new Set<String>{
+            'trackingNumber', 'status', 'recipientName', 'recipientAddress', 'recipientPhone', 'estimatedDelivery',
+            'deliveryInstructions', 'canDownloadProof', 'canReschedule', 'reschedulesLeft', 'minRescheduleDate', 'maxRescheduleDate'
+        }, details.keySet(), 'Only the AC-002.2 fields plus what the recipient may do');
+        for (String secret : new List<String>{ 'VIP', 'Acme', 'laura.garza@example.com', 'Books' }) {
             Assert.isFalse(json.contains(secret), 'Response must not contain ' + secret + ': ' + json);
         }
     }

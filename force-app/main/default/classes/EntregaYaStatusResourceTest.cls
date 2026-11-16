@@ -175,6 +175,13 @@ private class EntregaYaStatusResourceTest {
         ];
         Assert.areEqual(1, grants.size(), 'One permission set grants the endpoint');
         Assert.areEqual('EntregaYa_Integration', grants[0].Parent.Name, 'Only the integration permission set');
+        List<SetupEntityAccess> profileGrants = [
+            SELECT Parent.Profile.Name FROM SetupEntityAccess
+            WHERE SetupEntityId IN (SELECT Id FROM ApexClass WHERE Name = 'EntregaYaStatusResource')
+            AND Parent.IsOwnedByProfile = true AND Parent.Profile.Name != 'System Administrator'
+            WITH SYSTEM_MODE
+        ];
+        Assert.areEqual(0, profileGrants.size(), 'No other profile (guest, customer) grants the endpoint: ' + profileGrants);
     }
 
     // Covers BR-04, BR-09 (security review L-3): the integration user cannot bypass the endpoint with direct DML.
