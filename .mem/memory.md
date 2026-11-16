@@ -155,3 +155,9 @@
 - What: login/sign-up start page now /rutacargo/my-shipments (validated server side), commit f7b28e5; reviewers for item 2 running.
 - Why / evidence: feature doc L50.
 - Next: record reviewer verdicts; user retests login.
+
+## 2026-11-16 04:25 — T15 security review APPROVED
+- Type: review
+- What: security-reviewer APPROVED the login start-path fix (L51); access-auditor re-check pending.
+- Why / evidence: feature doc L51.
+- Next: record access verdict, close T15.
