@@ -131,3 +131,9 @@
 - What: security-reviewer APPROVED after fixes; lockout Medium fixed in 7adff0f. Waiting on access-auditor and brand-reviewer re-checks, test-reviewer and architecture-review.
 - Why / evidence: feature doc L41.
 - Next: act on remaining verdicts, then close T3-T14.
+
+## 2026-11-16 02:45 — Access re-verification APPROVED
+- Type: review
+- What: access-auditor APPROVED; Chatter tab removal added to README manual steps.
+- Why / evidence: feature doc L42.
+- Next: brand re-check, test-reviewer, architecture-review.

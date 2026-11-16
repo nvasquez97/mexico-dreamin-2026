@@ -66,7 +66,10 @@ never stored in the repository.
    set the currency locale to Spanish (Mexico) / MXN. The site already formats every amount as MXN.
 6. **Site email sender.** The Network sender address is the scratch org admin's email. Set a
    RutaCargo address (Setup > Digital Experiences > RutaCargo > Administration > Emails) before going live.
-7. **Official logo files.** `docs/brand/*.png` are stand-ins cropped from the manual. Replace them (and
+7. **Remove the Chatter tab from the site.** Experience Workspaces > Administration > Tabs (or Pages):
+   the org still lists the standard Chatter tab, which a metadata deploy does not remove. Member
+   visibility and messages are already off.
+8. **Official logo files.** `docs/brand/*.png` are stand-ins cropped from the manual. Replace them (and
    `staticresources/rcBrand/img`) with the official SVG or transparent PNG files. The display typeface
    Daily Brew is not available as a web font, so headlines use Montserrat Black, which the manual
    assigns to headlines.
