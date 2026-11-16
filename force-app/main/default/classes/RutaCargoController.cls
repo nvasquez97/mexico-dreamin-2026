@@ -49,7 +49,7 @@ public with sharing class RutaCargoController {
      * whether the email exists.
      * @param email email
      * @param password password
-     * @param startUrl where to go after login
+     * @param startUrl ignored: the landing page is always built on the server, so the endpoint cannot be used as an open redirect
      * @return redirect URL
      */
     @AuraEnabled
@@ -57,7 +57,7 @@ public with sharing class RutaCargoController {
         String username = CustomerService.usernameFor(email);
         PageReference target = username == null || String.isBlank(password)
             ? null
-            : Site.login(username, password, String.isBlank(startUrl) ? '/' : startUrl);
+            : Site.login(username, password, Site.getPathPrefix() + '/my-shipments');
         if (target == null) {
             throw new AuraHandledException('Invalid email or password.');
         }

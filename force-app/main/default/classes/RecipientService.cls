@@ -60,8 +60,15 @@ public without sharing class RecipientService {
         shipment.Estimated_Delivery__c = newDate;
         shipment.Delivery_Instructions__c = instructions;
         shipment.Reschedule_Count__c = (shipment.Reschedule_Count__c ?? 0) + 1;
-        Database.update(shipment, AccessLevel.SYSTEM_MODE);
-        Database.insert(change, AccessLevel.SYSTEM_MODE);
+        Savepoint savepoint = Database.setSavepoint();
+        try {
+            Database.update(shipment, AccessLevel.SYSTEM_MODE);
+            Database.insert(change, AccessLevel.SYSTEM_MODE);
+        } catch (DmlException e) {
+            Database.rollback(savepoint);
+            RutaCargoDtos.DeliveryDetails failed = failure(RutaCargoDtos.REJECTED, 'We could not save the change. Please try again.');
+            return failed;
+        }
         return toDetails(shipment);
     }
 
@@ -86,6 +93,12 @@ public without sharing class RecipientService {
         }
         try {
             EntregaYaClient.Proof proof = EntregaYaClient.fetchProof(shipment.Proof_Id__c);
+            if (!String.isBlank(proof.trackingNumber) && proof.trackingNumber != shipment.Name) {
+                // A proof that belongs to another shipment must never reach this recipient.
+                result.outcome = RutaCargoDtos.UNAVAILABLE;
+                result.message = MSG_PROOF_UNAVAILABLE;
+                return result;
+            }
             result.outcome = RutaCargoDtos.OK;
             result.fileName = String.isBlank(proof.fileName) ? 'proof-of-delivery.pdf' : proof.fileName;
             result.pdfBase64 = proof.pdfBase64;

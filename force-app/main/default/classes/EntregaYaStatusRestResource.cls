@@ -41,6 +41,10 @@ global with sharing class EntregaYaStatusRestResource {
             write(response, 400, false, 'The body must be valid JSON with trackingNumber, status, location, timestamp and proofId.');
             return;
         }
+        if (body == null) {
+            write(response, 400, false, 'The body must be a JSON object.');
+            return;
+        }
         ShipmentStatusService.Result result = ShipmentStatusService.apply(
             body.trackingNumber, body.status, body.location, body.timestamp, body.proofId
         );

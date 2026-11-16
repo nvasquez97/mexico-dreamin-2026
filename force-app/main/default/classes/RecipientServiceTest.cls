@@ -3,6 +3,10 @@
  */
 @IsTest
 private class RecipientServiceTest {
+    // Blank means the provider did not say; a value is returned in the proof body.
+    private static String proofTracking = '';
+    private static Integer calls = 0;
+
     private class ProofMock implements HttpCalloutMock {
         private Integer status;
         private Boolean fail;
@@ -11,13 +15,14 @@ private class RecipientServiceTest {
             this.fail = fail;
         }
         public HttpResponse respond(HttpRequest request) {
+            calls++;
             if (fail) {
                 throw new CalloutException('timeout');
             }
             Assert.isTrue(request.getEndpoint().startsWith('callout:EntregaYa/proofs/'), 'uses the Named Credential');
             HttpResponse response = new HttpResponse();
             response.setStatusCode(status);
-            response.setBody('{"proofId":"PRF-1","trackingNumber":"RC1","signedBy":"Ana Lopez","fileName":"proof-of-delivery.pdf","pdfBase64":"JVBERi0xLjQK"}');
+            response.setBody('{"proofId":"PRF-1","trackingNumber":"' + proofTracking + '","signedBy":"Ana Lopez","fileName":"proof-of-delivery.pdf","pdfBase64":"JVBERi0xLjQK"}');
             return response;
         }
     }
@@ -83,6 +88,30 @@ private class RecipientServiceTest {
         Assert.areEqual('JVBERi0xLjQK', proof.pdfBase64);
         Assert.areEqual('proof-of-delivery.pdf', proof.fileName);
         Assert.areEqual(0, [SELECT COUNT() FROM ContentVersion], 'the PDF is not stored in Salesforce');
+        Assert.areEqual(1, calls, 'exactly one callout, through the Named Credential endpoint asserted in the mock');
+    }
+
+    @IsTest
+    static void proofOfAnotherShipmentIsNeverReturned_BR_02() {
+        proofTracking = 'RC999999998';
+        Test.setMock(HttpCalloutMock.class, new ProofMock(200, false));
+        Test.startTest();
+        RutaCargoDtos.ProofResult proof = RecipientService.getProof(tn('Delivered'), TestDataFactory.POSTAL);
+        Test.stopTest();
+        Assert.areEqual(1, calls, 'the callout happened and its answer was refused');
+        Assert.areEqual('UNAVAILABLE', proof.outcome);
+        Assert.isNull(proof.pdfBase64);
+    }
+
+    @IsTest
+    static void proofIsAcceptedWhenItsTrackingNumberMatches_AC_002_4() {
+        proofTracking = tn('Delivered');
+        Test.setMock(HttpCalloutMock.class, new ProofMock(200, false));
+        Test.startTest();
+        RutaCargoDtos.ProofResult proof = RecipientService.getProof(tn('Delivered'), TestDataFactory.POSTAL);
+        Test.stopTest();
+        Assert.areEqual('OK', proof.outcome);
+        Assert.areEqual(1, calls);
     }
 
     @IsTest
@@ -97,12 +126,16 @@ private class RecipientServiceTest {
     static void proofRefusedWhenNotDelivered_AC_002_4() {
         RutaCargoDtos.ProofResult proof = RecipientService.getProof(tn('In transit'), TestDataFactory.POSTAL);
         Assert.areEqual('REJECTED', proof.outcome);
+        Assert.areEqual(0, calls, 'no callout is attempted for a shipment that is not delivered');
     }
 
     @IsTest
     static void proofServerErrorShowsFriendlyMessage_AC_002_5() {
         Test.setMock(HttpCalloutMock.class, new ProofMock(503, false));
+        Test.startTest();
         RutaCargoDtos.ProofResult proof = RecipientService.getProof(tn('Delivered'), TestDataFactory.POSTAL);
+        Test.stopTest();
+        Assert.areEqual(1, calls, 'EntregaYa was really called');
         Assert.areEqual('UNAVAILABLE', proof.outcome);
         Assert.areEqual('We could not get the proof of delivery, please try again later', proof.message);
     }
@@ -110,7 +143,10 @@ private class RecipientServiceTest {
     @IsTest
     static void proofTimeoutShowsFriendlyMessage_AC_002_5() {
         Test.setMock(HttpCalloutMock.class, new ProofMock(200, true));
+        Test.startTest();
         RutaCargoDtos.ProofResult proof = RecipientService.getProof(tn('Delivered'), TestDataFactory.POSTAL);
+        Test.stopTest();
+        Assert.areEqual(1, calls, 'EntregaYa was really called');
         Assert.areEqual('UNAVAILABLE', proof.outcome);
         Assert.areEqual('We could not get the proof of delivery, please try again later', proof.message);
     }

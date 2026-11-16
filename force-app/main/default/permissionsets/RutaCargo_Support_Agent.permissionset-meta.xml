@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Internal support agents: manage customers and shipments (including internal fields) from Salesforce. Read-only on the reschedule audit trail.</description>
+    <description>Support agents: manage customers and shipments. View-all on Shipment because every agent serves every customer. Price, reschedule counter and lock fields are read-only. Audit trail read-only.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>RutaCargo Support Agent</label>
     <objectPermissions>
@@ -67,7 +67,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Failed_Verifications__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -87,7 +87,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Locked_Until__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -127,7 +127,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Price__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -157,7 +157,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Reschedule_Count__c</field>
         <readable>true</readable>
     </fieldPermissions>

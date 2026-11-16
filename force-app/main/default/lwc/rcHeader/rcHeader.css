@@ -1,10 +1,12 @@
 @import 'c/rcBrand';
 
-/* Night-blue band; the negative logo PNG was cropped on this exact color, so it sits on it without a box.
+/* The PNG carries about 8% padding per side, so a 430 px image shows an artwork of about 360 px (the manual's on-screen minimum).
+   Narrow phones crop only that padding (the band is overflow hidden and the image is centered).
+   Night-blue band; the negative logo PNG was cropped on this exact color, so it sits on it without a box.
    Minimum on-screen logo width is 360 px (brand manual p.4). The band gives the 1X protection area around it. */
 .band { background: var(--rc-night); color: var(--rc-white); padding: 16px 0 12px; text-align: center; overflow: hidden; }
-.logo-link { display: inline-block; max-width: 100%; }
-.logo { display: block; width: 360px; max-width: 100%; height: auto; margin: 0 auto; }
+.logo-link { display: block; overflow: hidden; }
+.logo { display: block; width: 430px; max-width: none; height: auto; margin: 0 auto; }
 .nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 8px; padding: 8px 16px 8px; }
 .nav-link {
     color: var(--rc-white); font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;

@@ -39,7 +39,7 @@
 }
 .rc-textarea { min-height: 96px; resize: vertical; }
 .rc-input:focus, .rc-select:focus, .rc-textarea:focus, .rc-btn:focus-visible, .rc-link:focus-visible, .rc-radio input:focus-visible {
-    outline: 3px solid var(--rc-cyan); outline-offset: 2px;
+    outline: 3px solid var(--rc-electric); outline-offset: 2px; /* Cian pixel is only used for focus on night-blue areas (contrast) */
 }
 .rc-grid { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
 @media (min-width: 640px) { .rc-grid--2 { grid-template-columns: 1fr 1fr; } }
@@ -69,8 +69,8 @@
 
 /* Messages: status is conveyed by an icon word and a border, not by color alone. */
 .rc-msg { border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; font-weight: 500; border: 2px solid var(--rc-night); background: var(--rc-enamel); }
-.rc-msg--error { border-color: var(--rc-red); border-left-width: 8px; background: var(--rc-white); }
-.rc-msg--ok { border-color: var(--rc-cyan); border-left-width: 8px; background: var(--rc-white); }
+.rc-msg--error { border-color: var(--rc-night); border-left: 8px solid var(--rc-red); background: var(--rc-white); }
+.rc-msg--ok { border-color: var(--rc-night); border-left: 8px solid var(--rc-electric); background: var(--rc-white); }
 
 .rc-dl { display: grid; grid-template-columns: 1fr; gap: 4px 16px; margin: 0 0 16px; }
 @media (min-width: 640px) { .rc-dl { grid-template-columns: 200px 1fr; } }
@@ -82,10 +82,5 @@
 .rc-table th { text-align: left; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px; border-bottom: 3px solid var(--rc-night); }
 .rc-table td { padding: 10px 8px; border-bottom: 1px solid var(--rc-enamel); vertical-align: top; }
 
-.rc-steam { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 8px; }
-.rc-steam i { width: 6px; height: 22px; border-radius: 6px; display: block; }
-.rc-steam i:nth-child(1) { background: var(--rc-yellow); height: 16px; }
-.rc-steam i:nth-child(2) { background: var(--rc-electric); }
-.rc-steam i:nth-child(3) { background: var(--rc-red); height: 16px; }
 
 .rc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

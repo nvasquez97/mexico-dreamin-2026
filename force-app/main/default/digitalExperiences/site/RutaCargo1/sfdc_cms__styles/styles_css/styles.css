@@ -19,3 +19,13 @@ body {
     font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
     color: #0d1f5f;
 }
+
+/* Montserrat self-hosted in the RutaCargoBrand static resource so it loads on every page, not only where c-rc-header renders.
+   The URL follows the LWR static resource path; confirm in a browser that the site CSP lets it load (README, pending item). */
+@font-face {
+    font-family: 'Montserrat';
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    src: url('/sfsites/c/resource/RutaCargoBrand/fonts/Montserrat-latin-variable.woff2') format('woff2');
+}
