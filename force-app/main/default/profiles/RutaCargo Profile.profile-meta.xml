@@ -6,8 +6,123 @@
         <visible>false</visible>
     </applicationVisibilities>
     <custom>true</custom>
+    <!-- Guest Visualforce page access: every page in the org is listed. Enabled
+         are only the pages the CustomSite references (indexPage,
+         authorizationRequiredPage and the four error pages); the allow-list in
+         scripts/checks/guest-access-check.sh (GUEST_PAGES) must match. -->
+    <!-- AnswersHome: disabled, Answers is not used on this site. -->
+    <pageAccesses>
+        <apexPage>AnswersHome</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- BandwidthExceeded: enabled, CustomSite bandwidthExceededPage: static error page, no controller. -->
+    <pageAccesses>
+        <apexPage>BandwidthExceeded</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- ChangePassword: disabled, needs a logged-in user; the guest never changes a password. -->
+    <pageAccesses>
+        <apexPage>ChangePassword</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- CommunitiesLanding: enabled, CustomSite indexPage: forwards the visitor to the site start page. -->
+    <pageAccesses>
+        <apexPage>CommunitiesLanding</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- CommunitiesLogin: enabled, CustomSite authorizationRequiredPage: forwards the visitor to the LWR login page. -->
+    <pageAccesses>
+        <apexPage>CommunitiesLogin</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- CommunitiesSelfReg: disabled, self-registration is off (Network selfRegistration false); REQ-005 builds its own LWC sign-up. -->
+    <pageAccesses>
+        <apexPage>CommunitiesSelfReg</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- CommunitiesSelfRegConfirm: disabled, self-registration is off. -->
+    <pageAccesses>
+        <apexPage>CommunitiesSelfRegConfirm</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- CommunitiesTemplate: disabled, layout template only; no kept page uses it and it is not opened directly. -->
+    <pageAccesses>
+        <apexPage>CommunitiesTemplate</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- Exception: enabled, CustomSite genericErrorPage: static error page, no controller. -->
+    <pageAccesses>
+        <apexPage>Exception</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- FileNotFound: enabled, CustomSite fileNotFoundPage: static error page, no controller. -->
+    <pageAccesses>
+        <apexPage>FileNotFound</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- ForgotPassword: disabled, the Network uses the Designer (LWR) Forgot Password page; the Visualforce one is not needed. -->
+    <pageAccesses>
+        <apexPage>ForgotPassword</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- ForgotPasswordConfirm: disabled, the Network uses the Designer (LWR) Forgot Password page; the Visualforce one is not needed. -->
+    <pageAccesses>
+        <apexPage>ForgotPasswordConfirm</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- IdeasHome: disabled, Ideas is not used on this site. -->
+    <pageAccesses>
+        <apexPage>IdeasHome</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- InMaintenance: enabled, CustomSite inMaintenancePage: static error page, no controller. -->
+    <pageAccesses>
+        <apexPage>InMaintenance</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
+    <!-- MicrobatchSelfReg: disabled, self-registration is off. The platform creates this page with the site: deploy this profile after the site (scripts/setup/DEPLOY-ORDER.md). -->
     <pageAccesses>
         <apexPage>MicrobatchSelfReg</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- MyProfilePage: disabled, needs a logged-in user. -->
+    <pageAccesses>
+        <apexPage>MyProfilePage</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- SiteLogin: disabled, the Network uses the Designer (LWR) login page, reached through CommunitiesLogin. -->
+    <pageAccesses>
+        <apexPage>SiteLogin</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- SiteRegister: disabled, self-registration is off. -->
+    <pageAccesses>
+        <apexPage>SiteRegister</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- SiteRegisterConfirm: disabled, self-registration is off. -->
+    <pageAccesses>
+        <apexPage>SiteRegisterConfirm</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- SiteTemplate: disabled, layout template only; not opened directly. -->
+    <pageAccesses>
+        <apexPage>SiteTemplate</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- StdExceptionTemplate: disabled, layout template only; not opened directly. -->
+    <pageAccesses>
+        <apexPage>StdExceptionTemplate</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- Unauthorized: disabled, not referenced by the CustomSite. -->
+    <pageAccesses>
+        <apexPage>Unauthorized</apexPage>
+        <enabled>false</enabled>
+    </pageAccesses>
+    <!-- UnderConstruction: disabled, not referenced by the CustomSite; the site is Live. -->
+    <pageAccesses>
+        <apexPage>UnderConstruction</apexPage>
         <enabled>false</enabled>
     </pageAccesses>
     <tabVisibilities>

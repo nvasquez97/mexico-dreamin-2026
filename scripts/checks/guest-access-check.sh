@@ -10,11 +10,18 @@
 #      for every permission set assigned to the guest user (the profile's own
 #      permission set included);
 #   4. the guest user's TimeZoneSidKey is America/Mexico_City;
-#   5. an anonymous GET (no session, no redirects followed) of the site home URL
-#      returns 200.
+#   5. the Visualforce pages enabled for the guest (profile "RutaCargo Profile"
+#      and every permission set assigned to the guest user) are exactly the
+#      allow-list GUEST_PAGES below: no self-registration page;
+#   6. an anonymous GET (no session, no redirects followed) of the site home URL
+#      returns 200; the host comes from the site's own DomainSite row;
+#   7. an anonymous GET of the self-registration pages on the Visualforce site
+#      (/rutacargovforcesite/SiteRegister and /CommunitiesSelfReg) is refused:
+#      a non-200 status, or a 200 whose body only redirects to the LWR login.
 #
 # Usage: scripts/checks/guest-access-check.sh <org-alias>
 set -euo pipefail
+export LC_ALL=C  # byte order for sort and comm, the same order jq uses
 
 ORG="${1:-}"
 if [[ -z "$ORG" ]]; then
@@ -25,6 +32,12 @@ fi
 NETWORK_NAME='RutaCargo'
 GUEST_PROFILE='RutaCargo Profile'
 GUEST_TIME_ZONE='America/Mexico_City'
+# Visualforce pages the guest may open: what the CustomSite references
+# (indexPage, authorizationRequiredPage and the four error pages). Must match
+# force-app/main/default/profiles/RutaCargo Profile.profile-meta.xml.
+GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,FileNotFound,InMaintenance'
+# Self-registration pages that must not answer an anonymous visitor.
+SELF_REG_PAGES='SiteRegister CommunitiesSelfReg'
 
 violations=0
 fail() { echo "FAIL: $*"; violations=$((violations + 1)); }
@@ -104,23 +117,90 @@ else
     fail "guest user TimeZoneSidKey is '$tz', expected '$GUEST_TIME_ZONE'"
 fi
 
-# ─── 5. Anonymous GET of the site home URL ──────────────────────────────────
-# The LWR pages are served by the ChatterNetworkPicasso site (prefix rutacargo);
-# the Network and ChatterNetwork site use the rutacargovforcesite prefix.
-lwr_site="$(query "SELECT UrlPathPrefix FROM Site WHERE Name = 'RutaCargo1' AND SiteType = 'ChatterNetworkPicasso'")"
-prefix="$(jq -r '.[0].UrlPathPrefix // empty' <<<"$lwr_site")"
-domain="$(query "SELECT Domain FROM Domain WHERE Domain LIKE '%.my.site.com'")"
-host="$(jq -r '.[0].Domain // empty' <<<"$domain")"
-if [[ -z "$host" || -z "$prefix" ]]; then
-    fail "site home URL cannot be built (domain '$host', prefix '$prefix')"
-    finish
+# ─── 5. Visualforce pages enabled for the guest ─────────────────────────────
+# SetupEntityAccess rows of the guest profile and of every permission set
+# assigned to the guest user (the profile's own permission set included).
+page_ids="$( { query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexPage' AND Parent.Profile.Name = 'RutaCargo Profile'"; \
+    query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexPage' AND ParentId IN (SELECT PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId = '$guest_id')"; } \
+    | jq -s -r '[.[][].SetupEntityId] | unique | .[]')"
+enabled_pages=''
+if [[ -n "$page_ids" ]]; then
+    id_list=''
+    while IFS= read -r page_id; do
+        # Every Id is validated as an ApexPage Id before it enters the query.
+        if [[ ! "$page_id" =~ ^066[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
+            fail "unexpected SetupEntityId '$page_id' for an ApexPage"
+            finish
+        fi
+        id_list="${id_list:+$id_list,}'$page_id'"
+    done <<<"$page_ids"
+    pages="$(query "SELECT Name, NamespacePrefix FROM ApexPage WHERE Id IN ($id_list)")"
+    enabled_pages="$(jq -r '[.[] | (if .NamespacePrefix then .NamespacePrefix + "__" else "" end) + .Name] | sort | join(",")' <<<"$pages")"
 fi
-url="https://$host/$prefix/"
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$url" || true)"
-if [[ "$code" == "200" ]]; then
-    pass "anonymous GET $url returns 200"
+expected_pages="$(tr ',' '\n' <<<"$GUEST_PAGES" | sort | paste -sd ',' -)"
+if [[ "$enabled_pages" == "$expected_pages" ]]; then
+    pass "guest Visualforce pages are exactly the allow-list ($expected_pages)"
 else
-    fail "anonymous GET $url returns $code, expected 200"
+    extra="$(comm -23 <(tr ',' '\n' <<<"$enabled_pages" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_pages") | paste -sd ',' -)"
+    missing="$(comm -13 <(tr ',' '\n' <<<"$enabled_pages" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_pages") | paste -sd ',' -)"
+    fail "guest Visualforce pages differ from the allow-list: not allowed '$extra', missing '$missing'"
+fi
+
+# ─── 6. Anonymous GET of the site home URL ──────────────────────────────────
+# The host and path come from the site's own DomainSite row: the LWR pages are
+# served by the ChatterNetworkPicasso site (RutaCargo1, prefix rutacargo); the
+# Network and its ChatterNetwork site use the rutacargovforcesite prefix.
+# Sets SITE_URL to "https://<host><path>" when the site has exactly one
+# DomainSite row; otherwise records a violation and returns 1. Called without a
+# subshell so that fail() counts.
+SITE_URL=''
+site_url() {
+    local rows n
+    SITE_URL=''
+    rows="$(query "SELECT Domain.Domain, PathPrefix FROM DomainSite WHERE Site.Name = '$1' AND Site.SiteType = '$2'")"
+    n="$(jq 'length' <<<"$rows")"
+    if [[ "$n" -ne 1 ]]; then
+        fail "site $1 ($2) has $n DomainSite rows, expected exactly 1"
+        return 1
+    fi
+    SITE_URL="$(jq -r '.[0] | "https://" + (.Domain.Domain // "") + (.PathPrefix // "")' <<<"$rows")"
+}
+anonymous_get() {
+    curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$1" || true
+}
+
+home_prefix=''
+if site_url 'RutaCargo1' 'ChatterNetworkPicasso'; then
+    home_prefix="${SITE_URL##*/}"
+    url="$SITE_URL/"
+    code="$(anonymous_get "$url")"
+    if [[ "$code" == "200" ]]; then
+        pass "anonymous GET $url returns 200"
+    else
+        fail "anonymous GET $url returns $code, expected 200"
+    fi
+fi
+
+# ─── 7. Self-registration pages closed to anonymous visitors ────────────────
+# A refused page answers 401 with a script that sends the visitor to the LWR
+# login page. The CustomSite's own selfRegPage answers 200 with that same
+# script, so a 200 counts as refused only when its body is that redirect to
+# "<lwr prefix>/login?ec=302" and nothing renders a registration form.
+if site_url 'RutaCargo' 'ChatterNetwork'; then
+    login_redirect="/${home_prefix:-rutacargo}/login?ec=302"
+    for page in $SELF_REG_PAGES; do
+        url="$SITE_URL/$page"
+        body_file="$(mktemp)"
+        code="$(curl -s -o "$body_file" -w '%{http_code}' --max-time 60 "$url" || true)"
+        if [[ "$code" != "200" ]]; then
+            pass "anonymous GET $url returns $code (refused)"
+        elif grep -qF "$login_redirect" "$body_file" && ! grep -qi '<form' "$body_file"; then
+            pass "anonymous GET $url returns 200 with only a redirect to $login_redirect (refused)"
+        else
+            fail "anonymous GET $url returns 200 with page content, expected a refusal or a redirect to login"
+        fi
+        rm -f "$body_file"
+    done
 fi
 
 finish
