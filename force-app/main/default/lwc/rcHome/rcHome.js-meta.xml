@@ -4,7 +4,7 @@
     <isExposed>true</isExposed>
     <masterLabel>RutaCargo Home</masterLabel>
     <description
-  >Public home placeholder: the shipment tracking hero. No data and no Apex.</description>
+  >Public home hero: the shipment tracking heading above the rcTracking search. No data and no Apex.</description>
     <targets>
         <target>lightningCommunity__Page</target>
         <target>lightningCommunity__Default</target>

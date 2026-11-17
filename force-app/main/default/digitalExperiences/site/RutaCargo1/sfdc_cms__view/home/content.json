@@ -23,6 +23,10 @@
               "definition" : "c:rcHome",
               "id" : "469ca6fa-0583-462d-9f21-c33ac60312de",
               "type" : "component"
+            }, {
+              "definition" : "c:rcTracking",
+              "id" : "ba189586-4012-4f1b-a04d-6c5c8d5d3eff",
+              "type" : "component"
             } ],
             "id" : "457802b5-1c22-417a-8dfc-9007a136df29",
             "name" : "col1",

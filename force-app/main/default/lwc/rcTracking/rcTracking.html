@@ -1,0 +1,118 @@
+<template>
+  <section class="rc-tracking" aria-labelledby="rc-tracking-title">
+    <h2 id="rc-tracking-title" class="rc-tracking__title">Search shipments</h2>
+    <p class="rc-tracking__hint">
+      Enter up to 10 values, separated by commas or line breaks.
+    </p>
+    <div class="rc-tracking__form">
+      <lightning-radio-group
+        data-id="mode"
+        name="mode"
+        label="Search by"
+        options={modeOptions}
+        value={mode}
+        type="radio"
+        onchange={handleModeChange}
+      ></lightning-radio-group>
+      <lightning-textarea
+        data-id="values"
+        name="values"
+        label="Tracking numbers or order references"
+        value={rawValues}
+        onchange={handleValuesChange}
+      ></lightning-textarea>
+      <lightning-button
+        data-id="search"
+        class="rc-tracking__submit"
+        variant="brand"
+        label={searchLabel}
+        disabled={isLoading}
+        onclick={handleSearch}
+      ></lightning-button>
+    </div>
+
+    <template lwc:if={errorMessage}>
+      <p data-id="error" class="rc-tracking__error" role="alert">
+        {errorMessage}
+      </p>
+    </template>
+    <p data-id="summary" class="rc-tracking__summary" aria-live="polite">
+      {summary}
+    </p>
+
+    <template lwc:if={truncated}>
+      <p data-id="truncated" class="rc-tracking__notice">
+        Showing the first 50 results. Narrow your search.
+      </p>
+    </template>
+
+    <template lwc:if={hasCards}>
+      <div class="rc-tracking__sort">
+        <lightning-combobox
+          data-id="sort"
+          name="sort"
+          label="Sort by"
+          options={sortOptions}
+          value={sortBy}
+          onchange={handleSortChange}
+        ></lightning-combobox>
+      </div>
+      <ul class="rc-tracking__cards">
+        <template for:each={sortedCards} for:item="card">
+          <li key={card.key} data-id="card" class="rc-tracking__card">
+            <h3 class="rc-tracking__card-title">
+              <span data-id="card-label" class="rc-tracking__card-label"
+                >Tracking number</span
+              >
+              <span
+                data-id="card-number"
+                data-field="trackingNumber"
+                class="rc-tracking__card-number"
+                >{card.trackingNumber}</span
+              >
+            </h3>
+            <dl class="rc-tracking__fields">
+              <div class="rc-tracking__field">
+                <dt>Status</dt>
+                <dd data-field="status">{card.status}</dd>
+              </div>
+              <div class="rc-tracking__field">
+                <dt>Origin city</dt>
+                <dd data-field="originCity">{card.originCity}</dd>
+              </div>
+              <div class="rc-tracking__field">
+                <dt>Destination city</dt>
+                <dd data-field="destinationCity">{card.destinationCity}</dd>
+              </div>
+              <div class="rc-tracking__field">
+                <dt>Last location</dt>
+                <dd data-field="lastLocation">{card.lastLocation}</dd>
+              </div>
+              <div class="rc-tracking__field">
+                <dt>Last update</dt>
+                <dd data-field="lastUpdate">{card.lastUpdate}</dd>
+              </div>
+              <div class="rc-tracking__field">
+                <dt>Estimated delivery</dt>
+                <dd data-field="estimatedDelivery">
+                  {card.estimatedDeliveryText}
+                </dd>
+              </div>
+            </dl>
+          </li>
+        </template>
+      </ul>
+    </template>
+
+    <template lwc:if={hasNotFound}>
+      <div data-id="not-found" class="rc-tracking__not-found">
+        <h3 class="rc-tracking__subtitle">Not found</h3>
+        <ul class="rc-tracking__not-found-list">
+          <template for:each={notFoundItems} for:item="item">
+            <li key={item.key}>{item.value}</li>
+          </template>
+        </ul>
+      </div>
+    </template>
+  </section>
+</template>

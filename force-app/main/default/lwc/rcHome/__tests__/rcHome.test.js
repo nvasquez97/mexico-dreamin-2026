@@ -1,5 +1,6 @@
-// Covers AC-F.10 (odd/tasks/foundation.md): the public home page placeholder
-// renders the "Track your shipment" hero as a labelled region of the page.
+// Covers AC-F.10 (odd/tasks/foundation.md): the public home page renders the
+// "Track your shipment" hero as a labelled region of the page; its text points
+// to the rcTracking search below it (AC-001.7, odd/tasks/req-001-public-tracking.md).
 import { createElement } from "lwc";
 import RcHome from "c/rcHome";
 
@@ -40,7 +41,7 @@ describe("c-rc-home", () => {
     const text = element.shadowRoot.querySelector("section p");
     expect(text).not.toBeNull();
     expect(text.textContent.trim()).toBe(
-      "Follow your cargo from pickup to delivery. Online tracking is coming soon."
+      "Follow your cargo from pickup to delivery. Search by tracking number or order reference below."
     );
   });
 

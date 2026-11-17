@@ -9,7 +9,8 @@
 #      TextColor #0D1F5F (night blue), background BackgroundColor #FFFFFF, neutral
 #      _NeutralColor #D6E0EA (enamel gray); its BaseFont is Montserrat;
 #   2. each main palette color (#0D1F5F #016BFA #07E9F6 #D6E0EA) appears in the
-#      theme (branding set, site styles) or in the rcHeader / rcHome CSS;
+#      theme (branding set, site styles) or in the rcHeader / rcHome /
+#      rcTracking CSS;
 #   3. every logo a component shows comes from the rcBrandLogos static resource,
 #      exists there, sits on the background color it was cropped from
 #      (docs/brand/README.txt) and every <img> has alt="Coffee Blazers Summit",
@@ -21,7 +22,7 @@
 #      and the header component loads that stylesheet from the static resource;
 #      the font's OFL.txt license is in the resource;
 #   5. nothing references an external font or style host: no fonts.googleapis.com
-#      or fonts.gstatic.com in the site bundle, the two components, the static
+#      or fonts.gstatic.com in the site bundle, the components, the static
 #      resources or a CSP trusted site (source and org); no http(s) URL in any CSS
 #      of the site bundle, the components or the static resources, nor in the
 #      head markup, other than the site's own host; no reference to the Daily
@@ -45,8 +46,9 @@
 #      hold sections whose background (backgroundImageOverlay, painted over the
 #      platform's own rgb(239, 240, 242) band) is night blue or white;
 #  12. the full logo never renders below 360 px wide (manual p.4): for every
-#      <img> of rcHeader or rcHome that shows a full logo (not the isotype), in
-#      the component CSS at every breakpoint where it is displayed, its width
+#      <img> of rcHeader, rcHome or rcTracking that shows a full logo (not the
+#      isotype), in the component CSS at every breakpoint where it is
+#      displayed, its width
 #      (or its height times the PNG's aspect ratio, or its width attribute) is
 #      an absolute length of 360 px or more and no max-width can shrink it.
 #
@@ -62,7 +64,7 @@ fi
 cd "$(dirname "$0")/../.."
 
 BUNDLE='force-app/main/default/digitalExperiences/site/RutaCargo1'
-LWC_DIRS='force-app/main/default/lwc/rcHeader force-app/main/default/lwc/rcHome'
+LWC_DIRS='force-app/main/default/lwc/rcHeader force-app/main/default/lwc/rcHome force-app/main/default/lwc/rcTracking'
 HEADER_JS='force-app/main/default/lwc/rcHeader/rcHeader.js'
 SR='force-app/main/default/staticresources'
 FONT_CSS_NAME='montserrat.css'
@@ -540,7 +542,7 @@ for folder in dirs:
 PY
 )"
 if [[ -z "$size_report" ]]; then
-    fail "no full logo found in rcHeader or rcHome to check its minimum size"
+    fail "no full logo found in rcHeader, rcHome or rcTracking to check its minimum size"
 fi
 while IFS= read -r line; do
     case "$line" in
