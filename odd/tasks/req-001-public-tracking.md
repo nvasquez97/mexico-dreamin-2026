@@ -78,6 +78,7 @@ Plan review: fixed (plan-reviewer a1641868ac0d75f8f)
 - C6 (range): REQ-004's close commits may fall inside Base..HEAD of this document because this plan was drafted while REQ-004 closed; Close lists them and reviewers ignore them.
 
 ## Close
-Stage: reviews
+Stage: fix round
 Gate: sf project deploy start --source-dir force-app --test-level RunLocalTests @ d55cd2c (clean worktree, --ignore-conflicts), Succeeded (0AfEk00000h4W0ZKAU), 196 tests, 0 failures; Jest 54/54 (6 suites) · Coverage: org 95.18%, new classes PublicTrackingController 97.93%, PublicTrackingSelector 100%, PublicTrackingResult 100%
 Reviewers: test-reviewer aecfcbcfbb30ab9a3, brand-reviewer a1a4f386f50620376, sf-security-auditor ad6b0092e8afd2e31, access-auditor a96a4f4d6dc0e90a6
+Reviews: test-reviewer changes required (2 Medium: vacuous no-private-values test; guest-side BR-01 keys and refusal untested; 5 Low) · brand-reviewer approved (C11 live region confirmed WCAG 4.1.3; C12 hero full-bleed not off-brand) · sf-security-auditor pass with notes (SEC-001 Low selector "only caller" not enforced; SEC-002 Info) · access-auditor approved (org in sync)
