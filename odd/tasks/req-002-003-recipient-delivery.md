@@ -80,7 +80,7 @@ Plan review: fixed (plan-reviewer aed397399ce12f4a3) — the closing check close
 Order gate: this document starts after REQ-001 is archived (T1 shares the guest profile, TestDataFactory and guest-access-check.sh with REQ-001 T1; T3 edits rcTracking, built by REQ-001 T2).
 
 ## Tasks
-- [ ] T1 (S1, S2): Recipient access with lockout, delivery details and reschedule for guests — test first
+- [ ] T1 (S1, S2): Recipient access with lockout, delivery details and reschedule for guests — test first — review: findings · reviewers: task-reviewer a48580c99ce12f287, security-reviewer a593adf20ea69700b, access-auditor ac8eb3a621857d961
 - [ ] T2 (S3): Proof of delivery callout through the EntregaYa Named Credential, guest principal access — test first
 - [ ] T3 (S4): rcDeliveryDetails LWC from the tracking card, and the live history check — test first
 
