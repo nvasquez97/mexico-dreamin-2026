@@ -1,6 +1,6 @@
 ---
 description: Start or resume work with ODD - a requirement, the whole design, hardening, or simply the next step
-argument-hint: [<requirement or description> | hardening] [Org: <alias>] [Mode: interactive | auto]
+argument-hint: [<requirement or description> | hardening] [Org: <alias> | new scratch] [Mode: interactive | auto]
 ---
 
 Start or resume ODD for: $ARGUMENTS
@@ -9,9 +9,23 @@ Start or resume ODD for: $ARGUMENTS
 2. Find the org: the `Org:` in the arguments, otherwise the one in project
    memory or in the active task document. If there is none, ask in Mode:
    interactive or when the mode is not known yet; in Mode: auto, stop and
-   report it. Verify it with
-   `sf org display --target-org <alias> --json` and confirm it is not a
-   production org.
+   report it.
+   - `Org: new scratch` creates a new scratch org for the run, from the
+     default Dev Hub, with config/project-scratch-def.json (use the
+     salesforce-development:dx-org-manage skill, or
+     `sf org create scratch -f config/project-scratch-def.json -a <alias> -y 30 -w 15`).
+     Scratch features can only be enabled when the org is created: before
+     creating it, read the design and check that the definition enables
+     every feature it needs (for example Communities and the site settings
+     for an Experience Cloud site). If one is missing, add it to the
+     definition first as a tier 0 change, and record it as an assumption.
+     Record the new alias in project memory.
+   - Verify the org with `sf org display --target-org <alias> --json` and
+     confirm it is not a production org.
+   - Set it as the project's local default org:
+     `sf config set target-org <alias>` (local and git-ignored). The plugin's
+     deploy gate refuses deploys when there is no default org, even with
+     `--target-org`.
 3. Find where the work stands, and resume at the first step that applies:
    - A task document in odd/tasks/ (not archive/) for this work:
      - a task line with `review: findings (...)` and no tick: resume the fix

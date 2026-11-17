@@ -67,6 +67,8 @@ and write `Skills: not available - <skill>` in your return.
    - No assertion that cannot fail: checking only that a result is not null,
      comparing a value with itself, or repeating the code's logic in the test.
    - Assertions on concrete values and on what must NOT happen.
+   - A positive behavior is tested with at least two different inputs: with
+     a single input, a hard-coded result passes.
    - A negative test for every rule and every verification.
    - Code used by external users is tested with System.runAs and a user of
      that type.

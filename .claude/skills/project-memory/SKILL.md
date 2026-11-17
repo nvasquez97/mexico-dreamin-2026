@@ -47,7 +47,9 @@ report stays in .security-reports/).
 
 ## Entry format
 
-Append entries at the end. Do not rewrite earlier entries.
+Append entries at the end with the Edit or Write tool, not with a shell
+command, so the memory hook checks every write. Do not rewrite earlier
+entries.
 
     ## YYYY-MM-DD HH:MM — short title
     - Type: decision | assumption | status | verification | review | close | hardening | environment

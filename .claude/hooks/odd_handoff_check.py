@@ -34,10 +34,20 @@ REVIEW_EXTRA = {
 KNOWN = set(WORKER_FIELDS + FIX_FIELDS + REVIEW_CORE + ["do not read", "requirement", "scope",
             "evidence", "skills", "security", "coverage", "findings", "acceptance"])
 
-FIELD_RE = re.compile(r"^\s*-\s+([A-Za-z][A-Za-z /()-]*?)\s*:\s?(.*)$")
-PLACEHOLDER_RE = re.compile(r"^<[^<>]+>$|<(sha|alias|slug|paths?|file list|decisions|"
-                            r"target org alias|what done looks like|full skill names[^>]*|list)>",
-                            re.IGNORECASE)
+FIELD_RE = re.compile(r"^\s*-\s+([A-Za-z][^:\n]*?)\s*:\s?(.*)$")
+# The placeholders of the handoff templates in the odd skill. A field that still holds one
+# was not filled. "observed: <...>" inside Acceptance is filled later by the worker: allowed.
+TEMPLATE_PLACEHOLDERS = [
+    "<what done looks like>", "<decisions>", "<file list>", "<target org alias>",
+    "<full skill names", "<what the main session already digested>",
+    "<deploy and test command", "<full test command>", "<the lines verbatim",
+    "<the task's lines verbatim", "<the task's original file list>", "<list>",
+    "<the files the task may touch", "<the task's skills", "<the gate's coverage",
+    "<the requirement id", "<the format of the agent's return section>",
+    "<odd/evidence/", "<sha>", "<slug>", "<alias>", "<paths>", "<base>", "<head>",
+    "t# (s#)", "<filled by",
+]
+PLACEHOLDER_RE = re.compile(r"^<[^<>]+>$")
 
 
 def block(prompt, heading):
@@ -71,8 +81,13 @@ def problems(found, required):
             errs.append(f"missing field '{f}'")
         elif not v.strip():
             errs.append(f"field '{f}' is empty")
-        elif PLACEHOLDER_RE.search(v.strip().splitlines()[0]) or PLACEHOLDER_RE.search(v):
-            errs.append(f"field '{f}' still holds a template placeholder: {v.splitlines()[0][:60]}")
+        else:
+            low = v.lower()
+            if f == "acceptance":
+                low = re.sub(r"observed:\s*<[^<>]*>", "", low)
+            hit = next((ph for ph in TEMPLATE_PLACEHOLDERS if ph in low), None)
+            if PLACEHOLDER_RE.match(v.strip()) or hit:
+                errs.append(f"field '{f}' still holds a template placeholder: {(hit or v.strip())[:60]}")
     return errs
 
 

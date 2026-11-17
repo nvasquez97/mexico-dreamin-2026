@@ -9,17 +9,34 @@ import subprocess
 import sys
 
 TICK_RE = re.compile(r"^\s*-\s*\[[xX]\]\s*(T\d+)\b.*$", re.MULTILINE)
+# An unchecked task line that already carries tick data: the box was forgotten.
+UNCHECKED_RE = re.compile(r"^\s*-\s*\[ \]\s*(T\d+)\b.*·\s*(evidence|review):.*$", re.MULTILINE)
 FULL_RE = re.compile(r"[—–-]\s*([0-9a-f]{7,40})\s*·\s*evidence:\s*(\S+)\s*·\s*review:\s*"
                      r"(clean|fixed in [0-9a-f]{7,40}.*|open\s*[—–-].+)\s*$")
 
 
-def new_text(tool, ti):
+def apply(text, old, new, replace_all):
+    if not old:
+        return new
+    return text.replace(old, new) if replace_all else text.replace(old, new, 1)
+
+
+def new_text(tool, ti, path):
+    """The file content as it will be after the edit, so a tick is checked as a whole line."""
     if tool == "Write":
         return ti.get("content") or ""
+    try:
+        current = open(path, encoding="utf-8").read()
+    except OSError:
+        current = ""
     if tool == "Edit":
-        return ti.get("new_string") or ""
+        return apply(current, ti.get("old_string") or "", ti.get("new_string") or "",
+                     ti.get("replace_all"))
     if tool == "MultiEdit":
-        return "\n".join(e.get("new_string") or "" for e in ti.get("edits") or [])
+        for e in ti.get("edits") or []:
+            current = apply(current, e.get("old_string") or "", e.get("new_string") or "",
+                            e.get("replace_all"))
+        return current
     return ""
 
 
@@ -32,7 +49,10 @@ def main():
             return
         root = os.environ.get("CLAUDE_PROJECT_DIR") or p.get("cwd") or os.getcwd()
         errs = []
-        for m in TICK_RE.finditer(new_text(p.get("tool_name"), ti)):
+        text = new_text(p.get("tool_name"), ti, path)
+        for m in UNCHECKED_RE.finditer(text):
+            errs.append(f"{m.group(1)}: the line has the tick data but the box is unchecked; write '- [x]'")
+        for m in TICK_RE.finditer(text):
             line, task = m.group(0).strip(), m.group(1)
             full = FULL_RE.search(line)
             if not full:

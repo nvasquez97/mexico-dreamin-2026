@@ -62,6 +62,9 @@ so in your return.
 5. Acceptance lines.
    - Each one is Given / When / Then with an observable result that an Apex
      or Jest test can check.
+   - A positive criterion is tested with at least two different inputs, or
+     its Mutation hard-codes the expected value; otherwise a hard-coded
+     result passes the test.
    - Each one has a Mutation: a change to the PRODUCTION code (not to the
      test) that would make its test fail. A Mutation that could not turn the
      test red is a finding.

@@ -16,9 +16,19 @@ SECRET_RE = re.compile(
 def main():
     try:
         p = json.load(sys.stdin)
-        path = ((p.get("tool_input") or {}).get("file_path") or "").replace("\\", "/")
-        if not path.endswith("/.mem/memory.md"):
-            return
+        ti = p.get("tool_input") or {}
+        if p.get("tool_name") == "Bash":
+            # A shell write to memory (a heredoc, echo >>) gets the same check.
+            if ".mem/memory.md" not in (ti.get("command") or ""):
+                return
+            root = os.environ.get("CLAUDE_PROJECT_DIR") or p.get("cwd") or os.getcwd()
+            path = os.path.join(root, ".mem", "memory.md")
+            if not os.path.isfile(path):
+                return
+        else:
+            path = (ti.get("file_path") or "").replace("\\", "/")
+            if not path.endswith("/.mem/memory.md"):
+                return
         msgs = []
         size = os.path.getsize(path)
         if size > LIMIT:

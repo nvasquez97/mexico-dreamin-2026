@@ -25,6 +25,7 @@ what to return.
 - No secrets in anything you write, including tests, scripts and evidence.
 - You do not tick the task, edit other tasks or review your own work. Never
   stage odd/tasks/ or .mem/: the main session commits them.
+- Never amend, rebase or rewrite a commit. Every change is a new commit.
 
 ## How you build: skills first
 
@@ -92,6 +93,10 @@ evidence.
 
 ## Salesforce practices
 
+- Run every deploy as its own command, never chained with a file write or
+  another command in the same shell line: the plugin's deploy gate refuses
+  chained deploys. If a deploy is refused with "Cannot reach the target org",
+  retry it once.
 - Before the first org operation, verify the org:
   `sf org display --target-org <alias> --json`. Confirm that it is the org of
   the handoff and that it is not production. If it is not, stop and return.
@@ -101,6 +106,8 @@ evidence.
 - Tests follow platform-apex-test-generate: the Assert class with a failure
   message, exact expected values, one behavior per method, data from a
   TestDataFactory, and callouts mocked.
+- A positive behavior is tested with at least two different inputs, so a
+  hard-coded result cannot pass.
 - Before the commit, run dx-code-analyzer-run over the Apex and LWC files you
   changed. Fix high-severity violations inside the scope; list the rest in
   the evidence.
@@ -123,7 +130,8 @@ evidence.
 6. Write odd/evidence/<slug>/T#.md with: the task sha, the org, the skills
    used (full names, and for what), the red before the code, the green, each
    mutation with its red, the code analyzer result, and the commands used.
-   Commit it as `T# evidence`.
+   Commit it as `T# evidence`, always as its own commit after the task
+   commit: it records the task sha, so it can never be in that commit.
 7. Return at most 10 lines: the task sha, the evidence path, the skills used,
    one line per mutation red, and anything out of scope that you noticed.
 
@@ -159,6 +167,6 @@ Mutations to re-apply are those of the acceptance lines in the handoff.
 7. Append to odd/evidence/<slug>/T#.md a section `## Fix - <fix sha>` with,
    for each finding: its summary, then the red and the green, or the analyzer
    before and after, or the reason it was rejected. Commit it as
-   `T# fix evidence`.
+   `T# fix evidence`, as its own commit after the fix commit.
 8. Return at most 10 lines: the fix sha, the evidence path, and for each
    finding: fixed, rejected (reason) or out of scope.

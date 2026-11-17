@@ -128,7 +128,7 @@ Mode: <interactive or auto>
 Branch: <branch>
 Org: <target org alias>
 Approved: <who>, <date>
-Base: <HEAD sha before the first task of this document>
+Base: <HEAD sha before the plan commit of this document>
 Plan review: <clean | fixed | open — <finding>> (plan-reviewer <id>)
 
 ## Findings
@@ -154,7 +154,7 @@ Plan review: <clean | fixed | open — <finding>> (plan-reviewer <id>)
 
 ## Close
 Stage: pending | gate | reviews | fix round | filled
-Gate: <command @ sha, result> · Coverage: org <n>%, new classes <Class n%, ...>
+Gate: <command @ sha, result>; re-run after the fix round: <sha, result> · Coverage: org <n>%, new classes <Class n%, ...>
 Reviewers: <role id, ...>
 Reviews: test-reviewer <verdict> · brand-reviewer <verdict or n/a> · sf-security-auditor <verdict or n/a> · access-auditor <verdict or n/a>
 Observed: <what differed from this document>
@@ -175,9 +175,11 @@ Rules for the document:
 
 ## Task analysis (phase 6)
 
-Before any worker is launched, record `Base:` in the header (the HEAD sha
-before the first task; Close reviews the range Base..HEAD), and fill the
-Task analysis table. For each task:
+Before any worker is launched, record `Base:` in the header: the HEAD sha
+before the plan commit. Close reviews the range Base..HEAD; that range also
+holds the bookkeeping commits (`odd(<slug>): ...`), which only touch odd/ and
+.mem/ and which reviewers ignore. Then fill the Task analysis table. For each
+task:
 
 - Solves: the S# it implements.
 - Acceptance: the lines it must satisfy.
@@ -203,7 +205,8 @@ analysis is committed (`odd(<slug>): plan`) and before the first worker:
 2. If it returns blocking findings, the main session fixes the task document
    itself, once (the plan is its own work), commits it as
    `odd(<slug>): plan fix`, and resumes the same plan-reviewer for the
-   closing check.
+   closing check. Low findings never require a fix, but since the plan is the
+   main session's own document it may apply them in the same commit.
 3. Record the result on the `Plan review:` line of the header. A finding
    still open after the closing check: in Mode: auto, record it there and
    continue; in Mode: interactive, show it to the owner.
@@ -361,8 +364,12 @@ Hardening task documents get the same plan review.
     - [x] T4 (S2): <task> — <sha> · evidence: odd/evidence/<slug>/T4.md · review: open — <finding> (not resolved in the fix round)
 
 A task is ticked only with its sha, its evidence path and its review result.
-A hook (.claude/hooks/odd_tick_check.py) refuses a tick line without them, or
-whose commit or evidence file does not exist.
+When ticking, the main session also copies each Mutation's observed red from
+the evidence file into its Acceptance line (`observed:`); the task document
+is the main session's, so workers never write it.
+A hook (.claude/hooks/odd_tick_check.py) refuses a tick line without them,
+whose commit or evidence file does not exist, or that has the tick data but
+an unchecked box.
 
 ## Close and Archive (phases 10 and 11)
 
@@ -404,14 +411,17 @@ round, filled) and commit it, so an interrupted Close can be resumed.
    handoff, all the findings and the requirement's files as scope, closed by
    resuming the same reviewers. No
    second round; whatever stays open goes under Open findings in Mode: auto,
-   or stops the work in Mode: interactive.
+   or stops the work in Mode: interactive. After a fix round, run the gate
+   again, so the gate covers the code that is archived, and record both runs
+   on the Gate line.
 5. Close section. Fill it: gate, coverage, review verdicts, what was
    observed, open findings, the pre-existing weaknesses from reviewer notes
    and the skills that were not available. Set `Stage: filled`. The human
    test and delivery belong to the owner: record them as pending, never as
    done.
 6. Archive. Write the close entry in project memory, move the document with
-   `git mv odd/tasks/<slug>.md odd/tasks/archive/<date>-<slug>.md`, and
+   `git mv odd/tasks/<slug>.md odd/tasks/archive/<date>-<slug>.md` (`<date>`
+   is today's local date from `date +%Y-%m-%d`, never the org's clock), and
    commit the document and .mem/ together as `close <slug>`.
 
 ## Hardening (phase 12, once per run)

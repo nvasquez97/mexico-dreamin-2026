@@ -55,7 +55,8 @@ be loaded, run the command directly and say so in your return.
    that runs only as an administrator proves nothing about access. Tests of
    security rules prove the rejection: the unauthorized user, the wrong
    record, the guessable value (policy X16) are refused, and nothing changes.
-4. Assertions. The Assert class (Assert.areEqual, Assert.isTrue,
+4. Assertions. A positive behavior is tested with at least two different
+   inputs, so a hard-coded result cannot pass. The Assert class (Assert.areEqual, Assert.isTrue,
    Assert.fail), not the legacy System.assert methods, with a failure
    message. Exact expected values derived from the test data. Flag
    assertions that cannot fail: only not-null, a value compared with itself,
