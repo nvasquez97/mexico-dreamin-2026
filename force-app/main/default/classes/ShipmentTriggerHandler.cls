@@ -6,8 +6,9 @@
  *              DeliveryAccessCode.insertWithCodes are bound to the new record
  *              Ids. Before update: the access code hash and a filled original
  *              estimated delivery cannot be changed; a blank original estimate
- *              follows the first estimate. Works only on Trigger.new and
- *              Trigger.oldMap: no SOQL, no DML.
+ *              follows the first estimate; only the shipments of an active
+ *              DeliveryAccessCode.reissueCodes call get a new code and hash.
+ *              Works only on Trigger.new and Trigger.oldMap: no SOQL, no DML.
  */
 public with sharing class ShipmentTriggerHandler {
 
@@ -48,6 +49,7 @@ public with sharing class ShipmentTriggerHandler {
             revertProtectedFields(shipment, previous);
             fillOriginalEstimate(shipment, previous);
         }
+        DeliveryAccessCode.replaceReissuedCodes(newShipments);
     }
 
     // Keeps the stored hash and a filled original estimated delivery.

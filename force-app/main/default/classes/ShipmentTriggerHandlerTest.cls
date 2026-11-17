@@ -5,8 +5,10 @@
  *              DeliveryAccessCode.insertWithCodes), the Requested status on
  *              insert, the protection of the hash and of the original estimated
  *              delivery on update, and the capture of the original estimated
- *              delivery.
- *              Covers AC-F.4, AC-F.15, AC-F.13 and AC-F.5 of odd/tasks/foundation.md.
+ *              delivery, and the hash replaced on update only for the Ids
+ *              registered by DeliveryAccessCode.reissueCodes.
+ *              Covers AC-F.4, AC-F.15, AC-F.13, AC-F.16 and AC-F.5 of
+ *              odd/tasks/foundation.md.
  */
 @IsTest
 private with sharing class ShipmentTriggerHandlerTest {
@@ -429,6 +431,44 @@ private with sharing class ShipmentTriggerHandlerTest {
             Assert.areEqual(before.get(shipment.Id).Delivery_Access_Code_Hash__c,
                 saved.get(shipment.Id).Delivery_Access_Code_Hash__c,
                 'An update must not change the stored access code hash');
+        }
+    }
+
+    @IsTest
+    static void accessCodeHash_isReplacedOnlyForTheIdsOfAnActiveReissue() {
+        // AC-F.16 / AC-F.13: in one 251-record update that sets a caller hash on
+        // every row, only the Ids registered by an active reissue get a new salted
+        // hash matching their new code; every other shipment keeps its hash
+        List<Shipment__c> shipments = TestDataFactory.newShipments(customerId(), BULK_SIZE);
+        insertAsSystem(shipments);
+        Map<Id, Shipment__c> before = readBack(shipments);
+        List<Shipment__c> changes = new List<Shipment__c>();
+        Set<Id> registered = new Set<Id>();
+        for (Integer i = 0; i < shipments.size(); i++) {
+            changes.add(new Shipment__c(Id = shipments[i].Id, Delivery_Access_Code_Hash__c = CALLER_HASH));
+            if (Math.mod(i, 2) == 0) {
+                registered.add(shipments[i].Id);
+            }
+        }
+        DeliveryAccessCode.reissuingIds.addAll(registered);
+
+        Test.startTest();
+        updateAsSystem(changes);
+        Test.stopTest();
+
+        Map<Id, Shipment__c> saved = readBack(shipments);
+        Assert.areEqual(registered, DeliveryAccessCode.reissuedCodesById.keySet(), 'Only registered Ids get a new code');
+        for (Shipment__c shipment : shipments) {
+            Shipment__c row = saved.get(shipment.Id);
+            if (registered.contains(shipment.Id)) {
+                Assert.isTrue(STORED_HASH_FORMAT.matcher(row.Delivery_Access_Code_Hash__c).matches()
+                    && row.Delivery_Access_Code_Hash__c != before.get(shipment.Id).Delivery_Access_Code_Hash__c
+                    && DeliveryAccessCode.matches(row, DeliveryAccessCode.reissuedCodesById.get(shipment.Id)),
+                    'A registered shipment must store a new salted hash of its new code');
+            } else {
+                Assert.areEqual(before.get(shipment.Id).Delivery_Access_Code_Hash__c, row.Delivery_Access_Code_Hash__c,
+                    'A shipment not registered for reissue must keep its hash');
+            }
         }
     }
 

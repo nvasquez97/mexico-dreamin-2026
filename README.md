@@ -56,11 +56,31 @@ sandbox or scratch org, and nothing here is meant for production.
    are written once to `.seed-output/access-codes.csv`, which is git-ignored:
    never commit or share it.
 
-4. Verify the test data (read-only; exits non-zero on any failure):
+   If the data is loaded but `.seed-output/access-codes.csv` is not on this
+   machine (the codes of the first load were lost), reissue them:
+
+   ```bash
+   scripts/seed/seed.sh --reissue-codes <alias>
+   ```
+
+   It gives the 120 seeded shipments new codes through
+   `DeliveryAccessCode.reissueCodes` (the running user needs Edit on the
+   shipments) and writes them to `.seed-output/access-codes.csv`. **The reissue
+   invalidates the previous codes** of those shipments: any label or message
+   that carries an old code stops working. It loads nothing, refuses unless all
+   120 seeded shipments exist, and never overwrites an existing
+   `.seed-output/access-codes.csv`.
+
+4. Verify the test data (read-only on the data; exits non-zero on any failure):
 
    ```bash
    scripts/seed/verify.sh <alias>
    ```
+
+   When `.seed-output/access-codes.csv` is on this machine it also checks every
+   code in it against its shipment with `DeliveryAccessCode.verify` (it prints
+   only counts and deletes the debug logs of that check); without the file
+   that check is skipped.
 
 5. Run the org checks (read-only; each exits non-zero on any failure):
 
@@ -140,11 +160,11 @@ One line each; the full text is in the Assumptions section of
 - The administrator user for nicolas.murcia@adaptus.com in the development org
   is a justified exception to policy P7 (minimal admins), created at the
   owner's request; keep or remove it.
-- In the development org cargo-opus-t1 the delivery access codes of the 120
-  seeded shipments are not available: the first load's output was not captured
-  (see `odd/evidence/foundation/T6.md`), and only their hashes are stored (D1).
-  Recipient flows on those shipments need either a new org seeded from zero or
-  a decision on code reissue.
+- In the development org cargo-opus-t1 the delivery access codes of the first
+  seed load were lost (see `odd/evidence/foundation/T6.md`; only their hashes
+  are stored, D1). They were replaced with `scripts/seed/seed.sh
+  --reissue-codes` (T7); the new codes exist only in the local, git-ignored
+  `.seed-output/access-codes.csv` of the machine that ran it.
 
 ## Project structure
 

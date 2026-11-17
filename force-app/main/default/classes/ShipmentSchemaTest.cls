@@ -16,7 +16,7 @@ private with sharing class ShipmentSchemaTest {
     // mode and field permissions are granted by the permission sets of task T3,
     // so test-only DML and SOQL here run in system mode. Scope: this test class
     // only. Compensating control: access is proven with System.runAs in
-    // SupportAgentAccessTest (T3). (task-reviewer T1, 2026-11-17)
+    // SupportAgentAccessTest (T3). (pending owner approval, 2026-11-17)
     private static void insertAsSystem(List<SObject> records) {
         Database.insert(records, AccessLevel.SYSTEM_MODE);
     }

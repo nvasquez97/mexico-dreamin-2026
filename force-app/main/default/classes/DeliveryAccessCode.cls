@@ -7,9 +7,12 @@
  *              `v1$<rounds>$<base64 128-bit salt>$<base64 hash>`: round 1 is
  *              SHA-256(salt + code), each next round SHA-256(salt + previous
  *              digest), 100 rounds. The clear codes are bound to record Ids and
- *              returned only by insertWithCodes; rows inserted any other way keep
- *              no clear code. A clear code is never written to a field, a debug
- *              log or an exception message.
+ *              returned only by insertWithCodes and reissueCodes; rows inserted
+ *              or updated any other way keep no clear code, and a plain update
+ *              cannot change the hash (ShipmentTriggerHandler). verify checks a
+ *              typed code against one shipment's stored hash. A clear code or a
+ *              hash is never written to a debug log or an exception message, and
+ *              a clear code never to a field.
  */
 public with sharing class DeliveryAccessCode {
 
@@ -25,6 +28,7 @@ public with sharing class DeliveryAccessCode {
     private static final String TYPING_SEPARATORS = '[\\s-]';
     private static final Pattern STORED_FORMAT =
         Pattern.compile('^v1\\$([1-9][0-9]{0,3})\\$[A-Za-z0-9+/]{22}==\\$[A-Za-z0-9+/]{43}=$');
+    private static final Pattern CODE_FORMAT = Pattern.compile('^[' + ALPHABET + ']{' + CODE_LENGTH + '}$');
 
     // Clear codes of the rows being inserted through insertWithCodes, keyed by
     // the stored hash (unique per row thanks to its random salt): set in before
@@ -41,6 +45,16 @@ public with sharing class DeliveryAccessCode {
     private static Boolean captureForTest = false;
 
     private static Integer captureDepth = 0;
+
+    // Ids of the shipments being reissued by reissueCodes, only for the duration
+    // of that call: the before-update trigger replaces the hash only for them.
+    @TestVisible
+    private static Set<Id> reissuingIds = new Set<Id>();
+
+    // Clear codes issued by the before-update trigger for the registered Ids,
+    // until reissueCodes returns them.
+    @TestVisible
+    private static Map<Id, String> reissuedCodesById = new Map<Id, String>();
 
     /**
      * @description Inserts the shipments all-or-none in user mode (the running
@@ -73,6 +87,111 @@ public with sharing class DeliveryAccessCode {
             }
         }
         return codes;
+    }
+
+    /**
+     * @description Sanctioned reissue (AC-F.16): gives each shipment a new code and
+     *              a new salted hash, and returns the new clear codes. The shipments
+     *              are updated all-or-none in user mode with no field value of the
+     *              caller, so the running user needs Edit on Shipment__c and on each
+     *              record (object permission and sharing apply). The Ids are
+     *              registered only for the duration of the call, so the
+     *              before-update trigger replaces the hash only for them; every
+     *              other update keeps the stored hash. The previous codes stop
+     *              matching. A failed update throws and leaves no clear code in
+     *              memory.
+     * @param shipmentIds the shipments whose codes are reissued
+     * @return record Id to new clear code, for exactly the given Ids
+     */
+    public static Map<Id, String> reissueCodes(Set<Id> shipmentIds) {
+        Map<Id, String> codes = new Map<Id, String>();
+        if (shipmentIds == null || shipmentIds.isEmpty()) {
+            return codes;
+        }
+        List<Shipment__c> rows = new List<Shipment__c>();
+        for (Id shipmentId : shipmentIds) {
+            if (shipmentId != null) {
+                rows.add(new Shipment__c(Id = shipmentId));
+            }
+        }
+        reissuingIds.addAll(shipmentIds);
+        try {
+            Database.update(rows, true, AccessLevel.USER_MODE);
+            for (Shipment__c row : rows) {
+                if (reissuedCodesById.containsKey(row.Id)) {
+                    codes.put(row.Id, reissuedCodesById.get(row.Id));
+                }
+            }
+        } finally {
+            reissuingIds.clear();
+            reissuedCodesById.clear();
+        }
+        return codes;
+    }
+
+    /**
+     * @description Before update: for the shipments registered by an active
+     *              reissueCodes call, issues a new code, overwrites
+     *              Delivery_Access_Code_Hash__c with its iterated salted hash and
+     *              binds the clear code to the record Id (the Id already exists in
+     *              before update). Every other shipment is left unchanged. Runs
+     *              after the protected-field revert. No SOQL or DML.
+     * @param shipments the shipments being updated (Trigger.new)
+     */
+    public static void replaceReissuedCodes(List<Shipment__c> shipments) {
+        if (shipments == null || reissuingIds.isEmpty()) {
+            return;
+        }
+        for (Shipment__c shipment : shipments) {
+            if (shipment.Id != null && reissuingIds.contains(shipment.Id)) {
+                String code = generateCode();
+                shipment.Delivery_Access_Code_Hash__c = hashCode(code);
+                reissuedCodesById.put(shipment.Id, code);
+            }
+        }
+    }
+
+    /**
+     * @description Checks a code typed by a person against the stored hash of one
+     *              shipment (AC-F.17). The input is trimmed, upper-cased and its
+     *              spaces and hyphens removed; anything that is not then 12
+     *              characters of the code alphabet is rejected before any query.
+     *              Reads only Delivery_Access_Code_Hash__c of that one Id, compares
+     *              in constant time through matches, and never returns or logs the
+     *              hash. Callers exposed to external users must rate-limit
+     *              (REQ-002).
+     * @param shipmentId the shipment the code is claimed for
+     * @param code the typed code
+     * @return true only when the code is that shipment's code; false for a blank
+     *         or malformed code, or an unknown Id
+     */
+    public static Boolean verify(Id shipmentId, String code) {
+        if (shipmentId == null || String.isBlank(code)) {
+            return false;
+        }
+        String normalized = code.trim().replaceAll(TYPING_SEPARATORS, '').toUpperCase();
+        if (!CODE_FORMAT.matcher(normalized).matches()) {
+            return false;
+        }
+        // SECURITY-JUSTIFICATION: Delivery_Access_Code_Hash__c has no field
+        // permission for any user by design (D1, AC-F.8), so the user-mode default
+        // of API 67 cannot read it; this one query ignores FLS (record sharing still
+        // follows the class's with sharing). Scope: only the hash field of the one
+        // given Id, used only for the comparison below; the hash is never returned
+        // or logged. Compensating control: constant-time comparison, and callers
+        // exposed to external users must rate-limit attempts (REQ-002).
+        // (pending owner approval, 2026-11-17)
+        List<Shipment__c> rows = [
+            SELECT Delivery_Access_Code_Hash__c
+            FROM Shipment__c
+            WHERE Id = :shipmentId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (rows.isEmpty()) {
+            return false;
+        }
+        return matches(rows[0], normalized);
     }
 
     /**

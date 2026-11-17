@@ -18,15 +18,28 @@
 # Run it after the foundation metadata is deployed. Check with
 # scripts/seed/verify.sh <org-alias>.
 #
-# Usage: scripts/seed/seed.sh <org-alias>
+# --reissue-codes (AC-F.18): when the 120 seeded shipments exist but
+# .seed-output/access-codes.csv is not on this machine (the codes of the first
+# load were lost), gives the 120 shipments new codes through
+# DeliveryAccessCode.reissueCodes (scripts/seed/reissue.apex) and writes them to
+# that file. The previous codes stop working. It loads nothing, refuses to
+# overwrite an existing file and refuses unless all 120 seeded shipments exist.
+#
+# Usage: scripts/seed/seed.sh [--reissue-codes] <org-alias>
 set -euo pipefail
 umask 077
 
-ORG="${1:-}"
-if [[ -z "$ORG" ]]; then
-    echo "Usage: $0 <org-alias>" >&2
-    exit 2
-fi
+usage() { echo "Usage: $0 [--reissue-codes] <org-alias>" >&2; exit 2; }
+ORG=''
+REISSUE=false
+for arg in "$@"; do
+    case "$arg" in
+        --reissue-codes) REISSUE=true ;;
+        -*) usage ;;
+        *) [[ -z "$ORG" ]] || usage; ORG="$arg" ;;
+    esac
+done
+[[ -n "$ORG" ]] || usage
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT_DIR="$ROOT/.seed-output"
@@ -61,6 +74,30 @@ status_from_output() {
 codes_from_output() {
     debug_lines | grep -oE 'SEEDCODE[|]RC[0-9]{9}[|][A-Z0-9]{12}' | awk -F'|' '{ print $2 "," $3 }' || true
 }
+
+# The reissued access codes of a response (stdin), as tracking_number,access_code
+# lines (reissue.apex prints SEEDCODE:<tracking>:<code>).
+reissued_codes_from_output() {
+    debug_lines | grep -oE 'SEEDCODE:RC[0-9]{9}:[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{12}' | awk -F: '{ print $2 "," $3 }' || true
+}
+
+# Writes tracking_number,access_code lines (stdin) to the codes file, never over
+# an existing one.
+write_codes_file() {
+    local tmp
+    mkdir -p "$OUT_DIR"
+    tmp="$(mktemp "$OUT_DIR/.access-codes.XXXXXX")"
+    { printf 'tracking_number,access_code\n'; cat; } >"$tmp"
+    chmod 600 "$tmp"
+    if [[ -e "$CODES_FILE" ]] || ! mv -n "$tmp" "$CODES_FILE" || [[ -e "$tmp" ]]; then
+        rm -f "$tmp"
+        die "${CODES_FILE#"$ROOT/"} appeared while running; it was not overwritten and the new codes were discarded"
+    fi
+}
+
+if $REISSUE && [[ -e "$CODES_FILE" ]]; then
+    die "${CODES_FILE#"$ROOT/"} already exists; --reissue-codes never overwrites it (move it away only if its codes are known to be lost)"
+fi
 
 # ─── 1. Development org only, and who is running ───────────────────────────
 [[ "$(soql "SELECT IsSandbox FROM Organization" | jq -r '.[0].IsSandbox')" == "true" ]] \
@@ -100,6 +137,33 @@ delete_run_logs() {
 }
 trap delete_run_logs EXIT
 
+# ─── 4a. Reissue the codes of the seeded shipments (--reissue-codes) ───────
+if $REISSUE; then
+    seeded="$(soql "SELECT Id FROM Shipment__c WHERE Account__r.Name IN ('Abarrotes Acme','Globex Farma') AND Name >= 'RC000001001' AND Name <= 'RC000001120'" | jq 'length')"
+    [[ "$seeded" == "$EXPECTED_CODES" ]] \
+        || die "found $seeded of $EXPECTED_CODES seeded shipments; load the data with $0 $ORG first"
+    run="$(sf apex run --file "$ROOT/scripts/seed/reissue.apex" --target-org "$ORG" --json 2>/dev/null || true)"
+    if [[ "$(jq -r '.result.success // false' <<<"$run" 2>/dev/null)" != "true" ]]; then
+        reason="$(jq -r '.result.exceptionMessage // .result.compileProblem // .message // "no response"' <<<"$run" 2>/dev/null)"
+        unset run
+        die "reissue refused or failed, no code changed: $reason"
+    fi
+    reissued="$(debug_lines <<<"$run" | grep -oE 'SEEDREISSUE:reissued:[0-9]+' | tail -1 | cut -d: -f3 || true)"
+    codes="$(reissued_codes_from_output <<<"$run")"
+    unset run
+    written="$(grep -c . <<<"$codes" || true)"
+    distinct="$(cut -d, -f1 <<<"$codes" | sort -u | grep -c . || true)"
+    if [[ "$reissued" != "$EXPECTED_CODES" || "$written" != "$EXPECTED_CODES" || "$distinct" != "$EXPECTED_CODES" ]]; then
+        unset codes
+        die "the codes were reissued ($reissued) but $written of $EXPECTED_CODES were read from the output; the file is not written, run $0 --reissue-codes $ORG again"
+    fi
+    write_codes_file <<<"$codes"
+    unset codes
+    echo "seed: reissued $written delivery access codes; the previous codes no longer work"
+    echo "seed: wrote them to ${CODES_FILE#"$ROOT/"} (git-ignored; never commit or share it)"
+    exit 0
+fi
+
 # ─── 4. Load ───────────────────────────────────────────────────────────────
 run="$(sf apex run --file "$ROOT/scripts/seed/seed.apex" --target-org "$ORG" --json 2>/dev/null || true)"
 if [[ "$(jq -r '.result.success // false' <<<"$run" 2>/dev/null)" != "true" ]]; then
@@ -131,6 +195,6 @@ else
     if [[ -f "$CODES_FILE" ]]; then
         echo "seed: access codes of the first load stay in ${CODES_FILE#"$ROOT/"}"
     else
-        echo "seed: note: ${CODES_FILE#"$ROOT/"} is not on this machine; the codes were shown only once, at the first load (D1)"
+        echo "seed: note: ${CODES_FILE#"$ROOT/"} is not on this machine; the codes were shown only once, at the first load (D1). To get new ones (the old codes stop working): $0 --reissue-codes $ORG"
     fi
 fi

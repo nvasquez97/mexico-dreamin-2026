@@ -5,8 +5,18 @@
  *              rounds, recomputed here independently) and the matching rules
  *              (normalization of lower case, spaces and hyphens, blank input,
  *              blank, malformed or unknown stored values, rounds read from the
- *              stored value). No DML: shipments are in memory.
- *              Covers AC-F.4 of odd/tasks/foundation.md (D1, X8, X16).
+ *              stored value): no DML, shipments in memory. Then the sanctioned
+ *              reissue (reissueCodes, run as a support agent in user mode) and
+ *              verify (one shipment's hash, by Id) on saved shipments.
+ *              Covers AC-F.4, AC-F.16 and AC-F.17 of odd/tasks/foundation.md
+ *              (D1, X8, X16).
+ *              The support agent is a Standard Platform User with the
+ *              RutaCargo_Support_Agent permission set. Criteria-based sharing
+ *              rules are not evaluated in Apex tests (A10), so setup mirrors the
+ *              rule access with manual Edit shares to the agent itself, not to the
+ *              RutaCargo_Support_Agents group: adding a group member here locks
+ *              the group row against SupportAgentAccessTest when the classes run
+ *              in parallel (UNABLE_TO_LOCK_ROW).
  */
 @IsTest
 private with sharing class DeliveryAccessCodeTest {
@@ -20,6 +30,13 @@ private with sharing class DeliveryAccessCodeTest {
     private static final Integer HASH_FIELD_LENGTH = 100;
     private static final String FIRST_CODE = 'ABCDEFGHJKMN';
     private static final String SECOND_CODE = '23456789PQRS';
+
+    private static final String PERMISSION_SET_NAME = 'RutaCargo_Support_Agent';
+    private static final String AGENT_KEY = 'rcreissue';
+    private static final String SHARED_ACCOUNT = 'Reissue Test Customer';
+    private static final String UNSHARED_ACCOUNT = 'Reissue Unshared Customer';
+    private static final Integer BULK_SIZE = 251;
+    private static final Integer UNSHARED_SIZE = 2;
 
     // Independent recomputation of the stored value: round 1 hashes salt + code,
     // each next round hashes salt + the previous digest.
@@ -40,6 +57,75 @@ private with sharing class DeliveryAccessCodeTest {
 
     private static Shipment__c shipmentWithHash(String stored) {
         return new Shipment__c(Delivery_Access_Code_Hash__c = stored);
+    }
+
+    // ─── Saved shipments for reissueCodes and verify (AC-F.16, AC-F.17) ──
+
+    // SECURITY-JUSTIFICATION: the running test admin has no field permissions on
+    // the RutaCargo custom fields and nobody can read Delivery_Access_Code_Hash__c
+    // (at API 67 DML and SOQL default to user mode), so the test fixture is
+    // written and the stored hashes are read back in system mode. Scope: setup DML
+    // and verification reads of this test class only. Compensating control: the
+    // code under test (reissueCodes, insertWithCodes) runs as the support agent
+    // inside System.runAs in user mode. (pending owner approval, 2026-11-17)
+    private static void insertAsSystem(List<SObject> records) {
+        Database.insert(records, AccessLevel.SYSTEM_MODE);
+    }
+
+    private static Map<Id, Shipment__c> readHashes(Set<Id> shipmentIds) {
+        return new Map<Id, Shipment__c>([
+            SELECT Id, Delivery_Access_Code_Hash__c FROM Shipment__c WHERE Id IN :shipmentIds WITH SYSTEM_MODE
+        ]);
+    }
+
+    @TestSetup
+    static void setup() {
+        User agent = TestDataFactory.newPlatformUsers(new List<String>{ AGENT_KEY })[0];
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insertAsSystem(new List<User>{ agent });
+            Id permissionSetId = [SELECT Id FROM PermissionSet WHERE Name = :PERMISSION_SET_NAME WITH SYSTEM_MODE].Id;
+            insertAsSystem(TestDataFactory.newPermissionSetAssignments(permissionSetId, new List<User>{ agent }));
+        }
+        Account shared = TestDataFactory.newCustomerAccount(SHARED_ACCOUNT);
+        Account unshared = TestDataFactory.newCustomerAccount(UNSHARED_ACCOUNT);
+        insertAsSystem(new List<Account>{ shared, unshared });
+        List<Shipment__c> sharedShipments = TestDataFactory.newShipments(shared.Id, BULK_SIZE);
+        insertAsSystem(sharedShipments);
+        insertAsSystem(TestDataFactory.newShipments(unshared.Id, UNSHARED_SIZE));
+        // Manual shares to the agent user (the share builders accept any user or group Id).
+        insertAsSystem(TestDataFactory.newShipmentGroupShares(sharedShipments, agent.Id, 'Edit'));
+        insertAsSystem(TestDataFactory.newAccountGroupShares(new List<Account>{ shared }, agent.Id, 'Edit'));
+    }
+
+    private static User agent() {
+        String username = AGENT_KEY + '.' + UserInfo.getOrganizationId() + '@example.com.rutacargo';
+        return [SELECT Id FROM User WHERE Username = :username WITH SYSTEM_MODE LIMIT 1];
+    }
+
+    private static Set<Id> shipmentIdsOf(String accountName) {
+        return new Map<Id, Shipment__c>([
+            SELECT Id FROM Shipment__c WHERE Account__r.Name = :accountName WITH SYSTEM_MODE
+        ]).keySet();
+    }
+
+    private static Map<Id, String> reissueAsAgent(Set<Id> shipmentIds) {
+        Map<Id, String> codes;
+        System.runAs(agent()) {
+            codes = DeliveryAccessCode.reissueCodes(shipmentIds);
+        }
+        return codes;
+    }
+
+    // Two shipments A and B created by the agent through insertWithCodes, with their first codes.
+    private static Map<Id, String> insertTwoAsAgent() {
+        Id customerId = [SELECT Id FROM Account WHERE Name = :SHARED_ACCOUNT WITH SYSTEM_MODE LIMIT 1].Id;
+        List<Shipment__c> rows = TestDataFactory.newShipments(customerId, 2);
+        Map<Id, String> codes;
+        System.runAs(agent()) {
+            codes = DeliveryAccessCode.insertWithCodes(rows);
+        }
+        Assert.areEqual(2, codes.size(), 'insertWithCodes must return the codes of shipments A and B');
+        return codes;
     }
 
     // ─── Generator ────────────────────────────────────────────────────────
@@ -318,5 +404,231 @@ private with sharing class DeliveryAccessCodeTest {
     static void matches_returnsFalse_whenShipmentIsNull() {
         // AC-F.4: no shipment, no match
         Assert.isFalse(DeliveryAccessCode.matches(null, FIRST_CODE), 'A null shipment must match nothing');
+    }
+
+    // ─── reissueCodes (AC-F.16) ───────────────────────────────────────────
+
+    @IsTest
+    static void reissueCodes_returnsOneDistinctAlphabetCodePerGivenId() {
+        // AC-F.16: run as a support agent over 251 shipments, the returned map
+        // holds a 12-character alphabet code for exactly the given Ids, all distinct
+        Set<Id> shipmentIds = shipmentIdsOf(SHARED_ACCOUNT);
+
+        Test.startTest();
+        Map<Id, String> codes = reissueAsAgent(shipmentIds);
+        Test.stopTest();
+
+        Assert.areEqual(shipmentIds, codes.keySet(), 'The map must hold exactly the 251 given Ids');
+        Assert.areEqual(BULK_SIZE, new Set<String>(codes.values()).size(), 'The 251 new codes must be distinct');
+        for (String code : codes.values()) {
+            Assert.isTrue(CODE_FORMAT.matcher(code).matches(), 'Each new code must be 12 alphabet characters');
+        }
+    }
+
+    @IsTest
+    static void reissueCodes_storesANewHashThatMatchesEachReturnedCode() {
+        // AC-F.16: each of the 251 shipments stores a new v1$100 salted hash that
+        // matches its returned code and differs from the hash it had before
+        Set<Id> shipmentIds = shipmentIdsOf(SHARED_ACCOUNT);
+        Map<Id, Shipment__c> before = readHashes(shipmentIds);
+
+        Test.startTest();
+        Map<Id, String> codes = reissueAsAgent(shipmentIds);
+        Test.stopTest();
+
+        Map<Id, Shipment__c> after = readHashes(shipmentIds);
+        for (Id shipmentId : shipmentIds) {
+            String stored = after.get(shipmentId).Delivery_Access_Code_Hash__c;
+            Assert.isTrue(STORED_HASH_FORMAT.matcher(stored).matches(), 'The new hash must be v1$100$salt$hash');
+            Assert.isFalse(before.get(shipmentId).Delivery_Access_Code_Hash__c == stored, 'The hash must be replaced');
+            Assert.isTrue(DeliveryAccessCode.matches(after.get(shipmentId), codes.get(shipmentId)),
+                'The stored hash must match the returned code');
+        }
+    }
+
+    @IsTest
+    static void reissueCodes_newCodesVerify() {
+        // AC-F.16: the returned code of shipments A and B verifies on its shipment
+        Map<Id, String> first = insertTwoAsAgent();
+
+        Test.startTest();
+        Map<Id, String> reissued = reissueAsAgent(first.keySet());
+        Test.stopTest();
+
+        for (Id shipmentId : first.keySet()) {
+            Assert.isTrue(DeliveryAccessCode.verify(shipmentId, reissued.get(shipmentId)),
+                'The reissued code must verify on its shipment');
+        }
+    }
+
+    @IsTest
+    static void reissueCodes_previousCodesNoLongerVerify() {
+        // AC-F.16: after the reissue, the previous codes of A and B are rejected
+        Map<Id, String> first = insertTwoAsAgent();
+        for (Id shipmentId : first.keySet()) {
+            Assert.isTrue(DeliveryAccessCode.verify(shipmentId, first.get(shipmentId)),
+                'Before the reissue the first code must verify');
+        }
+
+        Test.startTest();
+        reissueAsAgent(first.keySet());
+        Test.stopTest();
+
+        for (Id shipmentId : first.keySet()) {
+            Assert.isFalse(DeliveryAccessCode.verify(shipmentId, first.get(shipmentId)),
+                'After the reissue the previous code must not verify');
+        }
+    }
+
+    @IsTest
+    static void reissueCodes_keepsNoClearCodeInMemory_afterReturning() {
+        // AC-F.16: the registered Ids and the clear codes are cleared when the call ends
+        Set<Id> shipmentIds = shipmentIdsOf(SHARED_ACCOUNT);
+
+        Test.startTest();
+        reissueAsAgent(shipmentIds);
+        Test.stopTest();
+
+        Assert.isTrue(DeliveryAccessCode.reissuingIds.isEmpty(), 'No Id may stay registered for reissue');
+        Assert.isTrue(DeliveryAccessCode.reissuedCodesById.isEmpty(), 'No clear code may stay in memory');
+    }
+
+    @IsTest
+    static void reissueCodes_throwsAndKeepsTheHash_whenTheAgentCannotEditTheShipment() {
+        // AC-F.16 (P10, no escalation): user mode, so shipments not shared with the
+        // agent cannot be reissued; the hashes stay and no state is kept
+        Set<Id> shipmentIds = shipmentIdsOf(UNSHARED_ACCOUNT);
+        Map<Id, Shipment__c> before = readHashes(shipmentIds);
+
+        Test.startTest();
+        Boolean reissued = true;
+        try {
+            reissueAsAgent(shipmentIds);
+        } catch (System.DmlException e) {
+            reissued = false;
+        }
+        Test.stopTest();
+
+        Assert.isFalse(reissued, 'An agent without access to the shipments must not reissue their codes');
+        Map<Id, Shipment__c> after = readHashes(shipmentIds);
+        for (Id shipmentId : shipmentIds) {
+            Assert.areEqual(before.get(shipmentId).Delivery_Access_Code_Hash__c,
+                after.get(shipmentId).Delivery_Access_Code_Hash__c, 'A refused reissue must keep the hash');
+        }
+        Assert.isTrue(DeliveryAccessCode.reissuingIds.isEmpty(), 'No Id may stay registered after a failure');
+        Assert.isTrue(DeliveryAccessCode.reissuedCodesById.isEmpty(), 'No clear code may stay after a failure');
+    }
+
+    @IsTest
+    static void reissueCodes_returnsAnEmptyMap_whenNoIdsAreGiven() {
+        // AC-F.16: nothing to reissue, nothing returned
+        Assert.isTrue(DeliveryAccessCode.reissueCodes(new Set<Id>()).isEmpty(), 'An empty set must return an empty map');
+    }
+
+    @IsTest
+    static void reissueCodes_returnsAnEmptyMap_whenIdsAreNull() {
+        // AC-F.16: nothing to reissue, nothing returned
+        Assert.isTrue(DeliveryAccessCode.reissueCodes(null).isEmpty(), 'A null set must return an empty map');
+    }
+
+    // ─── verify (AC-F.17) ─────────────────────────────────────────────────
+
+    @IsTest
+    static void verify_returnsTrue_forEachShipmentsOwnCode() {
+        // AC-F.17: A's code verifies on A, and B's code on B
+        Map<Id, String> codes = insertTwoAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+
+        Test.startTest();
+        Boolean a = DeliveryAccessCode.verify(ids[0], codes.get(ids[0]));
+        Boolean b = DeliveryAccessCode.verify(ids[1], codes.get(ids[1]));
+        Test.stopTest();
+
+        Assert.isTrue(a, 'A must accept its own code');
+        Assert.isTrue(b, 'B must accept its own code');
+    }
+
+    @IsTest
+    static void verify_returnsTrue_forTheOwnCodeInLowerCaseOrGrouped() {
+        // AC-F.17: A's code typed in lower case, and as xxxx-xxxx-xxxx with spaces around
+        Map<Id, String> codes = insertTwoAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+        String a = codes.get(ids[0]);
+        String b = codes.get(ids[1]);
+
+        Test.startTest();
+        Boolean lowerCase = DeliveryAccessCode.verify(ids[0], a.toLowerCase());
+        Boolean grouped = DeliveryAccessCode.verify(ids[1], ' ' + b.left(4) + '-' + b.mid(4, 4) + '-' + b.right(4) + ' ');
+        Test.stopTest();
+
+        Assert.isTrue(lowerCase, 'The own code in lower case must verify');
+        Assert.isTrue(grouped, 'The own code as XXXX-XXXX-XXXX must verify');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_forAnotherShipmentsCode() {
+        // AC-F.17: B's code on A, and A's code on B, are rejected
+        Map<Id, String> codes = insertTwoAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+
+        Test.startTest();
+        Boolean bOnA = DeliveryAccessCode.verify(ids[0], codes.get(ids[1]));
+        Boolean aOnB = DeliveryAccessCode.verify(ids[1], codes.get(ids[0]));
+        Test.stopTest();
+
+        Assert.isFalse(bOnA, 'B\'s code must not verify on A');
+        Assert.isFalse(aOnB, 'A\'s code must not verify on B');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_whenCodeIsBlank() {
+        // AC-F.17: a blank code is rejected
+        Id a = new List<Id>(insertTwoAsAgent().keySet())[0];
+        Assert.isFalse(DeliveryAccessCode.verify(a, '  '), 'A blank code must be rejected');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_whenCodeIsNull() {
+        // AC-F.17: a null code is rejected
+        Id a = new List<Id>(insertTwoAsAgent().keySet())[0];
+        Assert.isFalse(DeliveryAccessCode.verify(a, null), 'A null code must be rejected');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_andDoesNotQuery_whenCodeIsMalformed() {
+        // AC-F.17: malformed codes (too short, too long, outside the alphabet) are
+        // rejected before any query
+        Map<Id, String> codes = insertTwoAsAgent();
+        Id a = new List<Id>(codes.keySet())[0];
+        String own = codes.get(a);
+
+        Test.startTest();
+        Integer queriesBefore = Limits.getQueries();
+        Boolean tooShort = DeliveryAccessCode.verify(a, own.left(11));
+        Boolean tooLong = DeliveryAccessCode.verify(a, own + 'A');
+        Boolean outsideAlphabet = DeliveryAccessCode.verify(a, own.left(11) + '0');
+        Integer queriesUsed = Limits.getQueries() - queriesBefore;
+        Test.stopTest();
+
+        Assert.isFalse(tooShort, 'An 11-character code must be rejected');
+        Assert.isFalse(tooLong, 'A 13-character code must be rejected');
+        Assert.isFalse(outsideAlphabet, 'A code with 0 (outside the alphabet) must be rejected');
+        Assert.areEqual(0, queriesUsed, 'A malformed code must be rejected before any query');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_whenTheIdIsUnknown() {
+        // AC-F.17: an Id of no shipment is rejected, whatever the code
+        String own = insertTwoAsAgent().values()[0];
+        Id unknown = Shipment__c.SObjectType.getDescribe(SObjectDescribeOptions.DEFERRED).getKeyPrefix() + '000000000000';
+
+        Assert.isFalse(DeliveryAccessCode.verify(unknown, own), 'An unknown shipment Id must be rejected');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_whenTheIdIsNull() {
+        // AC-F.17: no shipment, no match
+        String own = insertTwoAsAgent().values()[0];
+        Assert.isFalse(DeliveryAccessCode.verify(null, own), 'A null shipment Id must be rejected');
     }
 }

@@ -3,8 +3,11 @@
 # (AC-F.11 and assumption A10, odd/tasks/foundation.md; design "Test data and
 # definition of done", docs/functional-design.md).
 #
-# Read-only: SOQL through the data API and a read of the local, git-ignored
-# .seed-output/access-codes.csv. It never prints a hash or a code.
+# Read-only on the data: SOQL through the data API, a read of the local,
+# git-ignored .seed-output/access-codes.csv and, when that file exists,
+# anonymous Apex that only calls DeliveryAccessCode.verify. It never prints a
+# hash or a code, and deletes the debug logs its anonymous Apex creates (they
+# echo the codes of the file).
 #
 # Exits non-zero unless:
 #   1. Abarrotes Acme (Business, Low, 500,000) and Globex Farma (Business, High,
@@ -20,12 +23,11 @@
 #      50,000, and Last_Location__c unless it is Requested;
 #   5. the delivery access codes written by seed.sh (when .seed-output/
 #      access-codes.csv is on this machine) cover exactly the 120 tracking
-#      numbers, one distinct 12-character code each from the code alphabet.
-#      Delivery_Access_Code_Hash__c itself cannot be read by any user, not even
-#      the administrator through the data API or anonymous Apex (D1, AC-F.8), so
-#      the hash is proven at creation: seed.sh fails and rolls back unless
-#      DeliveryAccessCode.insertWithCodes returns one code per shipment, which it
-#      binds only to rows that store the hash it generated;
+#      numbers, one distinct 12-character code each from the code alphabet, and
+#      every one of them verifies on its shipment through
+#      DeliveryAccessCode.verify (AC-F.18; anonymous Apex in batches of
+#      $VERIFY_BATCH codes, one query per code, counts only). When the file is
+#      absent this check is skipped (seed.sh --reissue-codes writes a new one);
 #   6. every seeded shipment has a Shipment__Share row with RowCause Rule to the
 #      RutaCargo_Support_Agents group, and both accounts an AccountShare row with
 #      RowCause Rule to that group (the criteria-based sharing rules, A10).
@@ -43,6 +45,8 @@ if [[ -z "$ORG" ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+VERIFY_BATCH=50
 
 ACME='Abarrotes Acme'
 GLOBEX='Globex Farma'
@@ -194,9 +198,88 @@ else
 fi
 
 # ─── 5. Delivery access codes from the seed (local file, never printed) ────
+
+# Checks every code of the (well-formed) file with DeliveryAccessCode.verify on
+# its shipment, in anonymous Apex batches of $VERIFY_BATCH (verify runs one query
+# per code; 100 per transaction). The generated Apex holds codes, so it lives in
+# a private directory under the git-ignored .seed-output/ and is removed, and the
+# debug logs of these runs are deleted. Prints counts only.
+verify_codes_in_org() {
+    local username user_id logs_before workdir batch apex out result checked=0 passed=0 failed
+    username="$(sf org display --target-org "$ORG" --json 2>/dev/null | jq -r '.result.username // empty')"
+    query "SELECT Id FROM User WHERE Username = '$username'"
+    user_id="$(jq -r '.[0].Id // empty' <<<"$REPLY" 2>/dev/null)"
+    if [[ -z "$user_id" ]]; then
+        fail "access codes not checked in the org: cannot identify the running user"
+        return
+    fi
+    query "SELECT Id FROM ApexLog WHERE LogUserId = '$user_id'"
+    logs_before="$(jq -r '.[]?.Id' <<<"$REPLY" 2>/dev/null)"
+    workdir="$(umask 077; mktemp -d "$ROOT/.seed-output/.verify.XXXXXX")"
+    tail -n +2 "$CODES_FILE" | split -l "$VERIFY_BATCH" - "$workdir/batch."
+    for batch in "$workdir"/batch.*; do
+        apex="$batch.apex"
+        {
+            echo "Map<String, String> codes = new Map<String, String>{"
+            awk -F, '{ printf "%s    '\''%s'\'' => '\''%s'\''", (NR > 1 ? ",\n" : ""), $1, $2 } END { print "" }' "$batch"
+            cat <<'APEX'
+};
+Map<String, Id> idByName = new Map<String, Id>();
+for (Shipment__c shipment : [
+    SELECT Id, Name FROM Shipment__c
+    WHERE Name IN :codes.keySet() AND Account__r.Name IN ('Abarrotes Acme', 'Globex Farma')
+    WITH USER_MODE
+]) {
+    idByName.put(shipment.Name, shipment.Id);
+}
+Integer passed = 0;
+for (String name : codes.keySet()) {
+    if (idByName.containsKey(name) && DeliveryAccessCode.verify(idByName.get(name), codes.get(name))) {
+        passed++;
+    }
+}
+System.debug('SEEDVERIFY:' + codes.size() + ':' + passed);
+APEX
+        } >"$apex"
+        out="$(sf apex run --file "$apex" --target-org "$ORG" --json 2>/dev/null || true)"
+        rm -f "$apex" "$batch"
+        result="$(jq -r '.result.logs // ""' <<<"$out" 2>/dev/null | grep 'USER_DEBUG' | grep -oE 'SEEDVERIFY:[0-9]+:[0-9]+' | tail -1 || true)"
+        if [[ "$(jq -r '.result.success // false' <<<"$out" 2>/dev/null)" != "true" || -z "$result" ]]; then
+            fail "a batch of access codes could not be checked in the org: $(jq -r '.result.exceptionMessage // .result.compileProblem // .message // "no result"' <<<"$out" 2>/dev/null | cut -c1-200)"
+            unset out
+            continue
+        fi
+        unset out
+        checked=$((checked + $(cut -d: -f2 <<<"$result")))
+        passed=$((passed + $(cut -d: -f3 <<<"$result")))
+    done
+    rmdir "$workdir" 2>/dev/null || rm -rf "$workdir"
+
+    local after id deleted=0
+    after="$(sf data query --target-org "$ORG" --json --query "SELECT Id FROM ApexLog WHERE LogUserId = '$user_id'" 2>/dev/null \
+        | jq -r '.result.records[]?.Id' 2>/dev/null || true)"
+    for id in $after; do
+        if ! grep -qx "$id" <<<"$logs_before"; then
+            if sf data delete record --sobject ApexLog --record-id "$id" --target-org "$ORG" --json >/dev/null 2>&1; then
+                deleted=$((deleted + 1))
+            else
+                echo "WARNING: could not delete debug log $id (it echoes access codes); delete it in Setup > Debug Logs" >&2
+            fi
+        fi
+    done
+    echo "info: deleted $deleted debug log(s) of the access-code check"
+
+    failed=$((checked - passed))
+    if [[ "$checked" == "120" && "$passed" == "120" ]]; then
+        pass "120 of 120 access codes verify on their shipment through DeliveryAccessCode.verify"
+    else
+        fail "access codes that verify through DeliveryAccessCode.verify: $passed of 120 (checked $checked, failed $failed)"
+    fi
+}
+
 CODES_FILE="$ROOT/.seed-output/access-codes.csv"
 if [[ ! -f "$CODES_FILE" ]]; then
-    echo "skip: $CODES_FILE is not on this machine (it is written only by the run of seed.sh that loads the data)"
+    echo "skip: $CODES_FILE is not on this machine (written by the run of seed.sh that loads the data, or by seed.sh --reissue-codes)"
 else
     expected_all="$(range_json 1001 1120)"
     if awk -F, 'NR == 1 { if ($0 != "tracking_number,access_code") bad = 1; next }
@@ -206,8 +289,9 @@ else
        && jq -e -R -s --argjson e "$expected_all" \
             '[split("\n")[1:][] | select(length > 0) | split(",")[0]] | sort == $e' "$CODES_FILE" >/dev/null; then
         pass "access-codes.csv holds one distinct 12-character code for each of RC000001001-RC000001120"
+        verify_codes_in_org
     else
-        fail "access-codes.csv does not hold exactly one distinct well-formed code for each of RC000001001-RC000001120"
+        fail "access-codes.csv does not hold exactly one distinct well-formed code for each of RC000001001-RC000001120; the codes were not checked in the org"
     fi
 fi
 
