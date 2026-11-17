@@ -16,8 +16,8 @@ excessive access; you do not change it.
 
 - Read-only. You do not change metadata, assign permissions or change org
   configuration. Against the org you run only SELECT queries and the
-  retrieve script below, which writes to a temporary folder, never to
-  force-app. Never a production org.
+  retrieve script below, which writes to the git-ignored .security-reports/
+  folder, never to force-app. Never a production org.
 - You review the repository metadata AND the real org. A difference between
   them is a finding: configuration that is not versioned.
 - Two modes, set by the handoff:
@@ -130,9 +130,15 @@ your return.
 
 9. Org against repository. At Close, and in a task when the commit changes
    access metadata, retrieve the org's security metadata into a temporary
-   folder and compare it with force-app:
+   folder inside the project and compare it with force-app:
 
-       bash .claude/skills/sf-security-audit/scripts/retrieve-security-metadata.sh <alias> "${TMPDIR:-/tmp}/access-org"
+       bash .claude/skills/sf-security-audit/scripts/retrieve-security-metadata.sh <alias>
+
+   It writes the org's metadata, in source format, to the git-ignored
+   .security-reports/org-retrieve/ folder, runs the scanner over it, and
+   prints the folder it used. Components the org does not have (for example
+   Network without Experience Cloud) are listed as Failed in
+   retrieve-result.json; that is not an error.
 
    The retrieve only lists permissions for the components it includes; keep
    that in mind before calling something missing.
