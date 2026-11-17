@@ -123,3 +123,10 @@
 - Type: environment
 - What: To run the GATE while a worker edits the main checkout, deploy from `git worktree add --detach <scratch>/wt-gate HEAD`; a fresh worktree has no source-tracking state, so the deploy needs `--ignore-conflicts` (156 "conflicts" otherwise).
 - Why / evidence: gate 0AfEk00000h4y85KAA.
+
+## 2026-11-17 19:40 — REQ-001: T1, T2 ticked; T3 in review
+- Type: status
+- What: T1 04ed8f0 (fixed 093aab3: 520-char entry bound, 100-entry test, inner sharing keywords), T2 00532b9 clean (rcTracking on the home page, published). T3 6f82b47 (logo 440 px box from 40em → 369 px visible; gray wrapper removed by zero branding-set row paddings — side effect: page sections edge to edge) under task-reviewer.
+- Why / evidence: odd/tasks/req-001-public-tracking.md task lines.
+- Next: tick T3, REQ-001 Close (gate from a clean worktree; test-reviewer, brand-reviewer, sf-security-auditor, access-auditor), archive; then REQ-002+003 T1.
+- Environment: source tracking reports stale conflicts after deploys from other worktrees; workers verify with a retrieve and use --ignore-conflicts.
