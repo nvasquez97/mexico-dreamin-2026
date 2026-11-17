@@ -95,7 +95,7 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 - [x] T4 (S4): LWR site RutaCargo, published, locked-down guest profile and guest time zone — 3da69bd · evidence: odd/evidence/foundation/T4.md · review: fixed in 1cae575, open — Low: guest-access-check.sh:195 counts any non-200 (timeout, 000, 5xx) as "refused" · reviewers: task-reviewer ab9d619dc128467ce, security-reviewer a6c46ac1c01af428d, access-auditor a9287e8cd078ca284
 - [x] T5 (S5): Brand theme, fonts, logos and header of the site — 0482f05 · evidence: odd/evidence/foundation/T5.md · review: clean
 - [x] T6 (S6): Idempotent seed and verify scripts, README run steps and assumptions — 738ff65 · evidence: odd/evidence/foundation/T6.md · review: open — High "security lens missing" closed by launching the lens (security-reviewer, access-auditor approved); Low: README.md:140 names a person's email (X7/X14); seeded clear codes lost (handled by T7) · reviewers: task-reviewer aa645d88783fd81dc, security-reviewer a4c3ba447b3865ad6, access-auditor a67b9df082a22afdf
-- [ ] T7 (S2, S6): Sanctioned reissue and verify of delivery access codes; seed reissues the lost seeded codes — test first
+- [ ] T7 (S2, S6): Sanctioned reissue and verify of delivery access codes; seed reissues the lost seeded codes — test first — review: findings · reviewers: task-reviewer a0e1a57111d569e95, security-reviewer a1d9deb51376e7016, access-auditor ae15fd73d4050bbb7
 
 ## Assumptions
 - A1 (D1): the delivery access code is stored only as a salted SHA-256 hash; its clear value exists only in the creating transaction (shown once to the creator in REQ-006, written to a git-ignored local file by the seed). Label printing and code reissue by agents are out of scope.
