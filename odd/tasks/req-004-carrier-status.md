@@ -4,7 +4,7 @@ Mode: auto
 Branch: ODD-Opus-Cargo-Test-1
 Org: cargo-opus-t1
 Approved: standing choice of the owner (unattended run), 2026-11-17
-Base: 
+Base: 642bc1b
 Plan review: 
 
 ## Findings
@@ -15,6 +15,8 @@ Plan review:
 - Tracking numbers are the record Name, `^RC\d{9}$`, indexed (foundation AC-F.2).
 - At API 67 Apex DML/SOQL default to user mode, so the integration user's FLS and sharing apply (foundation T1 evidence).
 - The site's guest and customers must never reach this endpoint (BR-04); Apex REST is reachable only by authenticated users with class access.
+- Foundation lessons (odd/tasks/archive/2026-11-17-foundation.md): criteria-based sharing rules are not evaluated in Apex tests (A10: mirror them with Manual group shares in tests, prove the real rule shares with a script); every check script must fail on a failed query; agents can edit Status__c, Last_Location__c, Last_Update__c, Delivered_At__c and Proof_Id__c (BR-09 allows RutaCargo to correct statuses); licenses: Salesforce Integration 0/1 used, Salesforce Platform 0/3 (tests create users without consuming real licenses but must use profiles whose license exists).
+- Only 120 seeded shipments exist; A6 forbids stray Shipment__c inserts outside tests; the live check of AC-004.6 updates one seeded "In transit" shipment, which keeps every status present per customer (scripts/seed/verify.sh must stay green).
 
 ## Problems
 - P1: Without an inbound service, statuses keep being typed by hand hours late (evidence: REQ-004 story).
