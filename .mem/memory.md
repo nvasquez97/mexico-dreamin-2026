@@ -82,3 +82,15 @@
 - What: odd/tasks/req-004-carrier-status.md (Base 642bc1b, plan review fixed). T1 87b84b4 (fixed d77dade): integration permset, custom permission RutaCargo_EntregaYa_Sender, group + sharing rule, entregaya-access-check.sh. T2 4c7096d (fixed 4298410): EntregaYaStatusService + trigger guard refusing direct updates by custom-permission holders (AC-004.9), INVALID_PROOF_ID (B9). T3 (REST resource) worker launched; T4 (External Client App, integration user, live simulation and attack check) next.
 - Why / evidence: task lines in the document.
 - Next: review T3, then T4 (must create the integration user and assign the Salesforce API Integration PSL in one step, B8; ECA OAuth policies from a template, not versioned).
+
+## 2026-11-17 15:05 — Session handoff: REQ-004 T4 committed, awaiting review; plugins installed
+- Type: status
+- What: REQ-004 T3 ticked (62342c7, fixed 4d8c04f; B10 16 KB cap, B11 depth ≤ 20). T4 committed 55bb487, evidence d7da664 (odd/evidence/req-004-carrier-status/T4.md): External Client App "EntregaYa Status", integration user via scripts/setup/entregaya-integration.sh (ran, idempotent), attack-check.sh, simulate-status.sh; gate 166/166, 94.6%. Live simulation NOT run (consumer secret not readable via API; owner step, B12). T4 is NOT ticked yet: its review has not run.
+- Why / evidence: odd/tasks/req-004-carrier-status.md (B12), T4 evidence.
+- Next (new session): launch task-reviewer, security-reviewer and access-auditor over 55bb487 with Review handoffs for T4 (AC-004.6, AC-004.8; Security yes); fix round if needed; tick T4; then REQ-004 Close (gate, test-reviewer, sf-security-auditor, access-auditor; no brand: no interface); archive; then REQ-001.
+- Speed-ups decided (apply from the next requirement): workers run only their own test classes and scripts (no full GATE per task; the gate stays at Close); fewer, larger tasks (2–3 per requirement); draft and plan-review the next requirement while workers run. Grouping requirements (REQ-002+003, REQ-006+007, REQ-005 alone) is proposed to the owner but NOT approved: keep one task document per requirement unless the owner says yes.
+
+## 2026-11-17 15:05 — Environment: Salesforce plugins installed at project scope
+- Type: environment
+- What: The four Salesforce plugins were disabled in ~/.claude/settings.json and only installed for other project folders, so the Skill tool returned "Unknown skill" and every agent read SKILL.md by hand (main cause of slow agents). Installed salesforce-development, salesforce-code-quality, experience-lwc and integration with `claude plugin install <p>@salesforce --scope project` on 2026-11-17; they load after a session restart. In the new session, check that the Skill tool lists salesforce-development:* skills; if it does, drop the "read SKILL.md from the cache" note from handoffs.
+- Why / evidence: measured: deploys 1–3 s, test runs 5–40 s, gate ~2.5 min; the gaps are agent turns.

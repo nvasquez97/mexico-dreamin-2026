@@ -79,6 +79,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 - B9 (T2 review): a proofId longer than 100 characters (the Proof_Id__c length) or with characters outside letters, digits, hyphen and underscore is rejected with 400 INVALID_PROOF_ID, added to the closed list of error codes; an empty-string proofId counts as present and is rejected (EntregaYa sends null when there is none); ASCII letters only.
 - B10 (T3 security review CODE-001): request bodies larger than 16 KB are rejected with 400 INVALID_JSON before parsing; the five-field contract fits far below that, and deeply nested JSON could otherwise raise an uncatchable limit exception.
 - B11 (T3 fix round): JSON nested deeper than 20 levels is rejected with 400 INVALID_JSON by a non-recursive JSONParser walk before deserializing, because 8 KB of nesting under the size cap still raised the uncatchable "Maximum stack depth reached"; the five-field contract has depth 1.
+- B12 (T4): the LWR site path /rutacargo/services/apexrest/* answers every POST with 501; the attack check accepts 501 only when a POST to a nonexistent resource on the same path also gets 501 (proof the request never reaches Apex), and never accepts 200. The live client-credentials simulation was not run: the org keeps enableClientSecretInRestApiAccess off, so the consumer secret is not readable through the API; the owner runs scripts/entregaya/simulate-status.sh with the key and secret from Setup (README, B4).
 - B7: lock timeouts answer 503 so EntregaYa retries; other unexpected errors answer 500 with a generic body.
 
 ## Close
