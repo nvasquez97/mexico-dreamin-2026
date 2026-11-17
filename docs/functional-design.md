@@ -179,7 +179,7 @@ There are two exchanges with EntregaYa: Salesforce asks it for the proof of deli
 
 **Note from the provider's ticket (copied as is):**
 
-> Hi, your access to the test environment is now active. Base URL: https://REPLACE-WITH-YOUR-MOCK — API key: ey_sk_test_4Qw8Zr2LmX9vTn6Kp3Hd. It goes in the Authorization header as Bearer. To send you the status changes we need you to tell us the URL of your service and how we authenticate; on our side we support OAuth 2.0 (client credentials). Regards, EntregaYa support.
+> Hi, your access to the test environment is now active. Base URL: https://REPLACE-WITH-YOUR-MOCK — API key: [REDACTED: the original key was committed to git history and must be rotated with EntregaYa; the new key lives only in the org's External Credential, never in the repository]. It goes in the Authorization header as Bearer. To send you the status changes we need you to tell us the URL of your service and how we authenticate; on our side we support OAuth 2.0 (client credentials). Regards, EntregaYa support.
 
 **Proof of delivery (Salesforce calls EntregaYa):**
 
