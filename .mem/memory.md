@@ -112,3 +112,14 @@
 - What: REQ-004 gate @ 139ffb7 green (166/166, 94.6%); Close reviews: test-reviewer changes required (Medium simulate-status.sh exits 0 on any 2xx; Lows), sf-security-auditor pass, access-auditor approved; Stage fix round — the fix worker launches after REQ-001 T1 commits (one committing worker). REQ-001 T1 worker running (PublicTracking*). REQ-002+003 plan reviewed and fixed (3c64ca7; new object Recipient_Access_Guard__c, guest permset RutaCargo_Guest_Proof_Download; starts after REQ-001 archive). REQ-005 plan b59ead7 in plan review.
 - Why / evidence: the three task documents; reviewer ids on their lines.
 - Next: REQ-001 T1 review (task-reviewer, security-reviewer, access-auditor) + REQ-004 Close fix worker; then REQ-001 T2, T3.
+
+## 2026-11-17 18:30 — REQ-004 closed and archived
+- Type: close
+- What: Gate @ 139ffb7 166/166 and re-run @ a096821 192/192, org 95.26% (EntregaYa* 100%). Reviews: test-reviewer (Medium + Low fixed in ae77cb2; High AC-004.6 live POST open, owner), sf-security-auditor pass, access-auditor approved. Open: AC-004.6 live POST (B12/B13), EXP-001 IP ranges (B6), one Low.
+- Why / evidence: odd/tasks/archive/2026-11-17-req-004-carrier-status.md, Close section.
+- Next: REQ-001 T1 fix round (worker running), then T2, T3, Close. REQ-002+003, REQ-005, REQ-006+007 plans are reviewed and committed.
+
+## 2026-11-17 18:30 — Environment: gate from a clean worktree
+- Type: environment
+- What: To run the GATE while a worker edits the main checkout, deploy from `git worktree add --detach <scratch>/wt-gate HEAD`; a fresh worktree has no source-tracking state, so the deploy needs `--ignore-conflicts` (156 "conflicts" otherwise).
+- Why / evidence: gate 0AfEk00000h4y85KAA.
