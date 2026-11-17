@@ -70,3 +70,9 @@
 - Why / evidence: odd/tasks/foundation.md
 - Next: tick T7, then foundation Close (GATE, test-reviewer, brand-reviewer, sf-security-auditor, access-auditor). REQ-004 plan is drafted (odd/tasks/req-004-carrier-status.md) — set Base and run plan review after foundation is archived.
 - Notes for REQ-002: DeliveryAccessCode is `with sharing`, so a guest caller of verify gets false unless a narrowly justified without-sharing helper does the lookup; verify does 1 SOQL per call and ~8 ms CPU; the guest controller must rate-limit (X16) and must not trust agent-editable fields (Proof_Id__c, Reschedule_Count__c). Network enableApexCDNCaching is true: guest cacheable Apex must not return caller-specific data. Every site page is public unless set to require login.
+
+## 2026-11-17 11:51 — foundation closed and archived
+- Type: close
+- What: Gate @ f2dedeb 98/98 and re-run @ 265a51d 101/101, org 90.79% (DeliveryAccessCode 98.42, ShipmentTriggerHandler 95.45). Reviews: test closed, security pass (Low), access approved, brand 2 open (logo ~303 px < 360 at desktop; platform #EFF0F2 wrapper around header/footer) → carried into REQ-001 as a task. Assumptions A1-A14 in the archived document.
+- Why / evidence: odd/tasks/archive/2026-11-17-foundation.md, Close section.
+- Next: REQ-004: set Base, commit plan, plan-reviewer. Then REQ-001 (include the two brand findings), REQ-002, REQ-003, REQ-005, REQ-006, REQ-007; Hardening; End of run.
