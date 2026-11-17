@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recipient_Address__c</fullName>
+    <label>Recipient Address</label>
+    <description>Delivery address. Personal data (BR-02).</description>
+    <length>1000</length>
+    <visibleLines>3</visibleLines>
+    <externalId>false</externalId>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+</CustomField>

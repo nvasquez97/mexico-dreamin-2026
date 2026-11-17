@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Previous_Instructions__c</fullName>
+    <label>Previous Instructions</label>
+    <description>Delivery instructions before the change.</description>
+    <length>2000</length>
+    <visibleLines>3</visibleLines>
+    <externalId>false</externalId>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+</CustomField>

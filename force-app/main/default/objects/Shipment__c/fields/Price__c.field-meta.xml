@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Price__c</fullName>
+    <label>Price</label>
+    <description>Shipment price for the customer (MXN), calculated with BR-08. Visible only to the requesting customer.</description>
+    <precision>12</precision>
+    <scale>2</scale>
+    <externalId>false</externalId>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>
