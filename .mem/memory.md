@@ -130,3 +130,9 @@
 - Why / evidence: odd/tasks/req-001-public-tracking.md task lines.
 - Next: tick T3, REQ-001 Close (gate from a clean worktree; test-reviewer, brand-reviewer, sf-security-auditor, access-auditor), archive; then REQ-002+003 T1.
 - Environment: source tracking reports stale conflicts after deploys from other worktrees; workers verify with a retrieve and use --ignore-conflicts.
+
+## 2026-11-17 21:00 — REQ-001 closed and archived; REQ-002+003 starts
+- Type: close
+- What: Gate @ d55cd2c 196/196 and re-run @ a6e305b 205/205, org 95.48% (PublicTracking* 100%), Jest 63/63. Reviews: test-reviewer (2 Medium + 5 Low fixed at 2dcff81), brand approved (C11 live region fixed), sf-security-auditor pass (SEC-001 fixed by guest-access-check 5c), access-auditor approved. No open blocking findings; Hardening items in the Close section (C1 rate limit, etc.).
+- Why / evidence: odd/tasks/archive/2026-11-17-req-001-public-tracking.md.
+- Next: REQ-002+003 T1 (recipient access with lockout, details, reschedule); REQ-005 and REQ-006+007 plans are reviewed and wait their order gates.
