@@ -78,6 +78,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 - B8 (T1 review): the org has one Salesforce Integration license and one Salesforce API Integration PSL; T4 must create the integration user and assign the PSL in the same step, and tests reuse that user through TestDataFactory.newOrExistingIntegrationUser.
 - B9 (T2 review): a proofId longer than 100 characters (the Proof_Id__c length) or with characters outside letters, digits, hyphen and underscore is rejected with 400 INVALID_PROOF_ID, added to the closed list of error codes; an empty-string proofId counts as present and is rejected (EntregaYa sends null when there is none); ASCII letters only.
 - B10 (T3 security review CODE-001): request bodies larger than 16 KB are rejected with 400 INVALID_JSON before parsing; the five-field contract fits far below that, and deeply nested JSON could otherwise raise an uncatchable limit exception.
+- B11 (T3 fix round): JSON nested deeper than 20 levels is rejected with 400 INVALID_JSON by a non-recursive JSONParser walk before deserializing, because 8 KB of nesting under the size cap still raised the uncatchable "Maximum stack depth reached"; the five-field contract has depth 1.
 - B7: lock timeouts answer 503 so EntregaYa retries; other unexpected errors answer 500 with a generic body.
 
 ## Close
