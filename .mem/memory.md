@@ -100,3 +100,9 @@
 - What: Resumed REQ-004 at the T4 review (org cargo-opus-t1, active scratch, default target-org; Mode: auto, unattended, whole run). The Skill tool now lists salesforce-development:*, salesforce-code-quality:*, experience-lwc:*, integration:* — handoffs no longer tell agents to read SKILL.md from the cache. Owner approved grouping: REQ-002+REQ-003 in one task document, REQ-006+REQ-007 in another; REQ-001 and REQ-005 alone (approved exception to "one task document per requirement"). Speed-ups in force: workers run only their own test classes and checks; 2–3 larger tasks per requirement; draft and plan-review the next requirement while workers run.
 - Why / evidence: /work arguments of this session.
 - Next: T4 reviews (task-reviewer, security-reviewer, access-auditor running), then REQ-004 Close; draft REQ-001 meanwhile.
+
+## 2026-11-17 16:20 — REQ-004 T4 ticked with open owner items; Close gate; REQ-001 plan in review
+- Type: review
+- What: T4 55bb487 ticked: security-reviewer and access-auditor APPROVED; task-reviewer High (AC-004.6 live POST not run) and EXP-001 Medium (no login IP ranges) recorded open, pending owner (B12, B6, B13); no worker fix round. REQ-004 Close Stage gate. REQ-001 plan committed 1e25e74 (odd/tasks/req-001-public-tracking.md, Base d0c2143), plan-reviewer running.
+- Why / evidence: T4 task line and B13 in odd/tasks/req-004-carrier-status.md.
+- Next: GATE @ HEAD, then test-reviewer, sf-security-auditor, access-auditor (tier 2, no interface); archive; REQ-001 T1.
