@@ -65,7 +65,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 ## Tasks
 - [x] T1 (S3): Integration permission set, custom permission, group, sharing rule and access check — 87b84b4 · evidence: odd/evidence/req-004-carrier-status/T1.md · review: fixed in d77dade · reviewers: task-reviewer a79d0ee9ec9707f97, security-reviewer afb85484222970362, access-auditor a28e16496f4edfada
 - [x] T2 (S1): Status service: validation, stale and future guard, lock and user-mode update — 4c7096d · evidence: odd/evidence/req-004-carrier-status/T2.md · review: fixed in 4298410 · reviewers: task-reviewer a87759ddc78ee5b3d, security-reviewer ab0198971d92ca07d, access-auditor ab52b460571b7c587
-- [ ] T3 (S2): REST resource: caller check, JSON parsing and the HTTP error contract — test first
+- [ ] T3 (S2): REST resource: caller check, JSON parsing and the HTTP error contract — test first — review: findings · reviewers: task-reviewer a1e1f8b130c8cc68d, security-reviewer aaae984d567623442, access-auditor a881e9b174befa418
 - [ ] T4 (S4): External Client App with client credentials, integration user setup, live simulation and attack check — test first
 
 ## Assumptions
@@ -77,6 +77,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 - B6: the External Client App enforces IP restrictions, but no login IP ranges are set for the integration user because EntregaYa has not provided its IP addresses; listed as a pending owner step.
 - B8 (T1 review): the org has one Salesforce Integration license and one Salesforce API Integration PSL; T4 must create the integration user and assign the PSL in the same step, and tests reuse that user through TestDataFactory.newOrExistingIntegrationUser.
 - B9 (T2 review): a proofId longer than 100 characters (the Proof_Id__c length) or with characters outside letters, digits, hyphen and underscore is rejected with 400 INVALID_PROOF_ID, added to the closed list of error codes; an empty-string proofId counts as present and is rejected (EntregaYa sends null when there is none); ASCII letters only.
+- B10 (T3 security review CODE-001): request bodies larger than 16 KB are rejected with 400 INVALID_JSON before parsing; the five-field contract fits far below that, and deeply nested JSON could otherwise raise an uncatchable limit exception.
 - B7: lock timeouts answer 503 so EntregaYa retries; other unexpected errors answer 500 with a generic body.
 
 ## Close
