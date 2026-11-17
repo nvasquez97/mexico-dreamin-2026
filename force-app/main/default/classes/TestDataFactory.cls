@@ -11,6 +11,17 @@ public with sharing class TestDataFactory {
     public static final String INTEGRATION_PROFILE_NAME = 'Minimum Access - API Only Integrations';
     public static final String API_INTEGRATION_PSL = 'SalesforceAPIIntegrationPsl';
 
+    /**
+     * @description When true, newOrExistingIntegrationUser must reuse an existing
+     *              integration user and throws TestDataException instead of
+     *              building a new one. Tests set it to force the reuse branch.
+     */
+    @TestVisible
+    private static Boolean reuseExistingIntegrationUserOnly = false;
+
+    /** @description Thrown when the factory cannot build the requested test data. */
+    public class TestDataException extends Exception {}
+
     // ─── Accounts (customers) ─────────────────────────────────────────────
 
     public static Account newCustomerAccount(String name) {
@@ -99,14 +110,41 @@ public with sharing class TestDataFactory {
     }
 
     /**
-     * @description Unsaved API-only integration user (profile "Minimum Access -
-     *              API Only Integrations", Salesforce Integration license). The
-     *              org has 1 Salesforce Integration license, so a test must not
-     *              insert more than 1 of them.
-     * @param uniqueKey a short key (letters and digits) that makes the user unique in the test
-     * @return the unsaved user
+     * @description The API-only integration user for a test (profile "Minimum
+     *              Access - API Only Integrations", Salesforce Integration
+     *              license). The org has 1 Salesforce Integration license and 1
+     *              "Salesforce API Integration" permission set license, which the
+     *              real EntregaYa integration user (req-004 T4) takes. So:
+     *              - when an active user with that profile already holds the
+     *                permission set license, that SAVED user is returned (Id set)
+     *                and the test must not insert it nor assign the license again;
+     *              - otherwise an UNSAVED new user is returned (Id null): the test
+     *                inserts it and assigns the license
+     *                (newApiIntegrationLicenseAssignment).
+     *              Remaining risk: if the only Salesforce Integration license is
+     *              held by a user without that profile or without the permission
+     *              set license, the test cannot insert a new one.
+     * @param uniqueKey a short key (letters and digits) that makes a new user unique in the test
+     * @return the existing integration user, or an unsaved new one
      */
-    public static User newIntegrationUser(String uniqueKey) {
+    public static User newOrExistingIntegrationUser(String uniqueKey) {
+        List<User> existing = [
+            SELECT Id, Username FROM User
+            WHERE IsActive = true AND Profile.Name = :INTEGRATION_PROFILE_NAME
+                AND Id IN (
+                    SELECT AssigneeId FROM PermissionSetLicenseAssign
+                    WHERE PermissionSetLicense.DeveloperName = :API_INTEGRATION_PSL
+                )
+            WITH USER_MODE
+            ORDER BY CreatedDate, Id
+            LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            return existing[0];
+        }
+        if (reuseExistingIntegrationUserOnly) {
+            throw new TestDataException('No active ' + INTEGRATION_PROFILE_NAME + ' user holds ' + API_INTEGRATION_PSL);
+        }
         Id profileId = [SELECT Id FROM Profile WHERE Name = :INTEGRATION_PROFILE_NAME WITH USER_MODE LIMIT 1].Id;
         return newUser(profileId, uniqueKey);
     }

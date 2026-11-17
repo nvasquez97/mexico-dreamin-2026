@@ -10,6 +10,11 @@
 #      (and the permission set does grant it);
 #   2. custom permission RutaCargo_EntregaYa_Sender is granted only through
 #      RutaCargo_EntregaYa_Integration (and it does grant it);
+#   2b. the permission set's setup entity access (SetupEntityAccess: Apex
+#      classes, Visualforce pages, custom permissions, apps, connected apps...) is
+#      exactly ApexClass EntregaYaStatusResource and CustomPermission
+#      RutaCargo_EntregaYa_Sender, and it has no tab visibility
+#      (PermissionSetTabSetting);
 #   3. among all the system permissions of the permission set (every boolean
 #      Permissions* field of PermissionSet), exactly API Enabled and Apex REST
 #      Services are enabled;
@@ -112,6 +117,31 @@ while IFS= read -r who; do
     fi
 done <<<"$(holders "$access")"
 [[ "$seen" == 1 ]] || fail "$PERMSET does not grant $CUSTOM_PERMISSION"
+
+# ─── 2b. Everything else the permission set grants ─────────────────────────
+# SetupEntityAccess covers Apex classes, Visualforce pages, custom permissions,
+# apps (TabSet), connected apps and the other setup entities: exactly the class
+# and the custom permission are allowed.
+entities="$(query "SELECT SetupEntityType, SetupEntityId FROM SetupEntityAccess WHERE ParentId = '$permset_id'")"
+expected_entities="$(printf '%s\n' "ApexClass:$class_id" "CustomPermission:$cp_id" | sort | paste -sd, -)"
+actual_entities="$(jq -r '[.[] | "\(.SetupEntityType):\(.SetupEntityId)"] | sort | join(",")' <<<"$entities")"
+if [[ "$actual_entities" == "$expected_entities" ]]; then
+    pass "$PERMSET grants only ApexClass $CLASS_NAME and CustomPermission $CUSTOM_PERMISSION (setup entities)"
+else
+    while IFS= read -r entity; do
+        [[ -z "$entity" ]] && continue
+        [[ ",$expected_entities," == *",$entity,"* ]] || fail "$PERMSET grants setup entity $entity"
+    done <<<"$(tr ',' '\n' <<<"$actual_entities")"
+    [[ ",$actual_entities," == *",ApexClass:$class_id,"* && ",$actual_entities," == *",CustomPermission:$cp_id,"* ]] \
+        || fail "$PERMSET setup entities must be exactly $expected_entities, are: ${actual_entities:-nothing}"
+fi
+tabs="$(query "SELECT Name, Visibility FROM PermissionSetTabSetting WHERE ParentId = '$permset_id'")"
+tab_list="$(jq -r '[.[] | "\(.Name)=\(.Visibility)"] | sort | join(", ")' <<<"$tabs")"
+if [[ -z "$tab_list" ]]; then
+    pass "$PERMSET has no tab visibility"
+else
+    fail "$PERMSET has tab visibility: $tab_list"
+fi
 
 # ─── 3. System permissions of the permission set ───────────────────────────
 describe="$(sf sobject describe --sobject PermissionSet --target-org "$ORG" --json 2>/dev/null || true)"

@@ -7,7 +7,9 @@
  *              Users: one integration user (profile "Minimum Access - API Only
  *              Integrations", Salesforce Integration license; the org has 1, so
  *              never more than 1 here) with the "Salesforce API Integration"
- *              permission set license, the permission set and the group; and one
+ *              permission set license, the permission set and the group. The
+ *              real integration user (T4) is reused when it already holds that
+ *              license; otherwise setup creates one. And one
  *              support agent (Standard Platform User with RutaCargo_Support_Agent).
  *              Every account and shipment is owned by the running admin, so the
  *              integration user's record access comes only from the group shares.
@@ -64,18 +66,35 @@ private with sharing class EntregaYaAccessTest {
 
     @TestSetup
     static void setup() {
-        User integration = TestDataFactory.newIntegrationUser(INTEGRATION_KEY);
+        // The org's only Salesforce Integration license may already be held by the
+        // real integration user (T4): the factory then returns that saved user.
+        User integration = TestDataFactory.newOrExistingIntegrationUser(INTEGRATION_KEY);
+        Boolean isNewIntegrationUser = integration.Id == null;
         User agent = TestDataFactory.newPlatformUsers(new List<String>{ AGENT_KEY })[0];
         System.runAs(new User(Id = UserInfo.getUserId())) {
-            insertAsSystem(new List<User>{ integration, agent });
-            insertAsSystem(new List<PermissionSetLicenseAssign>{
-                TestDataFactory.newApiIntegrationLicenseAssignment(integration.Id) });
+            List<User> newUsers = new List<User>{ agent };
+            if (isNewIntegrationUser) {
+                newUsers.add(integration);
+            }
+            insertAsSystem(newUsers);
+            if (isNewIntegrationUser) {
+                insertAsSystem(new List<PermissionSetLicenseAssign>{
+                    TestDataFactory.newApiIntegrationLicenseAssignment(integration.Id) });
+            }
             List<PermissionSetAssignment> assignments = TestDataFactory.newPermissionSetAssignments(
-                permissionSetId(PERMISSION_SET_NAME), new List<User>{ integration });
-            assignments.addAll(TestDataFactory.newPermissionSetAssignments(
-                permissionSetId(AGENT_PERMISSION_SET_NAME), new List<User>{ agent }));
+                permissionSetId(AGENT_PERMISSION_SET_NAME), new List<User>{ agent });
+            Id integrationSetId = permissionSetId(PERMISSION_SET_NAME);
+            if ([SELECT COUNT() FROM PermissionSetAssignment
+                    WHERE AssigneeId = :integration.Id AND PermissionSetId = :integrationSetId WITH SYSTEM_MODE] == 0) {
+                assignments.addAll(TestDataFactory.newPermissionSetAssignments(
+                    integrationSetId, new List<User>{ integration }));
+            }
             insertAsSystem(assignments);
-            insertAsSystem(TestDataFactory.newGroupMembers(groupId(), new List<User>{ integration }));
+            Id integrationGroupId = groupId();
+            if ([SELECT COUNT() FROM GroupMember
+                    WHERE GroupId = :integrationGroupId AND UserOrGroupId = :integration.Id WITH SYSTEM_MODE] == 0) {
+                insertAsSystem(TestDataFactory.newGroupMembers(integrationGroupId, new List<User>{ integration }));
+            }
         }
 
         Account customer = TestDataFactory.newCustomerAccount(CUSTOMER_NAME);
@@ -97,6 +116,22 @@ private with sharing class EntregaYaAccessTest {
         return [SELECT Id FROM User WHERE Username = :username WITH SYSTEM_MODE LIMIT 1];
     }
 
+    /**
+     * The integration user of the setup, created or reused: found through its
+     * group membership, independently of the factory's own lookup.
+     * @return the only integration-profile user in group RutaCargo_EntregaYa_Integration
+     */
+    private static User integrationUser() {
+        List<User> members = [
+            SELECT Id FROM User
+            WHERE Profile.Name = :TestDataFactory.INTEGRATION_PROFILE_NAME
+                AND Id IN (SELECT UserOrGroupId FROM GroupMember WHERE Group.DeveloperName = :GROUP_NAME)
+            WITH SYSTEM_MODE
+        ];
+        Assert.areEqual(1, members.size(), 'Exactly one integration user must be in group ' + GROUP_NAME);
+        return members[0];
+    }
+
     private static List<Shipment__c> twoShipments() {
         return [SELECT Id FROM Shipment__c WITH SYSTEM_MODE ORDER BY Name LIMIT 2];
     }
@@ -116,7 +151,7 @@ private with sharing class EntregaYaAccessTest {
         };
         List<String> wrong = new List<String>();
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             for (Schema.SObjectField field : fields) {
                 Schema.DescribeFieldResult result = field.getDescribe();
                 if (!result.isAccessible() || !result.isUpdateable()) {
@@ -133,7 +168,7 @@ private with sharing class EntregaYaAccessTest {
         // AC-004.5: read/edit FLS only on the five status fields (no other custom field)
         Set<String> readable = new Set<String>();
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             for (Schema.SObjectField field : describeShipment().fields.getMap().values()) {
                 Schema.DescribeFieldResult result = field.getDescribe();
                 if (result.isCustom() && result.isAccessible()) {
@@ -155,7 +190,7 @@ private with sharing class EntregaYaAccessTest {
         };
         List<String> readable = new List<String>();
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             for (Schema.SObjectField field : fields) {
                 Schema.DescribeFieldResult result = field.getDescribe();
                 if (result.isAccessible()) {
@@ -174,7 +209,7 @@ private with sharing class EntregaYaAccessTest {
         // AC-004.5: Shipment__c Read and Edit only (no Create)
         Boolean createable;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             createable = describeShipment().isCreateable();
         }
         Test.stopTest();
@@ -186,7 +221,7 @@ private with sharing class EntregaYaAccessTest {
         // AC-004.5: Shipment__c Read and Edit only (no Delete)
         Boolean deletable;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             deletable = describeShipment().isDeletable();
         }
         Test.stopTest();
@@ -199,7 +234,7 @@ private with sharing class EntregaYaAccessTest {
         Integer visible;
         String failure;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             try {
                 visible = [SELECT COUNT() FROM Shipment__c WITH USER_MODE];
             } catch (QueryException e) {
@@ -227,7 +262,7 @@ private with sharing class EntregaYaAccessTest {
         };
         List<Database.SaveResult> results;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             results = Database.update(changes, false, AccessLevel.USER_MODE);
         }
         Test.stopTest();
@@ -254,7 +289,7 @@ private with sharing class EntregaYaAccessTest {
         Shipment__c target = twoShipments()[0];
         List<Database.SaveResult> results;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             results = Database.update(new List<Shipment__c>{ new Shipment__c(Id = target.Id, Price__c = 1) },
                 false, AccessLevel.USER_MODE);
         }
@@ -271,7 +306,7 @@ private with sharing class EntregaYaAccessTest {
         // AC-004.5: RutaCargo_EntregaYa_Sender is granted through RutaCargo_EntregaYa_Integration
         Boolean granted;
         Test.startTest();
-        System.runAs(userWithKey(INTEGRATION_KEY)) {
+        System.runAs(integrationUser()) {
             granted = FeatureManagement.checkPermission(SENDER_PERMISSION);
         }
         Test.stopTest();
@@ -303,5 +338,23 @@ private with sharing class EntregaYaAccessTest {
         Assert.areEqual(501, RestContext.response.statusCode, 'The stub must answer 501');
         Assert.areEqual('{"error":{"code":"NOT_IMPLEMENTED","message":"This service is not available yet."}}',
             RestContext.response.responseBody.toString(), 'The stub must answer the generic error body');
+    }
+
+    // ─── Test data: the org's only Salesforce Integration license ─────────
+
+    @IsTest
+    static void factory_reusesTheExistingIntegrationUser() {
+        // AC-004.5 (T1 review finding 1): with an integration user already holding the
+        // Salesforce API Integration PSL, the factory returns it for any key and builds no new user
+        Id expected = integrationUser().Id;
+        TestDataFactory.reuseExistingIntegrationUserOnly = true;
+        User first;
+        User second;
+        Test.startTest();
+        first = TestDataFactory.newOrExistingIntegrationUser('rceyone');
+        second = TestDataFactory.newOrExistingIntegrationUser('rceytwo');
+        Test.stopTest();
+        Assert.areEqual(expected + '|' + expected, first.Id + '|' + second.Id,
+            'Both keys must reuse the integration user that already holds the license');
     }
 }
