@@ -53,7 +53,7 @@ publicly. Never write secret **values** into reports; cite file:line and redact 
    ```
    If Java 11+ is available (`java -version`), also run Graph Engine for path-based CRUD/FLS:
    `--rule-selector sfge --output-file "$RUN/code-analyzer-sfge.json"`. If a run fails, record it under
-   "Not covered" and consult the `dx-code-analyzer-configure` skill — don't block the audit. Violations with
+   "Not covered" and consult the `salesforce-code-quality:dx-code-analyzer-configure` skill — don't block the audit. Violations with
    rule `UnexpectedEngineError` mean that engine did not analyze those files: list them under "Not covered".
 3. With `--org`: retrieve org metadata into an isolated dir and scan it:
    ```bash
@@ -109,6 +109,6 @@ Artifact, gist or upload; they describe exploitable weaknesses.
 
 Then reply to the user with: counts by severity, the top
 findings (≤ 5, one line each with file:line), what was not covered, and both report paths. Offer to fix the
-Critical/High items — remediation should follow the vendored Salesforce skills (`platform-apex-generate`,
-`platform-permission-set-generate`, `platform-sharing-owd-configure`, `integration-connectivity-generate`,
-`integration-connectivity-connected-app-configure`, `experience-lwc-security-validate`).
+Critical/High items — remediation should follow the Salesforce plugin skills (`salesforce-development:platform-apex-generate`,
+`salesforce-development:platform-permission-set-generate`, `salesforce-development:platform-sharing-owd-configure`, `integration:integration-connectivity-generate`,
+`integration:integration-connectivity-connected-app-configure`, `experience-lwc:experience-lwc-security-validate`).

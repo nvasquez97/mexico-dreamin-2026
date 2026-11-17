@@ -10,21 +10,10 @@ DST="$ROOT/.claude/skills"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# Only skills that the enabled Salesforce plugins do not provide (see .claude/skills/VENDORED.md).
 SKILLS=(
-  dx-code-analyzer-run
-  dx-code-analyzer-configure
-  dx-code-analyzer-custom-rule-create
   dx-org-analyze
-  experience-lwc-security-validate
-  integration-connectivity-connected-app-configure
-  integration-connectivity-generate
-  platform-apex-generate
   platform-encryption-configure
-  platform-metadata-retrieve
-  platform-permission-set-generate
-  platform-sharing-owd-configure
-  platform-sharing-rules-generate
-  platform-soql-query
 )
 
 git clone --quiet --depth 1 --branch "$REF" https://github.com/forcedotcom/sf-skills.git "$TMP/sf-skills"

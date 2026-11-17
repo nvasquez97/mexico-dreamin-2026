@@ -69,7 +69,7 @@ Findings in the standard format with IDs `ACC-###`, plus a **least-privilege mat
 |---|---|---|---|---|---|
 
 ## Remediation guidance
-Generate corrected permission sets with the `platform-permission-set-generate` skill (permission sets over
-profiles, minimal object/field grants). Change OWDs with `platform-sharing-owd-configure`, replace broad access
-with targeted rules via `platform-sharing-rules-generate`. Warn that tightening OWD triggers sharing
+Generate corrected permission sets with the `salesforce-development:platform-permission-set-generate` skill (permission sets over
+profiles, minimal object/field grants). Change OWDs with `salesforce-development:platform-sharing-owd-configure`, replace broad access
+with targeted rules via `salesforce-development:platform-sharing-rules-generate`. Warn that tightening OWD triggers sharing
 recalculation and can break users — propose a test plan with realistic permission sets.

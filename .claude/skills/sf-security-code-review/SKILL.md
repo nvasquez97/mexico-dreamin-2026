@@ -71,7 +71,7 @@ used by a guest-exposed LWC/Aura component — check `*.js-meta.xml` `lightningC
 - Aura: `aura:unescapedHtml`, `$A.util` DOM writes, `access="global"`.
 - LWC: `innerHTML`/`outerHTML`/`insertAdjacentHTML`, `lwc:dom="manual"`, `lwc:inner-html`, `eval`,
   computed `window.location`, tokens in `localStorage`. For full LWS analysis use the
-  `experience-lwc-security-validate` skill on each component bundle.
+  `experience-lwc:experience-lwc-security-validate` skill on each component bundle.
 - Static resources: outdated JS libraries (Code Analyzer `retire-js` engine).
 
 ### 7. Secrets, logging, crypto, callouts (P2, X7, X8, X9)
@@ -91,5 +91,5 @@ used by a guest-exposed LWC/Aura component — check `*.js-meta.xml` `lightningC
 - Confirm or dismiss every High+ hit with a reason; add what the tools missed (cross-class data flow, IDOR).
 
 ## Remediation guidance
-Write fixes the way `platform-apex-generate` prescribes (explicit sharing keyword on every class, user mode
-by default, isolated justified elevation). For SOQL shape use `platform-soql-query`. Show the minimal diff.
+Write fixes the way `salesforce-development:platform-apex-generate` prescribes (explicit sharing keyword on every class, user mode
+by default, isolated justified elevation). For SOQL shape use `salesforce-development:platform-soql-query`. Show the minimal diff.

@@ -55,8 +55,8 @@ Certificate and Key Management (keys). Everything else is a finding:
   and exact (no wildcards); scopes minimal (no `Full`; `RefreshToken` only if needed; JWT flows need neither);
   admin-approved users only (permission set assignment); refresh token expiry; IP relaxation `ENFORCE` for
   server-to-server; no consumer secret in source; certificate-based JWT for integrations. Use the vendored
-  `integration-connectivity-connected-app-configure` checklist
-  (`.claude/skills/integration-connectivity-connected-app-configure/references/security-checklist.md`).
+  `integration:integration-connectivity-connected-app-configure` checklist
+  (its `references/security-checklist.md`).
 - Integration users: dedicated, API-only, scoped permission sets, not System Administrator (feed to P7).
 - Apex REST / SOAP exposed via Sites = anonymous; otherwise any authenticated user with class access.
 
@@ -86,6 +86,6 @@ Findings with IDs `EXP-###`, plus an **external attack-surface inventory**:
 | ECA "ERP Integration" | Server, JWT | Integration user U | |
 
 ## Remediation guidance
-Named/External Credentials and callout refactors: `integration-connectivity-generate`. OAuth apps and ECA
-migration: `integration-connectivity-connected-app-configure`. Encrypting regulated fields at rest:
+Named/External Credentials and callout refactors: `integration:integration-connectivity-generate`. OAuth apps and ECA
+migration: `integration:integration-connectivity-connected-app-configure`. Encrypting regulated fields at rest:
 `platform-encryption-configure`. Guest hardening is configuration in Setup per site — give exact steps.

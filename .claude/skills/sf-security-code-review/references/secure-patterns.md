@@ -138,8 +138,8 @@ req.setEndpoint('callout:Vendor_API/v1/orders');
 req.setMethod('GET');
 HttpResponse res = new Http().send(req);
 ```
-Set up the Named/External Credential with the `integration-connectivity-generate` skill; inbound OAuth
-clients with `integration-connectivity-connected-app-configure` (External Client Apps).
+Set up the Named/External Credential with the `integration:integration-connectivity-generate` skill; inbound OAuth
+clients with `integration:integration-connectivity-connected-app-configure` (External Client Apps).
 
 ## Visualforce XSS / CSRF / redirect (X1, X3, X4)
 

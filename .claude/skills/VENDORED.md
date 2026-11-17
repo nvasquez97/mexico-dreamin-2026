@@ -19,20 +19,23 @@ Subagents using them live in `.claude/agents/sf-security-*.md`.
 - **Commit:** `788b83fb9f5effb4f1548e3090df415704d3ec64` (ref `main`, synced 2026-11-15)
 - **Update:** `scripts/sync-sf-skills.sh [ref]`, then review the diff.
 
-Curated for security work (the upstream library has 260+ skills; only these are loaded to keep triggering precise):
+Only the skills that are **not** in the Salesforce plugins enabled for this project
+(`.claude/settings.json`: salesforce-development, salesforce-code-quality, experience-lwc, integration) are
+vendored. Everything else comes from the plugins and is called by its full name, for example
+`salesforce-development:platform-apex-generate`. Vendoring a skill the plugins already provide shadows the plugin
+copy when it is called by its bare name, so do not add those back.
 
 | Skill | Used for |
 |---|---|
-| `dx-code-analyzer-run` / `-configure` / `-custom-rule-create` | Salesforce Code Analyzer scans (PMD, ESLint, RetireJS, Flow, SFGE), setup/CI, custom policy rules |
-| `experience-lwc-security-validate` | Lightning Web Security (LWS) validation of LWC bundles |
-| `platform-apex-generate` | Secure Apex remediation patterns (sharing, user mode) |
-| `platform-soql-query` | Safe SOQL shape |
-| `platform-permission-set-generate` | Least-privilege permission set remediation |
-| `platform-sharing-owd-configure` / `platform-sharing-rules-generate` | OWD and sharing remediation |
-| `integration-connectivity-generate` | Named / External Credentials, callouts |
-| `integration-connectivity-connected-app-configure` | Connected Apps / External Client Apps OAuth security |
 | `platform-encryption-configure` | Shield Platform Encryption |
-| `platform-metadata-retrieve`, `dx-org-analyze` | Pulling and inventorying org metadata for audits |
+| `dx-org-analyze` | Inventorying and comparing org metadata for audits |
 
-Alternative to vendoring: install the full Salesforce plugin marketplace per developer with
-`/plugin marketplace add forcedotcom/sf-skills` (Claude Code) or `npx skills add forcedotcom/sf-skills`.
+## Project workflow skills (owned here — edit freely)
+
+| Skill | Purpose |
+|---|---|
+| `odd` | The ODD workflow (Organic Driven Development) |
+| `project-memory` | Project memory in `.mem/`, with rotation at 50 KB |
+
+The plugins come from the marketplace: `/plugin marketplace add forcedotcom/sf-skills`, then install
+salesforce-development, salesforce-code-quality, experience-lwc and integration from `@salesforce`.
