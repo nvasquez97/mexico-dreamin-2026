@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Group xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>RutaCargo support agents. Shipment__c and customer Account records are shared with this group by criteria-based sharing rules. Managers above the members in the role hierarchy do not inherit this access.</description>
+    <doesIncludeBosses>false</doesIncludeBosses>
+    <name>RutaCargo Support Agents</name>
+</Group>

@@ -7,6 +7,7 @@
 public with sharing class TestDataFactory {
 
     public static final String DEFAULT_ACCOUNT_NAME = 'Test Customer';
+    public static final String PLATFORM_PROFILE_NAME = 'Standard Platform User';
 
     // ─── Accounts (customers) ─────────────────────────────────────────────
 
@@ -77,5 +78,82 @@ public with sharing class TestDataFactory {
             LocaleSidKey = 'en_US',
             TimeZoneSidKey = 'America/Mexico_City'
         );
+    }
+
+    /**
+     * @description Unsaved Standard Platform Users (Salesforce Platform license),
+     *              one per key. The org has 3 Salesforce Platform licenses, so a
+     *              test must not insert more than 3 of them.
+     * @param uniqueKeys short keys (letters and digits), one per user
+     * @return the unsaved users, in the order of the keys
+     */
+    public static List<User> newPlatformUsers(List<String> uniqueKeys) {
+        Id profileId = [SELECT Id FROM Profile WHERE Name = :PLATFORM_PROFILE_NAME WITH USER_MODE LIMIT 1].Id;
+        List<User> users = new List<User>();
+        for (String uniqueKey : uniqueKeys) {
+            users.add(newUser(profileId, uniqueKey));
+        }
+        return users;
+    }
+
+    /**
+     * @description Unsaved permission set assignments of one permission set to
+     *              each given user.
+     */
+    public static List<PermissionSetAssignment> newPermissionSetAssignments(Id permissionSetId, List<User> users) {
+        List<PermissionSetAssignment> assignments = new List<PermissionSetAssignment>();
+        for (User member : users) {
+            assignments.add(new PermissionSetAssignment(PermissionSetId = permissionSetId, AssigneeId = member.Id));
+        }
+        return assignments;
+    }
+
+    /**
+     * @description Unsaved manual shares of each shipment with one group. Tests
+     *              use them to mirror a criteria-based sharing rule, which the
+     *              platform does not evaluate in Apex tests (assumption A10).
+     */
+    public static List<Shipment__Share> newShipmentGroupShares(List<Shipment__c> shipments, Id groupId, String accessLevel) {
+        List<Shipment__Share> shares = new List<Shipment__Share>();
+        for (Shipment__c shipment : shipments) {
+            shares.add(new Shipment__Share(
+                ParentId = shipment.Id,
+                UserOrGroupId = groupId,
+                AccessLevel = accessLevel,
+                RowCause = Schema.Shipment__Share.RowCause.Manual
+            ));
+        }
+        return shares;
+    }
+
+    /**
+     * @description Unsaved manual shares of each account with one group, with no
+     *              access to the account's opportunities and cases (contacts
+     *              follow the account: Controlled by Parent). Mirrors a
+     *              criteria-based Account sharing rule in tests (assumption A10).
+     */
+    public static List<AccountShare> newAccountGroupShares(List<Account> accounts, Id groupId, String accessLevel) {
+        List<AccountShare> shares = new List<AccountShare>();
+        for (Account customer : accounts) {
+            shares.add(new AccountShare(
+                AccountId = customer.Id,
+                UserOrGroupId = groupId,
+                AccountAccessLevel = accessLevel,
+                OpportunityAccessLevel = 'None',
+                CaseAccessLevel = 'None'
+            ));
+        }
+        return shares;
+    }
+
+    /**
+     * @description Unsaved memberships of each given user in one public group.
+     */
+    public static List<GroupMember> newGroupMembers(Id groupId, List<User> users) {
+        List<GroupMember> members = new List<GroupMember>();
+        for (User member : users) {
+            members.add(new GroupMember(GroupId = groupId, UserOrGroupId = member.Id));
+        }
+        return members;
     }
 }

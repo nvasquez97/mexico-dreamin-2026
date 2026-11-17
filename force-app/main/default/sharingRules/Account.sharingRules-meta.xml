@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingCriteriaRules>
+        <fullName>Customer_Accounts_To_Support_Agents</fullName>
+        <accessLevel>Edit</accessLevel>
+        <accountSettings>
+            <caseAccessLevel>None</caseAccessLevel>
+            <contactAccessLevel>None</contactAccessLevel>
+            <opportunityAccessLevel>None</opportunityAccessLevel>
+        </accountSettings>
+        <description>Customer accounts (Customer Type Individual or Business) are shared Read/Write with the RutaCargo support agents (BR-03). Contacts follow the account (Controlled by Parent); opportunities and cases are not shared.</description>
+        <label>Customer accounts to support agents</label>
+        <sharedTo>
+            <group>RutaCargo_Support_Agents</group>
+        </sharedTo>
+        <criteriaItems>
+            <field>Customer_Type__c</field>
+            <operation>equals</operation>
+            <value>Individual,Business</value>
+        </criteriaItems>
+        <includeRecordsOwnedByAll>true</includeRecordsOwnedByAll>
+    </sharingCriteriaRules>
+</SharingRules>
