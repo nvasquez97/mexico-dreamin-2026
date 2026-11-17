@@ -1,0 +1,19 @@
+<template>
+  <fieldset class="segmented">
+    <legend class="rc-label legend">{label}</legend>
+    <div class="options" role="radiogroup" aria-label={label}>
+      <template for:each={items} for:item="item">
+        <label key={item.value} class={item.css}>
+          <input
+            type="radio"
+            name={name}
+            value={item.value}
+            checked={item.checked}
+            onchange={handleChange}
+          />
+          <span>{item.label}</span>
+        </label>
+      </template>
+    </div>
+  </fieldset>
+</template>

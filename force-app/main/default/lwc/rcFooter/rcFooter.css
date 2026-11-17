@@ -1,0 +1,81 @@
+@import "c/rcBrand";
+
+/* Negative logo on night blue, as the brand manual allows. Its PNG background is night blue. */
+.footer {
+  background: var(--rc-night);
+  color: var(--rc-white);
+  margin-top: 3rem;
+}
+
+/* Tricolor only as a small detail. */
+.tricolor {
+  display: flex;
+  height: 4px;
+}
+.tricolor span {
+  flex: 1;
+}
+.tricolor span:nth-child(1) {
+  background: var(--rc-yellow);
+}
+.tricolor span:nth-child(2) {
+  background: var(--rc-electric);
+}
+.tricolor span:nth-child(3) {
+  background: var(--rc-red);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* Protection area: keep free space around the logo; never below 360 px wide (brand minimum). */
+.logo-wrap {
+  display: none;
+  padding: 2rem 0;
+}
+
+.logo {
+  width: 360px;
+  height: auto;
+  display: block;
+}
+
+.title {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.text {
+  font-weight: 400;
+  margin: 0 0 0.25rem;
+  color: var(--rc-white);
+}
+
+.small {
+  font-weight: 300;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  color: var(--rc-enamel);
+}
+
+@media (min-width: 420px) {
+  .logo-wrap {
+    display: block;
+  }
+}
+
+@media (min-width: 900px) {
+  .inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

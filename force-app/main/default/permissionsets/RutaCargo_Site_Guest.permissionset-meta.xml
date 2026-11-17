@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>RutaCargo Site Guest</label>
+    <description
+  >Assigned to the RutaCargo site guest user: public tracking, recipient delivery flow and sign-up/login. No object permissions; Apex returns only the allowed fields.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <classAccesses>
+        <apexClass>CustomerAuthController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>PublicTrackingController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecipientDeliveryController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <externalCredentialPrincipalAccesses>
+        <enabled>true</enabled>
+        <externalCredentialPrincipal
+    >EntregaYa-EntregaYaApiKey</externalCredentialPrincipal>
+    </externalCredentialPrincipalAccesses>
+</PermissionSet>

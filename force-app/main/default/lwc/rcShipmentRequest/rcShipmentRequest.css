@@ -1,0 +1,81 @@
+@import "c/rcBrand";
+
+.page {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.title {
+  margin-bottom: 1.5rem;
+}
+
+.form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.group {
+  margin: 0;
+  min-width: 0;
+}
+
+.group legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.75rem;
+}
+
+.group .rc-grid {
+  clear: both;
+}
+
+.quote {
+  border: 2px solid var(--rc-electric);
+}
+
+.breakdown {
+  margin: 0 0 1rem;
+}
+
+.breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rc-enamel);
+}
+
+.breakdown dt {
+  font-weight: 400;
+}
+
+.breakdown dd {
+  margin: 0;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.breakdown .total {
+  border-bottom: 0;
+  font-size: 1.15rem;
+}
+
+.breakdown .total dt,
+.breakdown .total dd {
+  font-weight: 900;
+}
+
+.done {
+  display: grid;
+  gap: 1rem;
+}
+
+.tracking {
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  color: var(--rc-electric);
+  margin: 0;
+  word-break: break-all;
+}

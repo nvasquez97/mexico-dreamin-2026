@@ -1,0 +1,121 @@
+@import "c/rcBrand";
+
+.hero {
+  background: var(--rc-white);
+  padding: 2rem 0 1.5rem;
+}
+
+.hero-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.lead {
+  margin-top: 1rem;
+  max-width: 34rem;
+}
+
+/* Main colour logo on white, at least 360 px wide (brand minimum) with free space around it.
+   Hidden where the viewport cannot fit 360 px plus the protection area. */
+.hero-logo {
+  display: none;
+  padding: 2rem;
+  background: var(--rc-white);
+}
+
+.logo {
+  width: 360px;
+  height: auto;
+  display: block;
+}
+
+.search {
+  display: grid;
+  gap: 1rem;
+}
+
+.message {
+  margin-top: 1rem;
+}
+
+.spinner-holder {
+  position: relative;
+  min-height: 6rem;
+}
+
+.results {
+  margin-top: 2rem;
+}
+
+.results-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sort {
+  max-width: 18rem;
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.result-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tracking {
+  font-weight: 900;
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  margin: 0.125rem 0 0;
+  word-break: break-all;
+}
+
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 1rem 0;
+}
+
+.arrow {
+  color: var(--rc-electric);
+}
+
+.result-actions {
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .results-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+@media (min-width: 900px) {
+  .hero {
+    padding: 3rem 0 2rem;
+  }
+
+  .hero-logo {
+    display: block;
+  }
+}

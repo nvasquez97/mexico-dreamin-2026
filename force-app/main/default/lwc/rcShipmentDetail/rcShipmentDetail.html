@@ -1,0 +1,133 @@
+<template>
+  <div class="rc-container page">
+    <a class="rc-link back" href={myShipmentsUrl}>← My shipments</a>
+    <template lwc:if={errorMessage}>
+      <div class="rc-alert rc-alert_error" role="alert">{errorMessage}</div>
+    </template>
+    <template lwc:if={isLoading}>
+      <div class="spinner-holder">
+        <lightning-spinner
+          alternative-text="Loading"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+    <template lwc:if={shipment}>
+      <div class="heading">
+        <div>
+          <p class="rc-eyebrow">Shipment</p>
+          <h1 class="rc-display tracking">{shipment.trackingNumber}</h1>
+        </div>
+        <span class={statusCss}>{shipment.status}</span>
+      </div>
+
+      <div class="sections">
+        <section class="rc-card">
+          <h2 class="rc-subtitle">Summary</h2>
+          <dl class="rc-dl">
+            <div>
+              <dt>Requested</dt>
+              <dd>{labels.requestDate}</dd>
+            </div>
+            <div>
+              <dt>Service</dt>
+              <dd>{shipment.serviceType}</dd>
+            </div>
+            <div>
+              <dt>Price</dt>
+              <dd>{labels.price}</dd>
+            </div>
+            <div>
+              <dt>Estimated delivery</dt>
+              <dd>{labels.estimatedDelivery}</dd>
+            </div>
+            <div>
+              <dt>Last location</dt>
+              <dd>{labels.lastLocation}</dd>
+            </div>
+            <div>
+              <dt>Last update (Mexico City)</dt>
+              <dd>{labels.lastUpdate}</dd>
+            </div>
+            <template lwc:if={shipment.deliveredAt}>
+              <div>
+                <dt>Delivered at (Mexico City)</dt>
+                <dd>{labels.deliveredAt}</dd>
+              </div>
+            </template>
+            <div>
+              <dt>Your reference</dt>
+              <dd>{labels.reference}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="rc-card">
+          <h2 class="rc-subtitle">Pickup</h2>
+          <dl class="rc-dl">
+            <div>
+              <dt>Address</dt>
+              <dd>{shipment.pickupAddress}</dd>
+            </div>
+            <div>
+              <dt>City and postal code</dt>
+              <dd>{labels.pickupCity}</dd>
+            </div>
+            <div>
+              <dt>Pickup date</dt>
+              <dd>{labels.pickupDate}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="rc-card">
+          <h2 class="rc-subtitle">Recipient</h2>
+          <dl class="rc-dl">
+            <div>
+              <dt>Name</dt>
+              <dd>{shipment.recipientName}</dd>
+            </div>
+            <div>
+              <dt>Address</dt>
+              <dd>{shipment.recipientAddress}</dd>
+            </div>
+            <div>
+              <dt>City and postal code</dt>
+              <dd>{labels.destinationCity}</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd>{shipment.recipientPhone}</dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>{shipment.recipientEmail}</dd>
+            </div>
+            <div>
+              <dt>Delivery instructions</dt>
+              <dd>{labels.instructions}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="rc-card">
+          <h2 class="rc-subtitle">Package</h2>
+          <dl class="rc-dl">
+            <div>
+              <dt>Contents</dt>
+              <dd>{shipment.packageDescription}</dd>
+            </div>
+            <div>
+              <dt>Weight</dt>
+              <dd>{labels.weight}</dd>
+            </div>
+            <div>
+              <dt>Declared value</dt>
+              <dd>{labels.declaredValue}</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    </template>
+  </div>
+</template>

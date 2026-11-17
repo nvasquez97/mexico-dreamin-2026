@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>RutaCargo Customer</label>
+    <description
+  >Registered RutaCargo customers: lets the proof-of-delivery download call EntregaYa when they are logged in. Assigned automatically at sign-up. Apex access comes from the RutaCargo Customer profile.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <externalCredentialPrincipalAccesses>
+        <enabled>true</enabled>
+        <externalCredentialPrincipal
+    >EntregaYa-EntregaYaApiKey</externalCredentialPrincipal>
+    </externalCredentialPrincipalAccesses>
+</PermissionSet>

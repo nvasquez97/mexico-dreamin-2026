@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Verification_Failures__c</fullName>
+    <label>Verification Failures</label>
+    <description
+  >Consecutive wrong postal codes entered on the public site to open the delivery details. After 5, the details are locked for 15 minutes.</description>
+    <inlineHelpText
+  >Consecutive wrong postal codes entered on the public site. After 5, the delivery details are locked for 15 minutes.</inlineHelpText>
+    <type>Number</type>
+    <precision>4</precision>
+    <scale>0</scale>
+    <defaultValue>0</defaultValue>
+    <externalId>false</externalId>
+    <unique>false</unique>
+    <trackHistory>false</trackHistory>
+    <required>false</required>
+</CustomField>

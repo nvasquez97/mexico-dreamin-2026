@@ -1,0 +1,147 @@
+@import "c/rcBrand";
+
+.header {
+  background: var(--rc-white);
+  border-bottom: 1px solid var(--rc-enamel);
+  position: relative;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--rc-night);
+}
+
+/* The isotype PNG has a solid electric-blue background: always show it on that colour. */
+.isotype-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--rc-electric);
+}
+
+.isotype {
+  width: 40px;
+  height: auto;
+  display: block;
+}
+
+.brand-name {
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.menu-toggle:focus-visible {
+  outline: 3px solid var(--rc-cyan);
+}
+
+.menu-icon,
+.menu-icon::before,
+.menu-icon::after {
+  display: block;
+  width: 22px;
+  height: 3px;
+  background: var(--rc-night);
+  border-radius: 2px;
+  position: relative;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.menu-icon::before {
+  top: -7px;
+}
+
+.menu-icon::after {
+  top: 7px;
+}
+
+.nav {
+  display: none;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.nav_open {
+  display: flex;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.75rem 0.25rem;
+  color: var(--rc-night);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+  color: var(--rc-electric);
+  text-decoration: underline;
+}
+
+.nav-link_strong {
+  font-weight: 700;
+}
+
+.nav-cta {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 900px) {
+  .menu-toggle {
+    display: none;
+  }
+
+  .nav {
+    display: flex;
+    flex-basis: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+  }
+
+  .nav-link {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .nav-cta {
+    margin: 0 0 0 0.5rem;
+  }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Verification_Locked_Until__c</fullName>
+    <label>Verification Locked Until</label>
+    <description
+  >The public delivery details stay locked until this moment after too many wrong postal codes.</description>
+    <inlineHelpText
+  >The public delivery details stay locked until this moment after too many wrong postal codes.</inlineHelpText>
+    <type>DateTime</type>
+    <trackHistory>false</trackHistory>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,350 @@
+/*
+ * RutaCargo site — brand tokens from the Coffee Blazers Summit Brand Manual (docs/brand-manual.pdf).
+ * "Azul de pies a cabeza": blues lead; the tricolor (yellow / red) appears only in small details,
+ * never as a background. Type: Montserrat for everything (Black for headings, Bold for subtitles,
+ * Medium for labels, Regular for paragraphs, Light for notes and data). The display face Daily Brew
+ * is not available as a web font, so short uppercase headlines use Montserrat Black.
+ * Import from any component stylesheet with:  @import 'c/rcBrand';
+ */
+:host {
+  --rc-night: #0d1f5f;
+  --rc-electric: #016bfa;
+  --rc-cyan: #07e9f6;
+  --rc-white: #ffffff;
+  --rc-enamel: #d6e0ea;
+  --rc-yellow: #ffc91d;
+  --rc-red: #ff3636;
+  --rc-night-80: rgba(13, 31, 95, 0.8);
+  --rc-night-60: rgba(13, 31, 95, 0.64);
+  --rc-enamel-soft: #eef2f7;
+  --rc-font: "Montserrat", "Segoe UI", Arial, sans-serif;
+  --rc-radius: 14px;
+  --rc-radius-small: 8px;
+  --rc-gutter: 16px;
+
+  /* Base components (SLDS styling hooks) */
+  --slds-c-button-brand-color-background: var(--rc-electric);
+  --slds-c-button-brand-color-border: var(--rc-electric);
+  --slds-c-button-brand-color-background-hover: var(--rc-night);
+  --slds-c-button-brand-color-border-hover: var(--rc-night);
+  --slds-c-button-brand-text-color: var(--rc-white);
+  --slds-c-button-text-color: var(--rc-electric);
+  --slds-c-button-radius-border: 999px;
+  --slds-c-input-radius-border: var(--rc-radius-small);
+  --slds-c-input-color-border: #9aabc4;
+  --slds-c-input-color-border-focus: var(--rc-electric);
+  --slds-c-input-text-color: var(--rc-night);
+  --slds-c-textarea-radius-border: var(--rc-radius-small);
+  --slds-c-textarea-color-border: #9aabc4;
+  --slds-c-select-radius-border: var(--rc-radius-small);
+  --slds-c-combobox-radius-border: var(--rc-radius-small);
+  --slds-c-radio-color-background-checked: var(--rc-electric);
+  --slds-g-color-brand-base-50: var(--rc-electric);
+  --sds-c-button-brand-color-background: var(--rc-electric);
+  --sds-c-button-brand-color-border: var(--rc-electric);
+  --sds-c-button-radius-border: 999px;
+  --dxp-g-brand: var(--rc-electric);
+  --dxp-g-root-contrast: var(--rc-night);
+
+  display: block;
+  font-family: var(--rc-font);
+  color: var(--rc-night);
+}
+
+.rc-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 var(--rc-gutter);
+  box-sizing: border-box;
+}
+
+.rc-display {
+  font-family: var(--rc-font);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  color: var(--rc-night);
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.rc-eyebrow {
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--rc-electric);
+  margin: 0 0 0.5rem;
+}
+
+.rc-subtitle {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--rc-night);
+  margin: 0 0 0.5rem;
+}
+
+.rc-text {
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--rc-night);
+}
+
+.rc-note {
+  font-weight: 300;
+  font-size: 0.875rem;
+  color: var(--rc-night-80);
+}
+
+.rc-label {
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-night-60);
+}
+
+.rc-value {
+  font-weight: 500;
+  color: var(--rc-night);
+  word-break: break-word;
+}
+
+.rc-card {
+  background: var(--rc-white);
+  border: 1px solid var(--rc-enamel);
+  border-radius: var(--rc-radius);
+  padding: 1.25rem;
+  box-shadow: 0 2px 0 var(--rc-enamel);
+}
+
+.rc-panel {
+  background: var(--rc-enamel-soft);
+  border-radius: var(--rc-radius);
+  padding: 1.25rem;
+}
+
+.rc-section {
+  padding: 2rem 0;
+}
+
+.rc-stack > * + * {
+  margin-top: 1rem;
+}
+
+.rc-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem 1.25rem;
+}
+
+.rc-dl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+}
+
+.rc-dl dt {
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-night-60);
+}
+
+.rc-dl dd {
+  margin: 0.125rem 0 0;
+  font-weight: 500;
+  color: var(--rc-night);
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+/* Status chips: blues only; the red appears as a small dot on exceptions. */
+.rc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--rc-enamel);
+  color: var(--rc-night);
+}
+
+.rc-status_requested {
+  background: var(--rc-enamel);
+}
+.rc-status_picked-up,
+.rc-status_in-transit {
+  background: #d9e8ff;
+}
+.rc-status_out-for-delivery {
+  background: var(--rc-electric);
+  color: var(--rc-white);
+}
+.rc-status_delivered {
+  background: var(--rc-cyan);
+  color: var(--rc-night);
+}
+.rc-status_exception {
+  background: var(--rc-white);
+  border: 1px solid var(--rc-night);
+}
+.rc-status_exception::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--rc-red);
+}
+.rc-status_not-found {
+  background: var(--rc-white);
+  border: 1px dashed var(--rc-night-60);
+  color: var(--rc-night-80);
+}
+
+/* Messages: dark text for contrast, colour carried by a small accent bar. */
+.rc-alert {
+  border-radius: var(--rc-radius-small);
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  color: var(--rc-night);
+  background: var(--rc-enamel-soft);
+  border-left: 6px solid var(--rc-electric);
+}
+.rc-alert_error {
+  border-left-color: var(--rc-red);
+  background: #fff4f4;
+}
+.rc-alert_success {
+  border-left-color: var(--rc-cyan);
+  background: #ebfdfe;
+}
+.rc-alert_warning {
+  border-left-color: var(--rc-yellow);
+  background: #fffaea;
+}
+
+.rc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.rc-link {
+  color: var(--rc-electric);
+  font-weight: 700;
+  text-decoration: none;
+}
+.rc-link:hover,
+.rc-link:focus {
+  text-decoration: underline;
+  color: var(--rc-night);
+}
+
+.rc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  border: 2px solid var(--rc-electric);
+  background: var(--rc-electric);
+  color: var(--rc-white);
+  font-family: var(--rc-font);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.rc-button:hover,
+.rc-button:focus {
+  background: var(--rc-night);
+  border-color: var(--rc-night);
+  color: var(--rc-white);
+  text-decoration: none;
+}
+.rc-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rc-button_outline {
+  background: transparent;
+  color: var(--rc-electric);
+}
+.rc-button_outline:hover,
+.rc-button_outline:focus {
+  background: var(--rc-electric);
+  border-color: var(--rc-electric);
+  color: var(--rc-white);
+}
+/* Links styled as buttons: beat the site's global link colours. */
+a.rc-button,
+a.rc-button:link,
+a.rc-button:visited {
+  background-color: var(--rc-electric);
+  color: var(--rc-white);
+  text-decoration: none;
+}
+a.rc-button:hover,
+a.rc-button:focus {
+  background-color: var(--rc-night);
+  border-color: var(--rc-night);
+  color: var(--rc-white);
+}
+a.rc-button.rc-button_outline,
+a.rc-button.rc-button_outline:link,
+a.rc-button.rc-button_outline:visited {
+  background-color: transparent;
+  color: var(--rc-electric);
+}
+a.rc-button.rc-button_outline:hover,
+a.rc-button.rc-button_outline:focus {
+  background-color: var(--rc-electric);
+  border-color: var(--rc-electric);
+  color: var(--rc-white);
+}
+.rc-button_block {
+  width: 100%;
+}
+
+.rc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+
+@media (min-width: 640px) {
+  .rc-display {
+    font-size: 2.6rem;
+  }
+  .rc-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rc-dl {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rc-grid .rc-span-2 {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rc-display {
+    font-size: 3.2rem;
+  }
+}

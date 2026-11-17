@@ -1,0 +1,36 @@
+<template>
+  <header class="header">
+    <div class="rc-container bar">
+      <a class="brand" href={homeUrl} aria-label="RutaCargo home">
+        <span class="isotype-tile">
+          <img src={isotypeUrl} alt="" class="isotype" width="40" height="38" />
+        </span>
+        <span class="brand-name">RutaCargo</span>
+      </a>
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-controls="rc-nav"
+        aria-expanded={menuExpanded}
+        onclick={toggleMenu}
+      >
+        <span class="rc-visually-hidden">Menu</span>
+        <span class="menu-icon" aria-hidden="true"></span>
+      </button>
+      <nav id="rc-nav" class={navClass} aria-label="Main">
+        <a class="nav-link" href={homeUrl}>Track</a>
+        <a class="nav-link" href={requestUrl}>Request a shipment</a>
+        <a class="nav-link" href={myShipmentsUrl}>My shipments</a>
+        <template lwc:if={isGuest}>
+          <a class="nav-link nav-link_strong" href={loginUrl}>Log in</a>
+          <a class="rc-button nav-cta" href={registerUrl}>Sign up</a>
+        </template>
+        <template lwc:else>
+          <a class="rc-button rc-button_outline nav-cta" href={logoutUrl}
+            >Log out</a
+          >
+        </template>
+      </nav>
+    </div>
+  </header>
+</template>

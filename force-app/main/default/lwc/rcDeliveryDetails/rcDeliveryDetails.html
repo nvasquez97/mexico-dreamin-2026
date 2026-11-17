@@ -1,0 +1,163 @@
+<template>
+  <div class="rc-panel details">
+    <template lwc:if={showVerification}>
+      <form class="verify" onsubmit={handleVerify} novalidate>
+        <p class="rc-subtitle">Delivery details</p>
+        <p class="rc-note">
+          To protect the recipient's data, enter the destination postal code of
+          this shipment.
+        </p>
+        <lightning-input
+          class="postal-code"
+          label="Destination postal code"
+          name="postalCode"
+          value={postalCode}
+          pattern={postalPattern}
+          max-length="5"
+          inputmode="numeric"
+          autocomplete="postal-code"
+          required
+          message-when-pattern-mismatch="Enter the 5-digit postal code."
+          message-when-value-missing="Enter the 5-digit postal code."
+          onchange={handlePostalCodeChange}
+        ></lightning-input>
+        <button class="rc-button" type="submit" disabled={isBusy}>
+          View details
+        </button>
+      </form>
+    </template>
+
+    <template lwc:if={errorMessage}>
+      <div class="rc-alert rc-alert_error message" role="alert">
+        {errorMessage}
+      </div>
+    </template>
+    <template lwc:if={successMessage}>
+      <div class="rc-alert rc-alert_success message" role="status">
+        {successMessage}
+      </div>
+    </template>
+
+    <template lwc:if={isBusy}>
+      <div class="spinner-holder">
+        <lightning-spinner
+          alternative-text="Loading"
+          size="small"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:if={details}>
+      <div class="rc-stack">
+        <div class="details-header">
+          <p class="rc-subtitle">Delivery details</p>
+          <span class={statusCss}>{details.status}</span>
+        </div>
+        <dl class="rc-dl">
+          <div>
+            <dt>Recipient</dt>
+            <dd>{details.recipientName}</dd>
+          </div>
+          <div>
+            <dt>Contact phone</dt>
+            <dd>{details.contactPhone}</dd>
+          </div>
+          <div>
+            <dt>Delivery address</dt>
+            <dd>{deliveryAddressLabel}</dd>
+          </div>
+          <div>
+            <dt>Estimated delivery</dt>
+            <dd>{estimatedDeliveryLabel}</dd>
+          </div>
+          <template lwc:if={details.deliveredAt}>
+            <div>
+              <dt>Delivered at (Mexico City)</dt>
+              <dd>{deliveredAtLabel}</dd>
+            </div>
+          </template>
+          <div class="full">
+            <dt>Delivery instructions</dt>
+            <dd>{instructionsLabel}</dd>
+          </div>
+        </dl>
+
+        <template lwc:if={details.canDownloadProof}>
+          <div class="rc-actions">
+            <button
+              class="rc-button"
+              type="button"
+              onclick={handleDownload}
+              disabled={isBusy}
+            >
+              Download proof of delivery
+            </button>
+          </div>
+        </template>
+
+        <template lwc:if={details.canReschedule}>
+          <template lwc:if={showRescheduleForm}>
+            <form
+              class="rc-card reschedule"
+              onsubmit={handleReschedule}
+              novalidate
+            >
+              <p class="rc-subtitle">Reschedule your delivery</p>
+              <p class="rc-note">
+                Choose a date between {minDateLabel} and {maxDateLabel}. You can
+                reschedule {reschedulesLeftLabel}.
+              </p>
+              <lightning-input
+                class="new-date"
+                type="date"
+                label="New delivery date"
+                name="newDate"
+                value={newDate}
+                min={details.rescheduleMinDate}
+                max={details.rescheduleMaxDate}
+                date-style="medium"
+                required
+                message-when-range-underflow="Choose a later date."
+                message-when-range-overflow="Choose an earlier date."
+                onchange={handleDateChange}
+              ></lightning-input>
+              <lightning-textarea
+                label="Delivery instructions"
+                name="instructions"
+                value={instructions}
+                max-length="1000"
+                onchange={handleInstructionsChange}
+              ></lightning-textarea>
+              <div class="rc-actions">
+                <button class="rc-button" type="submit" disabled={isBusy}>
+                  Save new date
+                </button>
+                <button
+                  class="rc-button rc-button_outline"
+                  type="button"
+                  onclick={toggleReschedule}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </template>
+          <template lwc:else>
+            <div class="rc-actions">
+              <button
+                class="rc-button rc-button_outline"
+                type="button"
+                onclick={toggleReschedule}
+              >
+                Change date or instructions
+              </button>
+            </div>
+          </template>
+        </template>
+        <template lwc:elseif={details.rescheduleBlockedReason}>
+          <p class="rc-note">{details.rescheduleBlockedReason}</p>
+        </template>
+      </div>
+    </template>
+  </div>
+</template>

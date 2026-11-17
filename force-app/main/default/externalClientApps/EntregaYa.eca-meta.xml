@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>noreply@rutacargo.example</contactEmail>
+    <description
+  >EntregaYa (last-mile carrier) sends shipment status changes with OAuth 2.0 client credentials. Run-as user: the EntregaYa integration user.</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>EntregaYa</label>
+</ExternalClientApplication>

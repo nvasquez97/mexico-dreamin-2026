@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Proof_Id__c</fullName>
+    <label>Proof of Delivery Id</label>
+    <description
+  >Identifier of the proof of delivery in EntregaYa. The PDF is never stored in Salesforce.</description>
+    <inlineHelpText
+  >Identifier of the proof of delivery in EntregaYa. The PDF is never stored in Salesforce.</inlineHelpText>
+    <type>Text</type>
+    <length>40</length>
+    <externalId>false</externalId>
+    <unique>false</unique>
+    <trackHistory>true</trackHistory>
+    <required>false</required>
+</CustomField>

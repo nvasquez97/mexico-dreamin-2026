@@ -1,0 +1,78 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Request a shipment",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"8af82c4a-06b8-5771-a486-68fb2f23da07\",\"columns\":[{\"UUID\":\"140315b1-45af-5507-a8f1-010c6d21d3f0\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
+              },
+              "children": [
+                {
+                  "children": [
+                    {
+                      "attributes": {},
+                      "definition": "c:rcShipmentRequest",
+                      "id": "b61fc33a-33b2-5f27-b22c-ba81c8ee7ed8",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "140315b1-45af-5507-a8f1-010c6d21d3f0",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "8af82c4a-06b8-5771-a486-68fb2f23da07",
+              "type": "component"
+            }
+          ],
+          "id": "7561b169-35b2-5d4e-989b-302d306de223",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Request a shipment | RutaCargo",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "d5539eb7-d6ee-527a-b0c7-4682631b0db3",
+              "type": "component"
+            }
+          ],
+          "id": "bb43cb63-ce9f-5aeb-9b6b-36c7ffaac14a",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "de241c9e-8152-51bb-ae96-653856f70fba",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-request-shipment"
+  },
+  "urlName": "request-shipment"
+}

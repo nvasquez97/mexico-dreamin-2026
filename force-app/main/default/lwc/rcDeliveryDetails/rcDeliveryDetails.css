@@ -1,0 +1,39 @@
+@import "c/rcBrand";
+
+:host {
+  margin-top: 1.25rem;
+}
+
+.verify {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 24rem;
+}
+
+.message {
+  margin-top: 1rem;
+}
+
+.spinner-holder {
+  position: relative;
+  min-height: 4rem;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.reschedule {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .full {
+    grid-column: span 2;
+  }
+}

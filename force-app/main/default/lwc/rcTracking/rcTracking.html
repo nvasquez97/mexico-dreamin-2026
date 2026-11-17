@@ -1,0 +1,145 @@
+<template>
+  <section class="hero">
+    <div class="rc-container hero-inner">
+      <div class="hero-copy">
+        <p class="rc-eyebrow">Shipment tracking</p>
+        <h1 class="rc-display">Where is my package?</h1>
+        <p class="rc-text lead">
+          Enter up to 10 tracking numbers or order references, separated by
+          commas or line breaks.
+        </p>
+      </div>
+      <div class="hero-logo" aria-hidden="true">
+        <img src={logoUrl} alt="" class="logo" width="360" height="189" />
+      </div>
+    </div>
+  </section>
+
+  <div class="rc-container">
+    <form class="rc-card search" onsubmit={handleSearch} novalidate>
+      <c-rc-segmented
+        name="searchBy"
+        label="Search by"
+        options={searchByOptions}
+        value={searchBy}
+        onchange={handleSearchByChange}
+      ></c-rc-segmented>
+      <lightning-textarea
+        class="search-input"
+        name="searchText"
+        label={searchLabel}
+        placeholder={searchPlaceholder}
+        value={searchText}
+        max-length="1200"
+        required
+        message-when-value-missing="Enter at least one value."
+        onchange={handleTextChange}
+      ></lightning-textarea>
+      <button
+        class="rc-button rc-button_block"
+        type="submit"
+        disabled={isLoading}
+      >
+        Track
+      </button>
+    </form>
+
+    <template lwc:if={errorMessage}>
+      <div class="rc-alert rc-alert_error message" role="alert">
+        {errorMessage}
+      </div>
+    </template>
+
+    <template lwc:if={isLoading}>
+      <div class="spinner-holder">
+        <lightning-spinner
+          alternative-text="Searching"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:if={hasResults}>
+      <section class="results" aria-live="polite">
+        <div class="results-header">
+          <h2 class="rc-subtitle">{resultsTitle}</h2>
+          <lightning-combobox
+            class="sort"
+            name="sortBy"
+            label="Sort by"
+            options={sortOptions}
+            value={sortBy}
+            onchange={handleSortChange}
+          ></lightning-combobox>
+        </div>
+        <ul class="result-list">
+          <template for:each={sortedResults} for:item="result">
+            <li key={result.key} class="rc-card result">
+              <template lwc:if={result.found}>
+                <div class="result-top">
+                  <div>
+                    <p class="rc-label">Tracking number</p>
+                    <p class="tracking">{result.trackingNumber}</p>
+                  </div>
+                  <span class={result.statusClass}>{result.status}</span>
+                </div>
+                <p class="route">
+                  <span>{result.originCity}</span>
+                  <span class="arrow" aria-hidden="true">→</span>
+                  <span class="rc-visually-hidden">to</span>
+                  <span>{result.destinationCity}</span>
+                </p>
+                <dl class="rc-dl">
+                  <div>
+                    <dt>Last location</dt>
+                    <dd>{result.lastLocationLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>Last update (Mexico City)</dt>
+                    <dd>{result.lastUpdateLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>Estimated delivery</dt>
+                    <dd>{result.estimatedDeliveryLabel}</dd>
+                  </div>
+                  <template lwc:if={result.showReference}>
+                    <div>
+                      <dt>Order reference</dt>
+                      <dd>{result.searchValue}</dd>
+                    </div>
+                  </template>
+                </dl>
+                <div class="result-actions">
+                  <button
+                    class="rc-button rc-button_outline"
+                    type="button"
+                    data-key={result.key}
+                    aria-expanded={result.ariaExpanded}
+                    onclick={toggleDetails}
+                  >
+                    {result.detailsButtonLabel}
+                  </button>
+                </div>
+                <template lwc:if={result.expanded}>
+                  <c-rc-delivery-details
+                    tracking-number={result.trackingNumber}
+                  ></c-rc-delivery-details>
+                </template>
+              </template>
+              <template lwc:else>
+                <div class="result-top">
+                  <div>
+                    <p class="rc-label">{searchValueLabel}</p>
+                    <p class="tracking">{result.searchValue}</p>
+                  </div>
+                  <span class="rc-status rc-status_not-found">Not found</span>
+                </div>
+                <p class="rc-note">Check the value and try again.</p>
+              </template>
+            </li>
+          </template>
+        </ul>
+      </section>
+    </template>
+  </div>
+</template>

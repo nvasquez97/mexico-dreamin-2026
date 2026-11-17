@@ -1,0 +1,78 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Register",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"4ae90e0b-90dd-54c8-bb31-18521ac01d34\",\"columns\":[{\"UUID\":\"a22b3e9b-d963-561c-92d9-bef72a0e4a7d\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
+              },
+              "children": [
+                {
+                  "children": [
+                    {
+                      "attributes": {},
+                      "definition": "c:rcRegister",
+                      "id": "9ef835c7-2b56-552e-a77c-196164972d6a",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "a22b3e9b-d963-561c-92d9-bef72a0e4a7d",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "4ae90e0b-90dd-54c8-bb31-18521ac01d34",
+              "type": "component"
+            }
+          ],
+          "id": "35b88319-6743-5148-b836-85f24e539cd6",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Create your account | RutaCargo",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "7c7af1c7-2553-518f-b80a-e7d488f0267c",
+              "type": "component"
+            }
+          ],
+          "id": "e4e93c3b-5f78-5509-a549-089c64a6b1da",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "0ac9c63d-74cb-53cc-8afe-6b3803b64b51",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "self-register"
+  },
+  "urlName": "register"
+}

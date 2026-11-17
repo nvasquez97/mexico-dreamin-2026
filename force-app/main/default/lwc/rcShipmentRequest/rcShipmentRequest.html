@@ -1,0 +1,284 @@
+<template>
+  <div class="rc-container page">
+    <p class="rc-eyebrow">Door to door</p>
+    <h1 class="rc-display title">Request a shipment</h1>
+
+    <template lwc:if={created}>
+      <div class="rc-card done" role="status">
+        <p class="rc-label">Your tracking number</p>
+        <p class="tracking">{created.trackingNumber}</p>
+        <div class="rc-alert rc-alert_success">
+          Your shipment is requested. We will pick it up on {pickupDateLabel};
+          payment is made at pickup.
+        </div>
+        <dl class="rc-dl summary">
+          <div>
+            <dt>Status</dt>
+            <dd>{created.status}</dd>
+          </div>
+          <div>
+            <dt>Price</dt>
+            <dd>{createdPriceLabel}</dd>
+          </div>
+          <div>
+            <dt>Estimated delivery</dt>
+            <dd>{createdEstimatedLabel}</dd>
+          </div>
+        </dl>
+        <div class="rc-actions">
+          <a class="rc-button" href={createdDetailUrl}>View shipment</a>
+          <a class="rc-button rc-button_outline" href={myShipmentsUrl}
+            >My shipments</a
+          >
+          <button
+            class="rc-button rc-button_outline"
+            type="button"
+            onclick={handleNew}
+          >
+            Request another
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <template lwc:else>
+      <form class="form" onsubmit={handleQuote} novalidate>
+        <fieldset class="rc-card group">
+          <legend class="rc-subtitle">Pickup</legend>
+          <div class="rc-grid">
+            <lightning-textarea
+              class="rc-span-2"
+              label="Pickup address"
+              name="pickupAddress"
+              value={form.pickupAddress}
+              max-length="1000"
+              required
+              onchange={handleChange}
+            ></lightning-textarea>
+            <lightning-input
+              label="City"
+              name="pickupCity"
+              value={form.pickupCity}
+              max-length="80"
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              label="Postal code"
+              name="pickupPostalCode"
+              value={form.pickupPostalCode}
+              pattern={postalPattern}
+              max-length="5"
+              inputmode="numeric"
+              message-when-pattern-mismatch="Enter 5 digits."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              class="pickup-date"
+              type="date"
+              label="Pickup date"
+              name="pickupDate"
+              value={form.pickupDate}
+              min={pickupWindow.minDate}
+              max={pickupWindow.maxDate}
+              date-style="medium"
+              field-level-help="A business day (Monday to Friday) between tomorrow and 15 days from today."
+              message-when-range-underflow="The earliest pickup is tomorrow."
+              message-when-range-overflow="Pickups can be booked up to 15 days ahead."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+          </div>
+        </fieldset>
+
+        <fieldset class="rc-card group">
+          <legend class="rc-subtitle">Recipient</legend>
+          <div class="rc-grid">
+            <lightning-input
+              class="rc-span-2"
+              label="Recipient name"
+              name="recipientName"
+              value={form.recipientName}
+              max-length="120"
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-textarea
+              class="rc-span-2"
+              label="Delivery address"
+              name="recipientAddress"
+              value={form.recipientAddress}
+              max-length="1000"
+              required
+              onchange={handleChange}
+            ></lightning-textarea>
+            <lightning-input
+              label="City"
+              name="destinationCity"
+              value={form.destinationCity}
+              max-length="80"
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              label="Postal code"
+              name="destinationPostalCode"
+              value={form.destinationPostalCode}
+              pattern={postalPattern}
+              max-length="5"
+              inputmode="numeric"
+              message-when-pattern-mismatch="Enter 5 digits."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              type="tel"
+              label="Phone"
+              name="recipientPhone"
+              value={form.recipientPhone}
+              pattern={phonePattern}
+              message-when-pattern-mismatch="Enter at least 10 digits."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              type="email"
+              label="Email"
+              name="recipientEmail"
+              value={form.recipientEmail}
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-textarea
+              class="rc-span-2"
+              label="Delivery instructions (optional)"
+              name="deliveryInstructions"
+              value={form.deliveryInstructions}
+              max-length="1000"
+              onchange={handleChange}
+            ></lightning-textarea>
+          </div>
+        </fieldset>
+
+        <fieldset class="rc-card group">
+          <legend class="rc-subtitle">Package and service</legend>
+          <div class="rc-grid">
+            <c-rc-segmented
+              class="rc-span-2"
+              name="serviceType"
+              label="Service"
+              options={serviceOptions}
+              value={form.serviceType}
+              onchange={handleChange}
+            ></c-rc-segmented>
+            <lightning-input
+              type="number"
+              label="Weight (kg)"
+              name="weightKg"
+              value={form.weightKg}
+              min="0.01"
+              max="30"
+              step="0.01"
+              message-when-range-overflow="The maximum weight is 30 kg."
+              message-when-range-underflow="Enter the weight."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              type="number"
+              label="Declared value (MXN)"
+              name="declaredValue"
+              value={form.declaredValue}
+              min="0"
+              max="50000"
+              step="0.01"
+              message-when-range-overflow="The maximum declared value is 50,000 MXN."
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              class="rc-span-2"
+              label="Description of the contents"
+              name="packageDescription"
+              value={form.packageDescription}
+              max-length="255"
+              required
+              onchange={handleChange}
+            ></lightning-input>
+            <lightning-input
+              class="rc-span-2"
+              label="Your order reference (optional)"
+              name="customerReference"
+              value={form.customerReference}
+              max-length="80"
+              onchange={handleChange}
+            ></lightning-input>
+          </div>
+        </fieldset>
+
+        <template lwc:if={errorMessage}>
+          <div class="rc-alert rc-alert_error" role="alert">{errorMessage}</div>
+        </template>
+
+        <template lwc:if={quote}>
+          <section class="rc-card quote" aria-live="polite">
+            <p class="rc-subtitle">Price with the current rate</p>
+            <dl class="breakdown">
+              <div>
+                <dt>{serviceLabel} base rate</dt>
+                <dd>{quoteBaseLabel}</dd>
+              </div>
+              <div>
+                <dt>Weight ({form.weightKg} kg)</dt>
+                <dd>{quoteWeightLabel}</dd>
+              </div>
+              <div>
+                <dt>Insurance (1.5% of declared value)</dt>
+                <dd>{quoteInsuranceLabel}</dd>
+              </div>
+              <div class="total">
+                <dt>Total, paid at pickup</dt>
+                <dd>{quoteTotalLabel}</dd>
+              </div>
+            </dl>
+            <p class="rc-note">Estimated delivery: {quoteEstimatedLabel}</p>
+            <div class="rc-actions">
+              <button
+                class="rc-button"
+                type="button"
+                onclick={handleConfirm}
+                disabled={isBusy}
+              >
+                Confirm request
+              </button>
+              <button
+                class="rc-button rc-button_outline"
+                type="button"
+                onclick={clearQuote}
+              >
+                Edit details
+              </button>
+            </div>
+          </section>
+        </template>
+        <template lwc:else>
+          <button
+            class="rc-button rc-button_block"
+            type="submit"
+            disabled={isBusy}
+          >
+            See price
+          </button>
+        </template>
+      </form>
+    </template>
+
+    <template lwc:if={isBusy}>
+      <lightning-spinner
+        alternative-text="Working"
+        size="medium"
+      ></lightning-spinner>
+    </template>
+  </div>
+</template>

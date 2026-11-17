@@ -1,0 +1,78 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Shipment",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"bff8edf2-01eb-5a11-9bf8-951796ad3225\",\"columns\":[{\"UUID\":\"61c5dc12-b0e0-59a5-bd65-149f0f3e5767\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
+              },
+              "children": [
+                {
+                  "children": [
+                    {
+                      "attributes": {},
+                      "definition": "c:rcShipmentDetail",
+                      "id": "a1ddc7ea-ebfb-5927-adcb-4bd6411ea27e",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "61c5dc12-b0e0-59a5-bd65-149f0f3e5767",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "bff8edf2-01eb-5a11-9bf8-951796ad3225",
+              "type": "component"
+            }
+          ],
+          "id": "0e7d9afa-0d96-588f-a83f-8bb74cf1933f",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Shipment | RutaCargo",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "7b0f433d-6f2a-562d-90b5-16ff45bb6f5e",
+              "type": "component"
+            }
+          ],
+          "id": "d217ce17-f625-53de-acc0-d1051aa46f19",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "445caa31-de2f-594e-b297-4185ca2002f0",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-shipment"
+  },
+  "urlName": "shipment"
+}

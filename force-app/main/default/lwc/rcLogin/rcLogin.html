@@ -1,0 +1,45 @@
+<template>
+  <div class="rc-container page">
+    <div class="rc-card auth">
+      <p class="rc-eyebrow">Customers</p>
+      <h1 class="rc-display title">Log in</h1>
+      <form class="form" onsubmit={handleLogin} novalidate>
+        <lightning-input
+          type="email"
+          label="Email"
+          name="email"
+          value={email}
+          autocomplete="username"
+          required
+          onchange={handleChange}
+        ></lightning-input>
+        <lightning-input
+          type="password"
+          label="Password"
+          name="password"
+          value={password}
+          autocomplete="current-password"
+          required
+          onchange={handleChange}
+        ></lightning-input>
+        <template lwc:if={errorMessage}>
+          <div class="rc-alert rc-alert_error" role="alert">{errorMessage}</div>
+        </template>
+        <button
+          class="rc-button rc-button_block"
+          type="submit"
+          disabled={isBusy}
+        >
+          Log in
+        </button>
+      </form>
+      <div class="links">
+        <a class="rc-link" href={forgotUrl}>Forgot your password?</a>
+        <p class="rc-text">
+          New to RutaCargo?
+          <a class="rc-link" href={registerUrl}>Create your account</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</template>

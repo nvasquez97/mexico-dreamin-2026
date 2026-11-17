@@ -1,0 +1,12 @@
+{
+  "type": "sfdc_cms__appPage",
+  "title": "main",
+  "contentBody": {
+    "currentThemeId": "Build_Your_Own_LWR",
+    "headMarkup": "<title>RutaCargo | Shipping and tracking</title>\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap\" />\n\n<style>body{font-family:Montserrat,\"Segoe UI\",Arial,sans-serif;color:#0d1f5f;}.community_byo-scoped-header-and-footer__header-content,.community_byo-scoped-header-and-footer__footer-content{background:transparent !important;}.community_byo-scoped-header-and-footer__header-content community_layout-section,.community_byo-scoped-header-and-footer__footer-content community_layout-section{padding:0 !important;}</style>\n<!-- branding stylesheets -->\n\r\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/slds/salesforce-lightning-design-system-part1.css?{ versionKey }\"/>\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/slds/salesforce-lightning-design-system-part2.css?{ versionKey }\"/>\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/slds/salesforce-lightning-design-system-part3.css?{ versionKey }\"/>\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/slds/salesforce-lightning-design-system-part4.css?{ versionKey }\"/>\r\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/dxp-site-spacing-styling-hooks.min.css?{ versionKey }\" />\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/dxp-styling-hooks.min.css?{ versionKey }\" />\n<link rel=\"stylesheet\" href=\"{ basePath }/assets/styles/dxp-slds-extensions.min.css?{ versionKey }\" />\n\n\n\n<!-- branding stylesheets-->\n\n<link rel=\"stylesheet\" href=\"{ styles/styles.css }\" />\n<link rel=\"stylesheet\" href=\"{ styles/print.css }\" media=\"print\"/>\n",
+    "isLockerServiceEnabled": true,
+    "isRelaxedCSPLevel": false,
+    "templateName": "talon-template-byo"
+  },
+  "urlName": "main"
+}

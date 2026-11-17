@@ -1,0 +1,110 @@
+<template>
+  <div class="rc-container page">
+    <div class="heading">
+      <div>
+        <p class="rc-eyebrow">Your account</p>
+        <h1 class="rc-display">My shipments</h1>
+      </div>
+      <a class="rc-button" href={requestUrl}>Request a shipment</a>
+    </div>
+
+    <div class="rc-card filters">
+      <lightning-combobox
+        name="status"
+        label="Status"
+        options={statusOptions}
+        value={status}
+        onchange={handleStatusChange}
+      ></lightning-combobox>
+      <lightning-input
+        type="search"
+        name="search"
+        label="Search"
+        placeholder="Tracking number, recipient or reference"
+        value={searchTerm}
+        onchange={handleSearchChange}
+      ></lightning-input>
+    </div>
+
+    <template lwc:if={errorMessage}>
+      <div class="rc-alert rc-alert_error message" role="alert">
+        {errorMessage}
+      </div>
+    </template>
+
+    <p class="rc-note count" aria-live="polite">{countLabel}</p>
+
+    <template lwc:if={hasRows}>
+      <ul class="list">
+        <template for:each={rows} for:item="row">
+          <li key={row.trackingNumber} class="rc-card row">
+            <div class="row-top">
+              <a class="tracking rc-link" href={row.detailUrl}
+                >{row.trackingNumber}</a
+              >
+              <span class={row.statusClass}>{row.status}</span>
+            </div>
+            <dl class="row-grid">
+              <div>
+                <dt>Requested</dt>
+                <dd>{row.requestDateLabel}</dd>
+              </div>
+              <div>
+                <dt>Recipient</dt>
+                <dd>{row.recipientName}</dd>
+              </div>
+              <div>
+                <dt>Destination</dt>
+                <dd>{row.destinationCity}</dd>
+              </div>
+              <div>
+                <dt>Service</dt>
+                <dd>{row.serviceType}</dd>
+              </div>
+              <div>
+                <dt>Price</dt>
+                <dd>{row.priceLabel}</dd>
+              </div>
+              <template lwc:if={row.customerReference}>
+                <div>
+                  <dt>Reference</dt>
+                  <dd>{row.customerReference}</dd>
+                </div>
+              </template>
+            </dl>
+          </li>
+        </template>
+      </ul>
+    </template>
+    <template lwc:elseif={showEmpty}>
+      <div class="rc-panel empty">
+        <p class="rc-subtitle">No shipments found</p>
+        <p class="rc-text">
+          Change the filters or request your first shipment.
+        </p>
+      </div>
+    </template>
+
+    <template lwc:if={isLoading}>
+      <div class="spinner-holder">
+        <lightning-spinner
+          alternative-text="Loading"
+          size="medium"
+        ></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:if={hasMore}>
+      <div class="more">
+        <button
+          class="rc-button rc-button_outline"
+          type="button"
+          onclick={loadMore}
+          disabled={isLoading}
+        >
+          Show more
+        </button>
+      </div>
+    </template>
+  </div>
+</template>

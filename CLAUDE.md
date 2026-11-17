@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Salesforce DX (source-driven) project generated from the standard `sf project generate` template. Single package directory `force-app` (`force-app/main/default/`), source API version 67.0, no namespace. No application code has been written yet; the metadata folders are scaffolding.
+Salesforce DX project implementing the RutaCargo shipping and tracking site (`docs/functional-design.md`). Single package directory `force-app` (`force-app/main/default/`), source API version 67.0, no namespace. See README.md for architecture, setup (`scripts/setup-org.sh`) and pending manual steps.
+
+- API 67 runs Apex SOQL/DML in user mode for site users: site-facing controllers use explicit `WITH SYSTEM_MODE` / `AccessLevel.SYSTEM_MODE` and return DTOs; site users have no object permissions on `Shipment__c`.
+- LWR site changes (components, styles) are only visible after `sf community publish -n RutaCargo`.
 
 ## Commands
 

@@ -1,0 +1,78 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Login",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {
+                "backgroundImageConfig": "",
+                "backgroundImageOverlay": "rgba(0,0,0,0)",
+                "componentSpacerSize": "",
+                "layoutDirectionDesktop": "row",
+                "layoutDirectionMobile": "column",
+                "layoutDirectionTablet": "column",
+                "maxContentWidth": "",
+                "sectionColumnGutterWidth": "",
+                "sectionConfig": "{\"UUID\":\"225cbfe3-94ed-5671-b826-0c124c2a623f\",\"columns\":[{\"UUID\":\"3ad96ff7-8482-5bbb-a1fc-4a65f6562381\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight": "",
+                "sectionVerticalAlign": "flex-start"
+              },
+              "children": [
+                {
+                  "children": [
+                    {
+                      "attributes": {},
+                      "definition": "c:rcLogin",
+                      "id": "c04f6142-7da7-5e09-a117-2d09839d0f6c",
+                      "type": "component"
+                    }
+                  ],
+                  "id": "3ad96ff7-8482-5bbb-a1fc-4a65f6562381",
+                  "name": "col1",
+                  "title": "Column 1",
+                  "type": "region"
+                }
+              ],
+              "definition": "community_layout:section",
+              "id": "225cbfe3-94ed-5671-b826-0c124c2a623f",
+              "type": "component"
+            }
+          ],
+          "id": "d7a1ea2b-5971-5d0c-afa1-f25cdc3313b7",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Log in | RutaCargo",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "a6f3f3ee-014b-5b37-9173-c6cce956f3aa",
+              "type": "component"
+            }
+          ],
+          "id": "333de554-deea-5281-b2e0-87234fb53ff1",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "72365ed4-6492-5f3b-83f5-dd645e8e0138",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "login-main"
+  },
+  "urlName": "login"
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Profile xmlns="http://soap.sforce.com/2006/04/metadata">
+    <custom>true</custom>
+    <description
+  >Self-registered RutaCargo customers. Object access to shipments is intentionally not granted (see CustomerShipmentController).</description>
+    <userLicense>Customer Community Login</userLicense>
+    <classAccesses>
+        <apexClass>CustomerShipmentController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>PublicTrackingController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecipientDeliveryController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+</Profile>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Role xmlns="http://soap.sforce.com/2006/04/metadata">
+    <caseAccessLevel>Edit</caseAccessLevel>
+    <contactAccessLevel>Edit</contactAccessLevel>
+    <description
+  >Owns customer accounts created on the RutaCargo site.</description>
+    <mayForecastManagerShare>false</mayForecastManagerShare>
+    <name>RutaCargo Operations</name>
+    <opportunityAccessLevel>Edit</opportunityAccessLevel>
+</Role>

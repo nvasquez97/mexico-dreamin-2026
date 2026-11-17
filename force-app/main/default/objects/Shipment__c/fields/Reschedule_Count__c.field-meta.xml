@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Reschedule_Count__c</fullName>
+    <label>Reschedule Count</label>
+    <description
+  >Number of times the recipient has rescheduled the delivery (max 2).</description>
+    <inlineHelpText
+  >Number of times the recipient has rescheduled the delivery (max 2).</inlineHelpText>
+    <type>Number</type>
+    <precision>2</precision>
+    <scale>0</scale>
+    <defaultValue>0</defaultValue>
+    <trackHistory>true</trackHistory>
+    <required>false</required>
+</CustomField>

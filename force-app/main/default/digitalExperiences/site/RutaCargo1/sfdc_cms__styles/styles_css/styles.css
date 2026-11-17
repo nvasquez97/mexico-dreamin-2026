@@ -1,0 +1,36 @@
+/*
+ * RutaCargo global styles (brand manual: blues lead, Montserrat).
+ */
+html,
+body {
+  height: 100%;
+}
+
+html {
+  background: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: Montserrat, "Segoe UI", Arial, sans-serif;
+  color: #0d1f5f;
+  -webkit-text-size-adjust: 100%;
+}
+
+*:focus-visible {
+  outline: 3px solid #07e9f6;
+  outline-offset: 2px;
+}
+
+/* Full-bleed RutaCargo header and footer: remove the template's grey wrappers and section padding. */
+.community_byo-scoped-header-and-footer__header-content,
+.community_byo-scoped-header-and-footer__footer-content {
+  background: transparent !important;
+}
+
+.community_byo-scoped-header-and-footer__header-content
+  community_layout-section,
+.community_byo-scoped-header-and-footer__footer-content
+  community_layout-section {
+  padding: 0 !important;
+}

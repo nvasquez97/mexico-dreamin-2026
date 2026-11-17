@@ -1,0 +1,40 @@
+@import "c/rcBrand";
+
+.page {
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.tracking {
+  word-break: break-all;
+}
+
+.sections {
+  display: grid;
+  gap: 1rem;
+}
+
+.spinner-holder {
+  position: relative;
+  min-height: 5rem;
+}
+
+@media (min-width: 900px) {
+  .sections {
+    grid-template-columns: 1fr 1fr;
+  }
+}
