@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Shipment__c</fullName>
+    <label>Shipment</label>
+    <description>The shipment whose recipient verifications this guard counts (REQ-002, X16). Written only by RecipientAccess in system mode.</description>
+    <inlineHelpText>Shipment protected by this attempt counter.</inlineHelpText>
+    <type>Lookup</type>
+    <referenceTo>Shipment__c</referenceTo>
+    <relationshipLabel>Recipient Access Guards</relationshipLabel>
+    <relationshipName>Recipient_Access_Guards</relationshipName>
+    <required>false</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

@@ -14,12 +14,17 @@
 #      every permission set assigned to the guest user (the platform keeps rows
 #      on standard Account fields for the guest profile; with no Account object
 #      permission they grant nothing);
+#   3c. Recipient_Access_Guard__c (the recipient attempt counter, req-002-003
+#      S1) has 0 ObjectPermissions rows and 0 readable or editable
+#      FieldPermissions rows in every permission set and every custom profile
+#      (PermissionSet.IsCustom or not owned by a profile): only the standard
+#      administrator profiles see it, and only RecipientAccess writes it;
 #   4. the guest user's TimeZoneSidKey is America/Mexico_City;
 #   5. the Visualforce pages enabled for the guest (profile "RutaCargo Profile"
 #      and every permission set assigned to the guest user) are exactly the
 #      allow-list GUEST_PAGES below: no self-registration page;
 #   5b. the Apex classes enabled for the guest (same scope as 5) are exactly the
-#      allow-list GUEST_CLASSES below (req-001 AC-001.6);
+#      allow-list GUEST_CLASSES below (req-001 AC-001.6, req-002-003 AC-002.6);
 #   5c. source check: no Apex class or trigger under force-app/main/default
 #      other than SELECTOR_FILES below names the without-sharing
 #      PublicTrackingSelector (case-insensitive, as Apex), so its
@@ -50,9 +55,12 @@ GUEST_TIME_ZONE='America/Mexico_City'
 # (indexPage, authorizationRequiredPage and the four error pages). Must match
 # force-app/main/default/profiles/RutaCargo Profile.profile-meta.xml.
 GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,FileNotFound,InMaintenance'
-# Apex classes the guest may call: only the public tracking entry point
-# (req-001 S1, C8). Must match the classAccesses of the guest profile.
-GUEST_CLASSES='PublicTrackingController'
+# Apex classes the guest may call: only the entry points of the public
+# tracking (req-001 S1, C8) and of the recipient's delivery details and
+# reschedule (req-002-003 S2). Must match the classAccesses of the guest profile.
+GUEST_CLASSES='PublicTrackingController,RecipientDeliveryController'
+# Admin-only object: no grant in any permission set or custom profile.
+GUARD_OBJECT='Recipient_Access_Guard__c'
 # The without-sharing selector and the only source files that may name it:
 # itself, its single caller and that caller's test (req-001 SEC-001, P11).
 SELECTOR='PublicTrackingSelector'
@@ -142,6 +150,25 @@ if [[ "$count" -eq 0 ]]; then
     pass "the guest has 0 FieldPermissions rows on Shipment__c and the Account custom fields"
 else
     fail "the guest has $count FieldPermissions rows on Shipment__c or Account custom fields: $(jq -r '[.[] | .parent + ":" + .field] | join(", ")' <<<"$guest_fls")"
+fi
+
+# ─── 3c. No grants on the recipient attempt guard ───────────────────────────
+# Standard profiles (System Administrator and the platform's own) carry
+# implicit rows on every custom object; every permission set and every custom
+# profile must have none.
+guard_object_perms="$(query "SELECT Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name FROM ObjectPermissions WHERE SobjectType = 'Recipient_Access_Guard__c' AND (Parent.IsCustom = true OR Parent.IsOwnedByProfile = false)")"
+count="$(jq 'length' <<<"$guard_object_perms")"
+if [[ "$count" -eq 0 ]]; then
+    pass "$GUARD_OBJECT has 0 ObjectPermissions rows in permission sets and custom profiles"
+else
+    fail "$GUARD_OBJECT has $count ObjectPermissions rows: $(jq -r '[.[] | if .Parent.IsOwnedByProfile then "profile:" + .Parent.Profile.Name else "permset:" + .Parent.Name end] | join(", ")' <<<"$guard_object_perms")"
+fi
+guard_field_perms="$(query "SELECT Field, Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name FROM FieldPermissions WHERE SobjectType = 'Recipient_Access_Guard__c' AND (PermissionsRead = true OR PermissionsEdit = true) AND (Parent.IsCustom = true OR Parent.IsOwnedByProfile = false)")"
+count="$(jq 'length' <<<"$guard_field_perms")"
+if [[ "$count" -eq 0 ]]; then
+    pass "$GUARD_OBJECT has 0 readable or editable FieldPermissions rows in permission sets and custom profiles"
+else
+    fail "$GUARD_OBJECT has $count FieldPermissions rows: $(jq -r '[.[] | (if .Parent.IsOwnedByProfile then "profile:" + .Parent.Profile.Name else "permset:" + .Parent.Name end) + ":" + .Field] | join(", ")' <<<"$guard_field_perms")"
 fi
 
 # ─── 4. Guest user time zone ────────────────────────────────────────────────

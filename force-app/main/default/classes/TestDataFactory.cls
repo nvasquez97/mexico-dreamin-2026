@@ -284,7 +284,7 @@ public with sharing class TestDataFactory {
     // manual shares that mirror the criteria sharing rules (A10) in system mode,
     // because at API 67 DML defaults to user mode and the admin has no field
     // permissions on the RutaCargo fields. Scope: these TestDataFactory setup
-    // helpers. Compensating control: every action under test runs inside
+    // helpers (updateAsSystem included). Compensating control: every action under test runs inside
     // System.runAs as the actor, in user mode. (pending owner approval, 2026-11-17)
     private static void insertAsSystem(List<SObject> records) {
         Database.insert(records, AccessLevel.SYSTEM_MODE);
@@ -369,6 +369,83 @@ public with sharing class TestDataFactory {
      */
     public static void insertShipmentGroupShares(List<Shipment__c> shipments, String groupDeveloperName) {
         insertAsSystem(newShipmentGroupShares(shipments, groupId(groupDeveloperName), RULE_ACCESS));
+    }
+
+    // ─── Recipient access (req-002-003) ───────────────────────────────────
+
+    /**
+     * @description A SAVED customer account, written in system mode (the test
+     *              admin has no field permissions on the Account custom fields).
+     * @param name the account name
+     * @return the saved account
+     */
+    public static Account insertCustomerAccount(String name) {
+        Account customer = newCustomerAccount(name);
+        insertAsSystem(new List<Account>{ customer });
+        return customer;
+    }
+
+    /**
+     * @description Inserts the shipments in system mode and returns the clear
+     *              access code of each one, captured from DeliveryAccessCode
+     *              while the insert runs (the trigger issues the codes). The
+     *              clear codes are removed from DeliveryAccessCode's memory
+     *              before returning. Tests use the codes as a recipient would
+     *              type them; they are never written to a field or a log.
+     * @param shipments unsaved shipments
+     * @return shipment Id to clear access code
+     */
+    public static Map<Id, String> insertShipmentsWithCodes(List<Shipment__c> shipments) {
+        Map<Id, String> codes = new Map<Id, String>();
+        DeliveryAccessCode.captureForTest = true;
+        try {
+            insertAsSystem(shipments);
+            for (Shipment__c shipment : shipments) {
+                codes.put(shipment.Id, DeliveryAccessCode.issuedCodesById.remove(shipment.Id));
+            }
+        } finally {
+            DeliveryAccessCode.captureForTest = false;
+            DeliveryAccessCode.pendingCodesByHash.clear();
+            DeliveryAccessCode.issuedCodesById.clear();
+        }
+        return codes;
+    }
+
+    /**
+     * @description Updates the records in system mode: tests set fields the
+     *              trigger fixes on insert (Status__c, Reschedule_Count__c,
+     *              Proof_Id__c) after inserting the shipment.
+     * @param records saved records with the fields to change
+     */
+    public static void updateAsSystem(List<SObject> records) {
+        Database.update(records, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Unsaved attempt guard of one shipment (keyed by its Id).
+     * @param shipmentId the guarded shipment
+     * @param failedAttempts the consecutive counted failures
+     * @param lockedUntil the end of a lock, or null
+     * @return the unsaved guard
+     */
+    public static Recipient_Access_Guard__c newRecipientAccessGuard(
+        Id shipmentId, Integer failedAttempts, Datetime lockedUntil
+    ) {
+        return new Recipient_Access_Guard__c(
+            Shipment__c = shipmentId,
+            Shipment_Key__c = String.valueOf(shipmentId),
+            Failed_Attempts__c = failedAttempts,
+            Locked_Until__c = lockedUntil
+        );
+    }
+
+    /**
+     * @description Inserts attempt guards in system mode (no user holds any
+     *              permission on Recipient_Access_Guard__c).
+     * @param guards unsaved guards
+     */
+    public static void insertRecipientAccessGuards(List<Recipient_Access_Guard__c> guards) {
+        insertAsSystem(guards);
     }
 
     // ─── EntregaYa status requests ────────────────────────────────────────

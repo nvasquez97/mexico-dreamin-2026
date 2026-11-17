@@ -5,12 +5,19 @@
         <default>false</default>
         <visible>false</visible>
     </applicationVisibilities>
-    <!-- Guest Apex class access: only PublicTrackingController, the public
-         tracking search (req-001 S1, C8). Its selector and DTO are not entry
-         points and get no access. The allow-list in
-         scripts/checks/guest-access-check.sh (GUEST_CLASSES) must match. -->
+    <!-- Guest Apex class access: only the entry points PublicTrackingController,
+         the public tracking search (req-001 S1, C8), and
+         RecipientDeliveryController, the recipient's delivery details and
+         reschedule (req-002-003 S2). Their selectors, helpers and DTOs
+         (PublicTrackingSelector, RecipientAccess, ...) are not entry points and
+         get no access. The allow-list in scripts/checks/guest-access-check.sh
+         (GUEST_CLASSES) must match. -->
     <classAccesses>
         <apexClass>PublicTrackingController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecipientDeliveryController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <custom>true</custom>

@@ -8,8 +8,11 @@
 #   1. Shipment__c.Status__c, Estimated_Delivery__c and Delivery_Instructions__c
 #      have IsFieldHistoryTracked = true (Tooling FieldDefinition, which, unlike
 #      Apex, sees every field whatever the running user's field permissions);
-#   2. Shipment__c and Account have InternalSharingModel and
-#      ExternalSharingModel Private (EntityDefinition);
+#   2. Shipment__c, Account and Recipient_Access_Guard__c have
+#      InternalSharingModel and ExternalSharingModel Private (EntityDefinition);
+#   2b. Recipient_Access_Guard__c (req-002-003 S1): its four fields exist,
+#      Shipment_Key__c is Text(18), External ID, unique and case-sensitive (one
+#      guard per shipment, written by upsert on it), and the object has no tab;
 #   3. the deployed Apex settings (Settings:Apex, retrieved from the org, not
 #      taken from the local file) have enableGaplessTestAutoNum true: tests use
 #      an independent Auto Number sequence, so they never consume tracking
@@ -64,8 +67,8 @@ count="$(jq '[.[] | select(.IsFieldHistoryTracked == true)] | length' <<<"$histo
 echo "info: $count of 3 fields history tracked"
 
 # ─── 2. Sharing models ──────────────────────────────────────────────────────
-entities="$(query "SELECT QualifiedApiName, InternalSharingModel, ExternalSharingModel FROM EntityDefinition WHERE QualifiedApiName IN ('Shipment__c', 'Account')")"
-for object in Shipment__c Account; do
+entities="$(query "SELECT QualifiedApiName, DurableId, InternalSharingModel, ExternalSharingModel FROM EntityDefinition WHERE QualifiedApiName IN ('Shipment__c', 'Account', 'Recipient_Access_Guard__c')")"
+for object in Shipment__c Account Recipient_Access_Guard__c; do
     for kind in InternalSharingModel ExternalSharingModel; do
         model="$(jq -r --arg o "$object" --arg k "$kind" '.[] | select(.QualifiedApiName == $o) | .[$k]' <<<"$entities")"
         if [[ "$model" == "Private" ]]; then
@@ -75,6 +78,35 @@ for object in Shipment__c Account; do
         fi
     done
 done
+
+# ─── 2b. The recipient attempt guard ────────────────────────────────────────
+GUARD_FIELDS='Failed_Attempts Locked_Until Shipment Shipment_Key'
+guard_entity="$(jq -r '.[] | select(.QualifiedApiName == "Recipient_Access_Guard__c") | .DurableId // empty' <<<"$entities")"
+if [[ ! "$guard_entity" =~ ^01I[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
+    fail "Recipient_Access_Guard__c not found"
+else
+    # guard_entity is validated above as a CustomObject Id before it enters any query.
+    guard_fields="$(query "SELECT DeveloperName FROM CustomField WHERE TableEnumOrId = '$guard_entity'" tooling \
+        | jq -r '[.[].DeveloperName] | sort | join(" ")')"
+    if [[ "$guard_fields" == "$GUARD_FIELDS" ]]; then
+        pass "Recipient_Access_Guard__c has exactly the fields $GUARD_FIELDS"
+    else
+        fail "Recipient_Access_Guard__c fields are '$guard_fields', expected '$GUARD_FIELDS'"
+    fi
+    key="$(query "SELECT Metadata FROM CustomField WHERE TableEnumOrId = '$guard_entity' AND DeveloperName = 'Shipment_Key'" tooling \
+        | jq -r '.[0].Metadata // {} | "\(.type) \(.length) externalId=\(.externalId) unique=\(.unique) caseSensitive=\(.caseSensitive)"')"
+    if [[ "$key" == "Text 18 externalId=true unique=true caseSensitive=true" ]]; then
+        pass "Recipient_Access_Guard__c.Shipment_Key__c is $key"
+    else
+        fail "Recipient_Access_Guard__c.Shipment_Key__c is '$key', expected Text 18, External ID, unique, case-sensitive"
+    fi
+fi
+guard_tabs="$(query "SELECT Name FROM TabDefinition WHERE SobjectName = 'Recipient_Access_Guard__c'")"
+if [[ "$(jq 'length' <<<"$guard_tabs")" -eq 0 ]]; then
+    pass "Recipient_Access_Guard__c has no tab"
+else
+    fail "Recipient_Access_Guard__c has a tab: $(jq -r '[.[].Name] | join(", ")' <<<"$guard_tabs")"
+fi
 
 # ─── 3. Apex settings: independent Auto Number sequence in tests ────────────
 tmp="$(mktemp -d)"
