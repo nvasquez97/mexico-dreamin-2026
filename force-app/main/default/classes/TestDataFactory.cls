@@ -10,6 +10,11 @@ public with sharing class TestDataFactory {
     public static final String PLATFORM_PROFILE_NAME = 'Standard Platform User';
     public static final String INTEGRATION_PROFILE_NAME = 'Minimum Access - API Only Integrations';
     public static final String API_INTEGRATION_PSL = 'SalesforceAPIIntegrationPsl';
+    public static final String ENTREGAYA_PERMISSION_SET = 'RutaCargo_EntregaYa_Integration';
+    public static final String ENTREGAYA_GROUP = 'RutaCargo_EntregaYa_Integration';
+    public static final String AGENT_PERMISSION_SET = 'RutaCargo_Support_Agent';
+    public static final String AGENT_GROUP = 'RutaCargo_Support_Agents';
+    public static final String RULE_ACCESS = 'Edit';
 
     /**
      * @description When true, newOrExistingIntegrationUser must reuse an existing
@@ -253,5 +258,123 @@ public with sharing class TestDataFactory {
             members.add(new GroupMember(GroupId = groupId, UserOrGroupId = member.Id));
         }
         return members;
+    }
+
+    // ─── Ready-made actors (saved): EntregaYa integration user, support agent ──
+
+    // SECURITY-JUSTIFICATION: test fixture only. The running test admin writes
+    // users, license and permission set assignments, group memberships and the
+    // manual shares that mirror the criteria sharing rules (A10) in system mode,
+    // because at API 67 DML defaults to user mode and the admin has no field
+    // permissions on the RutaCargo fields. Scope: these TestDataFactory setup
+    // helpers. Compensating control: every action under test runs inside
+    // System.runAs as the actor, in user mode. (pending owner approval, 2026-11-17)
+    private static void insertAsSystem(List<SObject> records) {
+        Database.insert(records, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description Id of a deployed permission set.
+     * @param name the API name of the permission set
+     * @return its Id
+     */
+    public static Id permissionSetId(String name) {
+        return [SELECT Id FROM PermissionSet WHERE Name = :name WITH SYSTEM_MODE LIMIT 1].Id;
+    }
+
+    /**
+     * @description Id of a deployed public group.
+     * @param developerName the API name of the group
+     * @return its Id
+     */
+    public static Id groupId(String developerName) {
+        return [
+            SELECT Id FROM Group WHERE DeveloperName = :developerName AND Type = 'Regular' WITH SYSTEM_MODE LIMIT 1
+        ].Id;
+    }
+
+    /**
+     * @description The SAVED EntregaYa integration user, ready to act: reuses the
+     *              org's existing integration user (newOrExistingIntegrationUser,
+     *              B8) or inserts a new one with the Salesforce API Integration
+     *              permission set license, then makes sure it has the
+     *              RutaCargo_EntregaYa_Integration permission set and is a member of
+     *              the RutaCargo_EntregaYa_Integration group. Setup objects are
+     *              written inside System.runAs (no mixed DML).
+     * @param uniqueKey a short key (letters and digits) for a new user
+     * @return the saved integration user
+     */
+    public static User insertEntregaYaIntegrationUser(String uniqueKey) {
+        User integration = newOrExistingIntegrationUser(uniqueKey);
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            if (integration.Id == null) {
+                insertAsSystem(new List<User>{ integration });
+                insertAsSystem(new List<PermissionSetLicenseAssign>{
+                    newApiIntegrationLicenseAssignment(integration.Id) });
+            }
+            Id setId = permissionSetId(ENTREGAYA_PERMISSION_SET);
+            if ([SELECT COUNT() FROM PermissionSetAssignment
+                    WHERE AssigneeId = :integration.Id AND PermissionSetId = :setId WITH SYSTEM_MODE] == 0) {
+                insertAsSystem(newPermissionSetAssignments(setId, new List<User>{ integration }));
+            }
+            Id integrationGroupId = groupId(ENTREGAYA_GROUP);
+            if ([SELECT COUNT() FROM GroupMember
+                    WHERE GroupId = :integrationGroupId AND UserOrGroupId = :integration.Id WITH SYSTEM_MODE] == 0) {
+                insertAsSystem(newGroupMembers(integrationGroupId, new List<User>{ integration }));
+            }
+        }
+        return integration;
+    }
+
+    /**
+     * @description A SAVED support agent (Standard Platform User with the
+     *              RutaCargo_Support_Agent permission set, member of the
+     *              RutaCargo_Support_Agents group). Uses one of the org's 3
+     *              Salesforce Platform licenses.
+     * @param uniqueKey a short key (letters and digits) that makes the user unique
+     * @return the saved agent
+     */
+    public static User insertSupportAgent(String uniqueKey) {
+        User agent = newPlatformUsers(new List<String>{ uniqueKey })[0];
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insertAsSystem(new List<User>{ agent });
+            insertAsSystem(newPermissionSetAssignments(permissionSetId(AGENT_PERMISSION_SET), new List<User>{ agent }));
+            insertAsSystem(newGroupMembers(groupId(AGENT_GROUP), new List<User>{ agent }));
+        }
+        return agent;
+    }
+
+    /**
+     * @description Inserts manual Edit shares of the shipments with a group,
+     *              mirroring its criteria-based sharing rule (A10).
+     * @param shipments saved shipments
+     * @param groupDeveloperName the API name of the group
+     */
+    public static void insertShipmentGroupShares(List<Shipment__c> shipments, String groupDeveloperName) {
+        insertAsSystem(newShipmentGroupShares(shipments, groupId(groupDeveloperName), RULE_ACCESS));
+    }
+
+    // ─── EntregaYa status requests ────────────────────────────────────────
+
+    /**
+     * @description An EntregaYa status change with the given fields (the five
+     *              fields of the decided contract, so five parameters).
+     * @param trackingNumber the tracking number
+     * @param status the status
+     * @param location the location
+     * @param timestamp the ISO-8601 timestamp
+     * @param proofId the proof of delivery id, or null
+     * @return the request
+     */
+    public static EntregaYaStatusRequest newStatusRequest(
+        String trackingNumber, String status, String location, String timestamp, String proofId
+    ) {
+        EntregaYaStatusRequest request = new EntregaYaStatusRequest();
+        request.trackingNumber = trackingNumber;
+        request.status = status;
+        request.location = location;
+        request.timestamp = timestamp;
+        request.proofId = proofId;
+        return request;
     }
 }

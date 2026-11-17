@@ -249,8 +249,11 @@ private with sharing class EntregaYaAccessTest {
     }
 
     @IsTest
-    static void integrationUser_updatesStatusFieldsOfSharedShipments() {
-        // AC-004.5 (S3): Edit on Shipment__c and the status fields, two different inputs
+    static void integrationUser_directUpdateOfStatusFieldsIsRefused() {
+        // AC-004.9 (T2 decision): a direct update of the status fields by the integration user is
+        // refused with the generic message and nothing changes; edit rights on the five fields are
+        // proven by describe in integrationUser_readsAndEditsTheFiveStatusFields, the update through
+        // the service in EntregaYaStatusServiceTest
         List<Shipment__c> shared = twoShipments();
         Datetime first = Datetime.newInstanceGmt(2026, 11, 20, 16, 0, 0);
         Datetime second = Datetime.newInstanceGmt(2026, 11, 21, 15, 5, 0);
@@ -266,37 +269,32 @@ private with sharing class EntregaYaAccessTest {
             results = Database.update(changes, false, AccessLevel.USER_MODE);
         }
         Test.stopTest();
-        Assert.isTrue(results[0].isSuccess(), 'First update must succeed: ' + results[0].getErrors());
-        Assert.isTrue(results[1].isSuccess(), 'Second update must succeed: ' + results[1].getErrors());
-        Map<Id, Shipment__c> saved = new Map<Id, Shipment__c>([
+        String refusal = 'Status updates from EntregaYa must use the status service.';
+        Assert.areEqual(refusal + '|' + refusal,
+            (results[0].isSuccess() ? 'success' : results[0].getErrors()[0].getMessage()) + '|'
+                + (results[1].isSuccess() ? 'success' : results[1].getErrors()[0].getMessage()),
+            'Both direct updates must be refused with the generic message');
+        for (Shipment__c row : [
             SELECT Status__c, Last_Location__c, Last_Update__c, Delivered_At__c, Proof_Id__c
             FROM Shipment__c WHERE Id IN :changes WITH SYSTEM_MODE
-        ]);
-        Shipment__c one = saved.get(shared[0].Id);
-        Shipment__c two = saved.get(shared[1].Id);
-        Assert.areEqual('Out for delivery|Monterrey, NL|' + first.getTime(),
-            one.Status__c + '|' + one.Last_Location__c + '|' + one.Last_Update__c.getTime(),
-            'First shipment must keep the status, location and time the integration saved');
-        Assert.areEqual('Delivered|Guadalajara, JAL|' + second.getTime() + '|' + second.getTime() + '|PRF-90417',
-            two.Status__c + '|' + two.Last_Location__c + '|' + two.Last_Update__c.getTime() + '|'
-                + two.Delivered_At__c.getTime() + '|' + two.Proof_Id__c,
-            'Second shipment must keep the delivery the integration saved');
+        ]) {
+            Assert.areEqual('Requested|null|null|null|null', row.Status__c + '|' + row.Last_Location__c + '|'
+                + row.Last_Update__c + '|' + row.Delivered_At__c + '|' + row.Proof_Id__c,
+                'A refused direct update must change nothing');
+        }
     }
 
     @IsTest
     static void integrationUser_cannotUpdatePrice() {
-        // AC-004.5: no edit on fields outside the five status fields (Price__c)
-        Shipment__c target = twoShipments()[0];
-        List<Database.SaveResult> results;
+        // AC-004.5: no edit on fields outside the five status fields (Price__c), proven by describe
+        // so it does not depend on the AC-004.9 trigger guard
+        Boolean updateable;
         Test.startTest();
         System.runAs(integrationUser()) {
-            results = Database.update(new List<Shipment__c>{ new Shipment__c(Id = target.Id, Price__c = 1) },
-                false, AccessLevel.USER_MODE);
+            updateable = Shipment__c.Price__c.getDescribe().isUpdateable();
         }
         Test.stopTest();
-        Assert.isFalse(results[0].isSuccess(), 'The integration user must not be able to change Price__c');
-        Assert.areEqual(300, [SELECT Price__c FROM Shipment__c WHERE Id = :target.Id WITH SYSTEM_MODE].Price__c,
-            'Price__c must be unchanged after the attempt');
+        Assert.isFalse(updateable, 'The integration user must not be able to edit Price__c');
     }
 
     // ─── AC-004.5 (BR-04, BR-09): the custom permission ───────────────────

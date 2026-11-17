@@ -8,7 +8,10 @@
  *              delivery, and the hash replaced on update only for the Ids
  *              registered by DeliveryAccessCode.reissueCodes.
  *              Covers AC-F.4, AC-F.15, AC-F.13, AC-F.16 and AC-F.5 of
- *              odd/tasks/foundation.md.
+ *              odd/tasks/foundation.md, and AC-004.9 of
+ *              odd/tasks/req-004-carrier-status.md: a direct update by a holder of
+ *              RutaCargo_EntregaYa_Sender is refused on every row, a support
+ *              agent's is applied (251 records each).
  */
 @IsTest
 private with sharing class ShipmentTriggerHandlerTest {
@@ -24,6 +27,8 @@ private with sharing class ShipmentTriggerHandlerTest {
     private static final Date SECOND_ESTIMATE = Date.newInstance(2026, 12, 9);
     private static final Date LATER_ESTIMATE = Date.newInstance(2026, 12, 20);
     private static final Date OTHER_LATER_ESTIMATE = Date.newInstance(2026, 12, 27);
+    private static final String DIRECT_SENDER_UPDATE_MESSAGE =
+        'Status updates from EntregaYa must use the status service.';
 
     // The user that inserts through insertWithCodes (user mode): Minimum Access
     // plus a test-only permission set with Account read, Shipment__c read and
@@ -582,5 +587,92 @@ private with sharing class ShipmentTriggerHandlerTest {
             'A caller must not set the original estimate of a shipment without an estimate (2026-12-20)');
         Assert.isNull(saved.get(shipments[1].Id).Original_Estimated_Delivery__c,
             'A caller must not set the original estimate of a shipment without an estimate (2026-12-27)');
+    }
+
+    // ─── AC-004.9 (P4, BR-04, BR-09): direct updates by EntregaYa senders ─
+
+    // 251 shipments shared Read/Write with the EntregaYa integration group and the
+    // support agents group: manual shares mirror the two deployed rules (A10).
+    private static List<Shipment__c> insertBulkSharedShipments() {
+        List<Shipment__c> shipments = TestDataFactory.newShipments(customerId(), BULK_SIZE);
+        insertAsSystem(shipments);
+        TestDataFactory.insertShipmentGroupShares(shipments, TestDataFactory.ENTREGAYA_GROUP);
+        TestDataFactory.insertShipmentGroupShares(shipments, TestDataFactory.AGENT_GROUP);
+        return shipments;
+    }
+
+    // Even rows: In transit at Leon; odd rows: Out for delivery at Celaya.
+    private static List<Shipment__c> statusChanges(List<Shipment__c> shipments) {
+        List<Shipment__c> changes = new List<Shipment__c>();
+        for (Integer i = 0; i < shipments.size(); i++) {
+            Boolean even = Math.mod(i, 2) == 0;
+            changes.add(new Shipment__c(Id = shipments[i].Id,
+                Status__c = even ? 'In transit' : 'Out for delivery',
+                Last_Location__c = even ? 'Leon, GTO' : 'Celaya, GTO'));
+        }
+        return changes;
+    }
+
+    private static List<Database.SaveResult> updateAs(User actor, List<Shipment__c> changes) {
+        List<Database.SaveResult> results;
+        System.runAs(actor) {
+            results = Database.update(changes, false, AccessLevel.USER_MODE);
+        }
+        return results;
+    }
+
+    private static Map<Id, Shipment__c> readStatuses(List<Shipment__c> shipments) {
+        return new Map<Id, Shipment__c>([
+            SELECT Id, Status__c, Last_Location__c FROM Shipment__c WHERE Id IN :shipments WITH SYSTEM_MODE
+        ]);
+    }
+
+    @IsTest
+    static void directUpdate_isRefusedOnEveryRow_whenTheUserHoldsTheSenderPermission() {
+        // AC-004.9: a 251-record direct update by the integration user (RutaCargo_EntregaYa_Sender)
+        // is refused on every row with the generic message, and nothing changes
+        User integration = TestDataFactory.insertEntregaYaIntegrationUser('rcthint');
+        List<Shipment__c> shipments = insertBulkSharedShipments();
+        List<Shipment__c> changes = statusChanges(shipments);
+
+        Test.startTest();
+        List<Database.SaveResult> results = updateAs(integration, changes);
+        Test.stopTest();
+
+        Integer refused = 0;
+        for (Database.SaveResult result : results) {
+            if (!result.isSuccess() && result.getErrors()[0].getMessage() == DIRECT_SENDER_UPDATE_MESSAGE) {
+                refused++;
+            }
+        }
+        Assert.areEqual(BULK_SIZE, refused, 'Every row must be refused with the generic message');
+        for (Shipment__c saved : readStatuses(shipments).values()) {
+            Assert.areEqual('Requested|null', saved.Status__c + '|' + saved.Last_Location__c,
+                'A refused update must change nothing');
+        }
+    }
+
+    @IsTest
+    static void directUpdate_isApplied_whenASupportAgentEditsStatusesByHand() {
+        // AC-004.9, BR-09: a 251-record status update by a support agent (no custom permission) is applied
+        User agent = TestDataFactory.insertSupportAgent('rcthagt');
+        List<Shipment__c> shipments = insertBulkSharedShipments();
+        List<Shipment__c> changes = statusChanges(shipments);
+
+        Test.startTest();
+        List<Database.SaveResult> results = updateAs(agent, changes);
+        Test.stopTest();
+
+        Integer applied = 0;
+        for (Database.SaveResult result : results) {
+            applied += result.isSuccess() ? 1 : 0;
+        }
+        Assert.areEqual(BULK_SIZE, applied, 'Every row of the agent must be saved');
+        Map<Id, Shipment__c> saved = readStatuses(shipments);
+        for (Shipment__c change : changes) {
+            Shipment__c row = saved.get(change.Id);
+            Assert.areEqual(change.Status__c + '|' + change.Last_Location__c, row.Status__c + '|' + row.Last_Location__c,
+                'The agent change must be saved');
+        }
     }
 }

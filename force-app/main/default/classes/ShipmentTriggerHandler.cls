@@ -8,12 +8,22 @@
  *              estimated delivery cannot be changed; a blank original estimate
  *              follows the first estimate; only the shipments of an active
  *              DeliveryAccessCode.reissueCodes call get a new code and hash.
+ *              A holder of the custom permission RutaCargo_EntregaYa_Sender (the
+ *              EntregaYa integration user) may update shipments only through
+ *              EntregaYaStatusService: any other update by that user is refused
+ *              on every row with a generic error (req-004 AC-004.9, BR-04).
+ *              Agents and administrators without the permission are unaffected
+ *              (BR-09).
  *              Works only on Trigger.new and Trigger.oldMap: no SOQL, no DML.
  */
 public with sharing class ShipmentTriggerHandler {
 
     @TestVisible
     private static final String INITIAL_STATUS = 'Requested';
+    private static final String SENDER_PERMISSION = 'RutaCargo_EntregaYa_Sender';
+    @TestVisible
+    private static final String DIRECT_SENDER_UPDATE_MESSAGE =
+        'Status updates from EntregaYa must use the status service.';
 
     /**
      * @description Before insert.
@@ -41,6 +51,9 @@ public with sharing class ShipmentTriggerHandler {
      * @param oldShipments Trigger.oldMap
      */
     public static void beforeUpdate(List<Shipment__c> newShipments, Map<Id, Shipment__c> oldShipments) {
+        if (refuseDirectSenderUpdate(newShipments)) {
+            return;
+        }
         for (Shipment__c shipment : newShipments) {
             Shipment__c previous = oldShipments.get(shipment.Id);
             if (previous == null) {
@@ -50,6 +63,18 @@ public with sharing class ShipmentTriggerHandler {
             fillOriginalEstimate(shipment, previous);
         }
         DeliveryAccessCode.replaceReissuedCodes(newShipments);
+    }
+
+    // AC-004.9: a RutaCargo_EntregaYa_Sender holder writes only through
+    // EntregaYaStatusService. One permission check per trigger batch.
+    private static Boolean refuseDirectSenderUpdate(List<Shipment__c> newShipments) {
+        if (EntregaYaStatusService.isApplying() || !FeatureManagement.checkPermission(SENDER_PERMISSION)) {
+            return false;
+        }
+        for (Shipment__c shipment : newShipments) {
+            shipment.addError(DIRECT_SENDER_UPDATE_MESSAGE);
+        }
+        return true;
     }
 
     // Keeps the stored hash and a filled original estimated delivery.
