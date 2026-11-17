@@ -5,7 +5,7 @@ Branch: ODD-Opus-Cargo-Test-1
 Org: cargo-opus-t1
 Approved: standing choice of the owner (unattended run), 2026-11-17
 Base: 642bc1b
-Plan review: 
+Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 
 ## Findings
 - The contract: one POST per status change with trackingNumber, status, location, timestamp (ISO-8601 with offset) and proofId (null unless delivered); about 5,000 updates a day (`docs/functional-design.md`, "Status changes (EntregaYa calls Salesforce)").
