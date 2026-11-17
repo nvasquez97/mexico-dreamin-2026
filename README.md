@@ -148,15 +148,19 @@ so they do not land in your shell history:
 ```bash
 read -rs ENTREGAYA_CLIENT_ID && export ENTREGAYA_CLIENT_ID
 read -rs ENTREGAYA_CLIENT_SECRET && export ENTREGAYA_CLIENT_SECRET
-scripts/entregaya/simulate-status.sh <alias> <trackingNumber> "Out for delivery" "Monterrey, NL" <timestamp>
+scripts/entregaya/simulate-status.sh <alias> updated <trackingNumber> "Out for delivery" "Monterrey, NL" <timestamp>
+scripts/entregaya/simulate-status.sh <alias> ignored <trackingNumber> "Out for delivery" "Monterrey, NL" <timestamp>
 unset ENTREGAYA_CLIENT_ID ENTREGAYA_CLIENT_SECRET
 ```
 
 Use a seeded "In transit" shipment whose `Last_Update__c` is earlier than the
 timestamp, and a timestamp of now in `-06:00` (for example
 `2026-11-17T14:00:00-06:00`); a timestamp more than 10 minutes in the future is
-refused. The first post answers 200 `{"result":"updated"}`; the same post again
-answers 200 `{"result":"ignored"}`. Then run `scripts/seed/verify.sh <alias>`:
+refused. The second argument is the result you expect: the first post must
+answer 200 `{"result":"updated"}` and move the shipment to the posted status,
+location and timestamp; the same post again must answer 200
+`{"result":"ignored"}` and leave the shipment as it was. The script reads the
+shipment before and after each post and exits 1 on any difference. Then run `scripts/seed/verify.sh <alias>`:
 every customer must still have all six statuses.
 
 ## Decisions of this run (D1–D5)

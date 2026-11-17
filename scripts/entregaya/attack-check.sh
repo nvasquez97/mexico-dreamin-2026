@@ -27,8 +27,13 @@
 # never hard-coded. The target is one seeded "In transit" shipment; nothing is
 # inserted (A6).
 #
+# It runs only against a sandbox or scratch org (Organization.IsSandbox, as in
+# scripts/setup/entregaya-integration.sh): its body is a valid "Out for delivery"
+# change, so on a production org with an open endpoint it would move a real
+# shipment. The check runs before any host is resolved or any request is sent.
+#
 # Exit codes: 0 refused everywhere and nothing changed; 1 a violation; 2 usage;
-# 3 a failed query or no target shipment.
+# 3 a failed query or no target shipment; 4 refused: not a sandbox or scratch org.
 #
 # Usage: scripts/entregaya/attack-check.sh <org-alias>
 set -euo pipefail
@@ -62,6 +67,13 @@ query() {
     fi
     jq -c '.result.records' <<<"$out"
 }
+
+# ─── Never a production org ─────────────────────────────────────────────────
+org_row="$(query "SELECT IsSandbox FROM Organization")"
+if [[ "$(jq -r '.[0].IsSandbox // false' <<<"$org_row")" != "true" ]]; then
+    echo "ERROR: refused: $ORG is not a sandbox or scratch org" >&2
+    exit 4
+fi
 
 # ─── Hosts ──────────────────────────────────────────────────────────────────
 display="$(sf org display --target-org "$ORG" --json 2>/dev/null || true)"

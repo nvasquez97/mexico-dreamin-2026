@@ -1,7 +1,8 @@
 /**
  * @description Proves EntregaYaStatusResource (req-004 S2), the HTTP contract of
  *              POST /services/apexrest/entregaya/v1/status: AC-004.1 (200 updated
- *              and the shipment saved), AC-004.3 (HTTP codes: 404, 400 with each
+ *              and the shipment saved), AC-004.2 (a POSTed "Delivered" saves
+ *              Delivered_At__c and Proof_Id__c), AC-004.3 (HTTP codes: 404, 400 with each
  *              closed error code, no internals in any body; B10: a body
  *              over 16,384 bytes or nested deeper than 20 levels answers 400
  *              INVALID_JSON), AC-004.7 (503 for a
@@ -241,6 +242,30 @@ private with sharing class EntregaYaStatusResourceTest {
         Shipment__c after = shipments()[0];
         Assert.areEqual('Out for delivery|Monterrey, NL', after.Status__c + '|' + after.Last_Location__c,
             'The ignored POSTs must not change the shipment');
+    }
+
+    @IsTest
+    static void post_answersUpdatedAndSavesDeliveredAtAndProofId_forTwoDeliveries() {
+        // AC-004.2: POSTed "Delivered" with proofId PRF-88231 at 2026-11-20T15:30:00-06:00 and PRF-90417
+        // at 2026-11-21T09:05:00-06:00 answer 200 updated; Delivered_At__c and Proof_Id__c hold each value
+        fixClock();
+        List<Shipment__c> rows = shipments();
+        Datetime firstAt = Datetime.newInstanceGmt(2026, 11, 20, 21, 30, 0);
+        Datetime secondAt = Datetime.newInstanceGmt(2026, 11, 21, 15, 5, 0);
+        Test.startTest();
+        List<String> summaries = postAll(integrationUser(), new List<String>{
+            JSON.serialize(TestDataFactory.newStatusRequestFields(
+                rows[0].Name, 'Delivered', 'Monterrey, NL', '2026-11-20T15:30:00-06:00', 'PRF-88231')),
+            JSON.serialize(TestDataFactory.newStatusRequestFields(
+                rows[1].Name, 'Delivered', 'Guadalajara, JAL', '2026-11-21T09:05:00-06:00', 'PRF-90417'))
+        });
+        Test.stopTest();
+        Assert.areEqual(repeated(success('updated'), 2), summaries, 'Both deliveries must answer 200 updated');
+        List<String> after = snapshots();
+        Assert.areEqual(rows[0].Name + '|Delivered|Monterrey, NL|' + firstAt.getTime() + '|' + firstAt.getTime() + '|PRF-88231',
+            after[0], 'The first delivery must save Delivered_At__c and Proof_Id__c');
+        Assert.areEqual(rows[1].Name + '|Delivered|Guadalajara, JAL|' + secondAt.getTime() + '|' + secondAt.getTime() + '|PRF-90417',
+            after[1], 'The second delivery must save Delivered_At__c and Proof_Id__c');
     }
 
     @IsTest
