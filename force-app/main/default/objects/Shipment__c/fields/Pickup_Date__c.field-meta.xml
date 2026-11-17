@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pickup_Date__c</fullName>
+    <label>Pickup Date</label>
+    <description>Date requested by the customer for the pickup.</description>
+    <inlineHelpText>Day on which the courier should pick up the parcel.</inlineHelpText>
+    <type>Date</type>
+    <trackHistory>false</trackHistory>
+</CustomField>

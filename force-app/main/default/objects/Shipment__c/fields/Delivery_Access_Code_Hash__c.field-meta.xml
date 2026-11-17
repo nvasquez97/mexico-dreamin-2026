@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Delivery_Access_Code_Hash__c</fullName>
+    <label>Delivery Access Code Hash</label>
+    <description>Salted hash of the delivery access code.</description>
+    <type>Text</type>
+    <length>100</length>
+    <trackHistory>false</trackHistory>
+</CustomField>

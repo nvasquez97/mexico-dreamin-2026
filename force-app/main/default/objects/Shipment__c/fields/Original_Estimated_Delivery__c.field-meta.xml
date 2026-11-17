@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Original_Estimated_Delivery__c</fullName>
+    <label>Original Estimated Delivery</label>
+    <description>First estimated delivery date of the shipment; the base for the reschedule window.</description>
+    <inlineHelpText>First estimated delivery date; it does not change when the delivery is rescheduled.</inlineHelpText>
+    <type>Date</type>
+    <trackHistory>false</trackHistory>
+</CustomField>

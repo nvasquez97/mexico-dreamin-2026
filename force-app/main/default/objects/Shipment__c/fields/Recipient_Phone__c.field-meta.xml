@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recipient_Phone__c</fullName>
+    <label>Recipient Phone</label>
+    <description>Contact phone of the recipient.</description>
+    <inlineHelpText>Phone number where the courier can reach the recipient.</inlineHelpText>
+    <type>Phone</type>
+    <trackHistory>false</trackHistory>
+</CustomField>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account__c</fullName>
+    <label>Customer</label>
+    <description>Customer account that requested the shipment. Deleting a customer with shipments is blocked.</description>
+    <inlineHelpText>The customer who requested this shipment.</inlineHelpText>
+    <type>Lookup</type>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Shipments</relationshipLabel>
+    <relationshipName>Shipments</relationshipName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+</CustomField>

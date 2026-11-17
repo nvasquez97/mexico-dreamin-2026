@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Internal_Notes__c</fullName>
+    <label>Internal Notes</label>
+    <description>Notes from the operations team.</description>
+    <inlineHelpText>Internal use only: operations notes, never shown to customers.</inlineHelpText>
+    <type>LongTextArea</type>
+    <length>5000</length>
+    <visibleLines>5</visibleLines>
+    <trackHistory>false</trackHistory>
+</CustomField>

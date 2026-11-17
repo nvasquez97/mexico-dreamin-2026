@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Carrier_Cost__c</fullName>
+    <label>Carrier Cost</label>
+    <description>Transport cost paid by RutaCargo, in MXN.</description>
+    <inlineHelpText>Internal use only: what RutaCargo pays the carrier, in MXN.</inlineHelpText>
+    <type>Currency</type>
+    <precision>16</precision>
+    <scale>2</scale>
+    <trackHistory>false</trackHistory>
+</CustomField>
