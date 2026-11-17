@@ -63,7 +63,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 | T4 | S4 | AC-004.6, AC-004.8 | force-app/main/default/externalClientApps/EntregaYa_Status.eca-meta.xml, force-app/main/default/extlClntAppOauthSettings/EntregaYa_Status_oauth.ecaOauth-meta.xml, force-app/main/default/extlClntAppGlobalOauthSets/EntregaYa_Status_glbloauth.ecaGlblOauth-meta.xml (exact names as the platform requires; no secret), scripts/setup/templates/EntregaYa_Status_oauthPlcy.ecaOauthPlcy-meta.xml.template, scripts/setup/entregaya-integration.sh, scripts/setup/entregaya-integration.apex, scripts/setup/DEPLOY-ORDER.md, scripts/entregaya/simulate-status.sh, scripts/entregaya/attack-check.sh, scripts/checks/entregaya-access-check.sh, README.md (EntregaYa section) | yes | task-worker | integration:integration-connectivity-connected-app-configure, salesforce-development:platform-metadata-api-context-get, salesforce-development:platform-metadata-deploy, salesforce-development:platform-metadata-retrieve, salesforce-development:platform-soql-query, salesforce-development:platform-apex-anonymous-run | task-reviewer, security-reviewer, access-auditor |
 
 ## Tasks
-- [ ] T1 (S3): Integration permission set, custom permission, group, sharing rule and access check — test first — review: findings · reviewers: task-reviewer a79d0ee9ec9707f97, security-reviewer afb85484222970362, access-auditor a28e16496f4edfada
+- [x] T1 (S3): Integration permission set, custom permission, group, sharing rule and access check — 87b84b4 · evidence: odd/evidence/req-004-carrier-status/T1.md · review: fixed in d77dade · reviewers: task-reviewer a79d0ee9ec9707f97, security-reviewer afb85484222970362, access-auditor a28e16496f4edfada
 - [ ] T2 (S1): Status service: validation, stale and future guard, lock and user-mode update — test first
 - [ ] T3 (S2): REST resource: caller check, JSON parsing and the HTTP error contract — test first
 - [ ] T4 (S4): External Client App with client credentials, integration user setup, live simulation and attack check — test first
@@ -75,6 +75,7 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 - B4: the consumer secret is read by the owner in Setup and handed to EntregaYa; the simulation script reads ENTREGAYA_CLIENT_ID / ENTREGAYA_CLIENT_SECRET from the environment.
 - B5: a timestamp more than 10 minutes ahead of the Salesforce server clock is rejected (400 INVALID_TIMESTAMP), so a wrong clock at EntregaYa cannot freeze a shipment.
 - B6: the External Client App enforces IP restrictions, but no login IP ranges are set for the integration user because EntregaYa has not provided its IP addresses; listed as a pending owner step.
+- B8 (T1 review): the org has one Salesforce Integration license and one Salesforce API Integration PSL; T4 must create the integration user and assign the PSL in the same step, and tests reuse that user through TestDataFactory.newOrExistingIntegrationUser.
 - B7: lock timeouts answer 503 so EntregaYa retries; other unexpected errors answer 500 with a generic body.
 
 ## Close
