@@ -109,6 +109,37 @@ public with sharing class TestDataFactory {
     }
 
     /**
+     * @description Unsaved permission set that exists only inside one test (the
+     *              test transaction rolls it back). Tests use it to give a user a
+     *              narrower object permission than any deployed permission set.
+     * @param name the API name of the permission set
+     * @return the unsaved permission set
+     */
+    public static PermissionSet newTestPermissionSet(String name) {
+        return new PermissionSet(Name = name, Label = name);
+    }
+
+    /**
+     * @description Unsaved Read-only object permission (no Create, Edit, Delete,
+     *              View All or Modify All) of one object in a permission set.
+     * @param permissionSetId the permission set that receives the permission
+     * @param sObjectType the API name of the object
+     * @return the unsaved object permission
+     */
+    public static ObjectPermissions newReadOnlyObjectPermission(Id permissionSetId, String sObjectType) {
+        return new ObjectPermissions(
+            ParentId = permissionSetId,
+            SobjectType = sObjectType,
+            PermissionsRead = true,
+            PermissionsCreate = false,
+            PermissionsEdit = false,
+            PermissionsDelete = false,
+            PermissionsViewAllRecords = false,
+            PermissionsModifyAllRecords = false
+        );
+    }
+
+    /**
      * @description Unsaved manual shares of each shipment with one group. Tests
      *              use them to mirror a criteria-based sharing rule, which the
      *              platform does not evaluate in Apex tests (assumption A10).

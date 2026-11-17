@@ -157,9 +157,9 @@ One line each; the full text is in the Assumptions section of
   `scripts/setup/DEPLOY-ORDER.md`, and record the result.
 - Set and verify a real sender email address for the site: the Network uses
   `noreply@example.com`, which stays unverified.
-- The administrator user for nicolas.murcia@adaptus.com in the development org
-  is a justified exception to policy P7 (minimal admins), created at the
-  owner's request; keep or remove it.
+- The administrator user created at the owner's request in the development
+  org is a justified exception to policy P7 (minimal admins); keep or remove
+  it.
 - In the development org cargo-opus-t1 the delivery access codes of the first
   seed load were lost (see `odd/evidence/foundation/T6.md`; only their hashes
   are stored, D1). They were replaced with `scripts/seed/seed.sh

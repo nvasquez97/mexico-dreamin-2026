@@ -203,19 +203,50 @@ fi
 # its shipment, in anonymous Apex batches of $VERIFY_BATCH (verify runs one query
 # per code; 100 per transaction). The generated Apex holds codes, so it lives in
 # a private directory under the git-ignored .seed-output/ and is removed, and the
-# debug logs of these runs are deleted. Prints counts only.
+# debug logs of these runs are deleted. Prints counts only. The cleanup (the
+# private directory and the new debug logs) is installed as an EXIT trap before
+# the first `sf apex run`, so an interrupted or failed run still removes them.
+CODE_CHECK_USER_ID=""
+CODE_CHECK_LOGS_BEFORE=""
+CODE_CHECK_WORKDIR=""
+CODE_CHECK_CLEANED=false
+clean_up_code_check() {
+    $CODE_CHECK_CLEANED && return 0
+    CODE_CHECK_CLEANED=true
+    if [[ -n "$CODE_CHECK_WORKDIR" ]]; then
+        rm -rf "$CODE_CHECK_WORKDIR"
+    fi
+    [[ -n "$CODE_CHECK_USER_ID" ]] || return 0
+    local after id deleted=0
+    after="$(sf data query --target-org "$ORG" --json --query "SELECT Id FROM ApexLog WHERE LogUserId = '$CODE_CHECK_USER_ID'" 2>/dev/null \
+        | jq -r '.result.records[]?.Id' 2>/dev/null || true)"
+    for id in $after; do
+        if ! grep -qx "$id" <<<"$CODE_CHECK_LOGS_BEFORE"; then
+            if sf data delete record --sobject ApexLog --record-id "$id" --target-org "$ORG" --json >/dev/null 2>&1; then
+                deleted=$((deleted + 1))
+            else
+                echo "WARNING: could not delete debug log $id (it echoes access codes); delete it in Setup > Debug Logs" >&2
+            fi
+        fi
+    done
+    echo "info: deleted $deleted debug log(s) of the access-code check"
+}
+
 verify_codes_in_org() {
-    local username user_id logs_before workdir batch apex out result checked=0 passed=0 failed
+    local username workdir batch apex out result checked=0 passed=0 failed
     username="$(sf org display --target-org "$ORG" --json 2>/dev/null | jq -r '.result.username // empty')"
     query "SELECT Id FROM User WHERE Username = '$username'"
-    user_id="$(jq -r '.[0].Id // empty' <<<"$REPLY" 2>/dev/null)"
-    if [[ -z "$user_id" ]]; then
+    CODE_CHECK_USER_ID="$(jq -r '.[0].Id // empty' <<<"$REPLY" 2>/dev/null)"
+    if [[ -z "$CODE_CHECK_USER_ID" ]]; then
         fail "access codes not checked in the org: cannot identify the running user"
         return
     fi
-    query "SELECT Id FROM ApexLog WHERE LogUserId = '$user_id'"
-    logs_before="$(jq -r '.[]?.Id' <<<"$REPLY" 2>/dev/null)"
+    query "SELECT Id FROM ApexLog WHERE LogUserId = '$CODE_CHECK_USER_ID'"
+    CODE_CHECK_LOGS_BEFORE="$(jq -r '.[]?.Id' <<<"$REPLY" 2>/dev/null)"
+    trap clean_up_code_check EXIT
+    trap 'exit 130' INT TERM HUP
     workdir="$(umask 077; mktemp -d "$ROOT/.seed-output/.verify.XXXXXX")"
+    CODE_CHECK_WORKDIR="$workdir"
     tail -n +2 "$CODES_FILE" | split -l "$VERIFY_BATCH" - "$workdir/batch."
     for batch in "$workdir"/batch.*; do
         apex="$batch.apex"
@@ -253,21 +284,7 @@ APEX
         checked=$((checked + $(cut -d: -f2 <<<"$result")))
         passed=$((passed + $(cut -d: -f3 <<<"$result")))
     done
-    rmdir "$workdir" 2>/dev/null || rm -rf "$workdir"
-
-    local after id deleted=0
-    after="$(sf data query --target-org "$ORG" --json --query "SELECT Id FROM ApexLog WHERE LogUserId = '$user_id'" 2>/dev/null \
-        | jq -r '.result.records[]?.Id' 2>/dev/null || true)"
-    for id in $after; do
-        if ! grep -qx "$id" <<<"$logs_before"; then
-            if sf data delete record --sobject ApexLog --record-id "$id" --target-org "$ORG" --json >/dev/null 2>&1; then
-                deleted=$((deleted + 1))
-            else
-                echo "WARNING: could not delete debug log $id (it echoes access codes); delete it in Setup > Debug Logs" >&2
-            fi
-        fi
-    done
-    echo "info: deleted $deleted debug log(s) of the access-code check"
+    clean_up_code_check
 
     failed=$((checked - passed))
     if [[ "$checked" == "120" && "$passed" == "120" ]]; then

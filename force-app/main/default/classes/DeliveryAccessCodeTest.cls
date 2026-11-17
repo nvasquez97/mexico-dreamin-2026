@@ -37,6 +37,8 @@ private with sharing class DeliveryAccessCodeTest {
     private static final String UNSHARED_ACCOUNT = 'Reissue Unshared Customer';
     private static final Integer BULK_SIZE = 251;
     private static final Integer UNSHARED_SIZE = 2;
+    private static final String READER_KEY = 'rcreader';
+    private static final String READ_ONLY_PERMISSION_SET_NAME = 'RC_Shipment_Read_Only_Test';
 
     // Independent recomputation of the stored value: round 1 hashes salt + code,
     // each next round hashes salt + the previous digest.
@@ -80,25 +82,46 @@ private with sharing class DeliveryAccessCodeTest {
 
     @TestSetup
     static void setup() {
-        User agent = TestDataFactory.newPlatformUsers(new List<String>{ AGENT_KEY })[0];
+        List<User> users = TestDataFactory.newPlatformUsers(new List<String>{ AGENT_KEY, READER_KEY });
+        User agent = users[0];
+        User reader = users[1];
         System.runAs(new User(Id = UserInfo.getUserId())) {
-            insertAsSystem(new List<User>{ agent });
+            insertAsSystem(users);
             Id permissionSetId = [SELECT Id FROM PermissionSet WHERE Name = :PERMISSION_SET_NAME WITH SYSTEM_MODE].Id;
             insertAsSystem(TestDataFactory.newPermissionSetAssignments(permissionSetId, new List<User>{ agent }));
+            // The reader: Read on Shipment__c and no Edit, from a permission set of this test only.
+            PermissionSet readOnly = TestDataFactory.newTestPermissionSet(READ_ONLY_PERMISSION_SET_NAME);
+            insertAsSystem(new List<PermissionSet>{ readOnly });
+            insertAsSystem(new List<ObjectPermissions>{
+                TestDataFactory.newReadOnlyObjectPermission(readOnly.Id, 'Shipment__c')
+            });
+            insertAsSystem(TestDataFactory.newPermissionSetAssignments(readOnly.Id, new List<User>{ reader }));
         }
         Account shared = TestDataFactory.newCustomerAccount(SHARED_ACCOUNT);
         Account unshared = TestDataFactory.newCustomerAccount(UNSHARED_ACCOUNT);
         insertAsSystem(new List<Account>{ shared, unshared });
         List<Shipment__c> sharedShipments = TestDataFactory.newShipments(shared.Id, BULK_SIZE);
         insertAsSystem(sharedShipments);
-        insertAsSystem(TestDataFactory.newShipments(unshared.Id, UNSHARED_SIZE));
+        List<Shipment__c> unsharedShipments = TestDataFactory.newShipments(unshared.Id, UNSHARED_SIZE);
+        insertAsSystem(unsharedShipments);
         // Manual shares to the agent user (the share builders accept any user or group Id).
         insertAsSystem(TestDataFactory.newShipmentGroupShares(sharedShipments, agent.Id, 'Edit'));
         insertAsSystem(TestDataFactory.newAccountGroupShares(new List<Account>{ shared }, agent.Id, 'Edit'));
+        // The reader may edit the records of the second customer (sharing) but not
+        // the object (no Edit permission on Shipment__c).
+        insertAsSystem(TestDataFactory.newShipmentGroupShares(unsharedShipments, reader.Id, 'Edit'));
     }
 
     private static User agent() {
-        String username = AGENT_KEY + '.' + UserInfo.getOrganizationId() + '@example.com.rutacargo';
+        return userWithKey(AGENT_KEY);
+    }
+
+    private static User reader() {
+        return userWithKey(READER_KEY);
+    }
+
+    private static User userWithKey(String key) {
+        String username = key + '.' + UserInfo.getOrganizationId() + '@example.com.rutacargo';
         return [SELECT Id FROM User WHERE Username = :username WITH SYSTEM_MODE LIMIT 1];
     }
 
@@ -520,6 +543,36 @@ private with sharing class DeliveryAccessCodeTest {
     }
 
     @IsTest
+    static void reissueCodes_throwsAndKeepsTheHash_whenTheUserHasNoEditPermissionOnShipments() {
+        // AC-F.16 (P10, no escalation): user mode also applies the object
+        // permission, so a user with an Edit share on the records but no Edit on
+        // Shipment__c cannot reissue; the hashes stay and no state is kept. The
+        // platform refuses a user-mode DML without the object permission with a
+        // System.TypeException (DML operation UPDATE not allowed), not a DmlException.
+        Set<Id> shipmentIds = shipmentIdsOf(UNSHARED_ACCOUNT);
+        Map<Id, Shipment__c> before = readHashes(shipmentIds);
+
+        Test.startTest();
+        Boolean reissued = true;
+        System.runAs(reader()) {
+            try {
+                DeliveryAccessCode.reissueCodes(shipmentIds);
+            } catch (System.TypeException e) {
+                reissued = false;
+            }
+        }
+        Test.stopTest();
+
+        Assert.isFalse(reissued, 'A user without Edit on Shipment__c must not reissue codes, even with an Edit share');
+        Map<Id, Shipment__c> after = readHashes(shipmentIds);
+        for (Id shipmentId : shipmentIds) {
+            Assert.areEqual(before.get(shipmentId).Delivery_Access_Code_Hash__c,
+                after.get(shipmentId).Delivery_Access_Code_Hash__c, 'A refused reissue must keep the hash');
+        }
+        Assert.isTrue(DeliveryAccessCode.reissuedCodesById.isEmpty(), 'No clear code may stay after a refusal');
+    }
+
+    @IsTest
     static void reissueCodes_returnsAnEmptyMap_whenNoIdsAreGiven() {
         // AC-F.16: nothing to reissue, nothing returned
         Assert.isTrue(DeliveryAccessCode.reissueCodes(new Set<Id>()).isEmpty(), 'An empty set must return an empty map');
@@ -623,6 +676,29 @@ private with sharing class DeliveryAccessCodeTest {
         Id unknown = Shipment__c.SObjectType.getDescribe(SObjectDescribeOptions.DEFERRED).getKeyPrefix() + '000000000000';
 
         Assert.isFalse(DeliveryAccessCode.verify(unknown, own), 'An unknown shipment Id must be rejected');
+    }
+
+    @IsTest
+    static void verify_computesOneHash_whetherTheIdIsKnownOrUnknown() {
+        // AC-F.17 (X16): a wrong code on an existing shipment and a well-formed
+        // code on an unknown Id cost the same hash work, so the time of a call
+        // does not tell whether the shipment exists
+        Map<Id, String> codes = insertTwoAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+        Id unknown = Shipment__c.SObjectType.getDescribe(SObjectDescribeOptions.DEFERRED).getKeyPrefix() + '000000000000';
+
+        Test.startTest();
+        Integer start = DeliveryAccessCode.hashesComputed;
+        Boolean onKnown = DeliveryAccessCode.verify(ids[0], codes.get(ids[1]));
+        Integer afterKnown = DeliveryAccessCode.hashesComputed;
+        Boolean onUnknown = DeliveryAccessCode.verify(unknown, codes.get(ids[0]));
+        Integer afterUnknown = DeliveryAccessCode.hashesComputed;
+        Test.stopTest();
+
+        Assert.isFalse(onKnown, 'B\'s code must not verify on A');
+        Assert.isFalse(onUnknown, 'A code must not verify on an unknown Id');
+        Assert.areEqual(1, afterKnown - start, 'A wrong code on an existing shipment must compute one hash');
+        Assert.areEqual(1, afterUnknown - afterKnown, 'A code on an unknown Id must also compute one hash');
     }
 
     @IsTest

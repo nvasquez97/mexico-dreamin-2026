@@ -28,6 +28,10 @@ public with sharing class DeliveryAccessCode {
     private static final String TYPING_SEPARATORS = '[\\s-]';
     private static final Pattern STORED_FORMAT =
         Pattern.compile('^v1\\$([1-9][0-9]{0,3})\\$[A-Za-z0-9+/]{22}==\\$[A-Za-z0-9+/]{43}=$');
+    // A well-formed v1 stored value with a fixed, public salt: a decoy that keeps
+    // the work of verify the same when the shipment is not found (X16).
+    private static final String DECOY_STORED_VALUE =
+        'v1$100$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     private static final Pattern CODE_FORMAT = Pattern.compile('^[' + ALPHABET + ']{' + CODE_LENGTH + '}$');
 
     // Clear codes of the rows being inserted through insertWithCodes, keyed by
@@ -55,6 +59,11 @@ public with sharing class DeliveryAccessCode {
     // until reissueCodes returns them.
     @TestVisible
     private static Map<Id, String> reissuedCodesById = new Map<Id, String>();
+
+    // Number of stored values computed in this transaction; lets a test prove
+    // that verify does the same hash work whether or not the shipment exists.
+    @TestVisible
+    private static Integer hashesComputed = 0;
 
     /**
      * @description Inserts the shipments all-or-none in user mode (the running
@@ -158,7 +167,8 @@ public with sharing class DeliveryAccessCode {
      *              characters of the code alphabet is rejected before any query.
      *              Reads only Delivery_Access_Code_Hash__c of that one Id, compares
      *              in constant time through matches, and never returns or logs the
-     *              hash. Callers exposed to external users must rate-limit
+     *              hash. An unknown Id costs the same hash work, against a
+     *              decoy. Callers exposed to external users must rate-limit
      *              (REQ-002).
      * @param shipmentId the shipment the code is claimed for
      * @param code the typed code
@@ -188,10 +198,14 @@ public with sharing class DeliveryAccessCode {
             WITH SYSTEM_MODE
             LIMIT 1
         ];
-        if (rows.isEmpty()) {
-            return false;
-        }
-        return matches(rows[0], normalized);
+        // X16: an unknown (or not shared) Id is checked against a fixed decoy
+        // value with the same rounds, so the call costs the same hash work and its
+        // time does not tell whether the shipment exists. The decoy can never
+        // match a code, and the result is false whenever no row was found.
+        Boolean found = !rows.isEmpty();
+        Shipment__c target = found ? rows[0] : new Shipment__c(Delivery_Access_Code_Hash__c = DECOY_STORED_VALUE);
+        Boolean matched = matches(target, normalized);
+        return found && matched;
     }
 
     /**
@@ -296,6 +310,7 @@ public with sharing class DeliveryAccessCode {
 
     // v1$<rounds>$<base64 salt>$<base64 digest>; the bytes are joined through hex.
     private static String storedValue(String code, Blob salt, Integer rounds) {
+        hashesComputed++;
         String saltHex = EncodingUtil.convertToHex(salt);
         Blob hash = Crypto.generateDigest(DIGEST,
             EncodingUtil.convertFromHex(saltHex + EncodingUtil.convertToHex(Blob.valueOf(code))));

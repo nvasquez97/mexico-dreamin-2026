@@ -461,10 +461,12 @@ private with sharing class ShipmentTriggerHandlerTest {
         for (Shipment__c shipment : shipments) {
             Shipment__c row = saved.get(shipment.Id);
             if (registered.contains(shipment.Id)) {
-                Assert.isTrue(STORED_HASH_FORMAT.matcher(row.Delivery_Access_Code_Hash__c).matches()
-                    && row.Delivery_Access_Code_Hash__c != before.get(shipment.Id).Delivery_Access_Code_Hash__c
-                    && DeliveryAccessCode.matches(row, DeliveryAccessCode.reissuedCodesById.get(shipment.Id)),
-                    'A registered shipment must store a new salted hash of its new code');
+                Assert.isTrue(STORED_HASH_FORMAT.matcher(row.Delivery_Access_Code_Hash__c).matches(),
+                    'A registered shipment must store a v1$100$salt$hash value');
+                Assert.areNotEqual(before.get(shipment.Id).Delivery_Access_Code_Hash__c, row.Delivery_Access_Code_Hash__c,
+                    'A registered shipment must store a new hash, not its previous one');
+                Assert.isTrue(DeliveryAccessCode.matches(row, DeliveryAccessCode.reissuedCodesById.get(shipment.Id)),
+                    'The new hash of a registered shipment must match its new code');
             } else {
                 Assert.areEqual(before.get(shipment.Id).Delivery_Access_Code_Hash__c, row.Delivery_Access_Code_Hash__c,
                     'A shipment not registered for reissue must keep its hash');
