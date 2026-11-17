@@ -78,4 +78,5 @@ Plan review: fixed (plan-reviewer a1641868ac0d75f8f)
 - C6 (range): REQ-004's close commits may fall inside Base..HEAD of this document because this plan was drafted while REQ-004 closed; Close lists them and reviewers ignore them.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: sf project deploy start --source-dir force-app --test-level RunLocalTests @ d55cd2c (clean worktree, --ignore-conflicts), Succeeded (0AfEk00000h4W0ZKAU), 196 tests, 0 failures; Jest 54/54 (6 suites) · Coverage: org 95.18%, new classes PublicTrackingController 97.93%, PublicTrackingSelector 100%, PublicTrackingResult 100%
