@@ -122,3 +122,4 @@ inherit the outer class's sharing.
 | X13 | Automation | Flows in system mode, scheduled/batch jobs `without sharing` over user-supplied criteria, platform-event subscribers |
 | X14 | Repo hygiene | `.env`, keys, SFDX auth URLs, `sfdx-config` with tokens, `SeeAllData=true` tests, secrets in history (`git log -p`) |
 | X15 | Packages & encryption | Managed packages with broad access, Shield Platform Encryption for regulated fields (see `platform-encryption-configure`) |
+| X16 | Weak verification | Guest or external actions authorized only by guessable, public or printed facts (postal code, email, phone, record or tracking number, birth date); no second factor or one-time token; enumeration through different messages or timings for "not found" vs "wrong value"; no attempt limit or lockout. A guest-reachable write authorized this way → **High**, **Critical** if it exposes or changes personal data |

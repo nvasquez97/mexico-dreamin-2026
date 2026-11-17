@@ -11,7 +11,7 @@ parallel, merge their findings and write the report. **Audit only — do not mod
 fixes at the end.
 
 Reference files (read them now, they define what "secure" means here):
-- [references/security-policy.md](references/security-policy.md) — rules P1–P11 and X1–X15
+- [references/security-policy.md](references/security-policy.md) — rules P1–P11 and X1–X16
 - [references/severity-and-report.md](references/severity-and-report.md) — severity, finding format, report template
 - [references/scanner-rules.md](references/scanner-rules.md) — heuristic scanner rule catalog
 - [references/org-audit-queries.md](references/org-audit-queries.md) — read-only org queries
@@ -77,9 +77,9 @@ Read-only: do not edit files, deploy, or run anything but SELECT queries against
 
 | subagent_type | Covers |
 |---|---|
-| `sf-security-code-reviewer` | P8, P10, P11, P9 code side, X1–X8, X13 — Apex, triggers, VF, Aura, LWC, flows |
-| `sf-security-access-reviewer` | P3, P4, P5, P6, P7, X11 — profiles, permission sets/groups, OWD, sharing rules, admin count |
-| `sf-security-exposure-reviewer` | P1, P2, P9 config side, X9, X10, X12, X14 — guest/sites, credentials, OAuth apps, endpoints, session |
+| `sf-security-code-reviewer` | P8, P10, P11, P9 code side, X1–X8, X13, X16 code side — Apex, triggers, VF, Aura, LWC, flows |
+| `sf-security-access-reviewer` | P3, P4, P5, P6, P7, X11, X15 — profiles, permission sets/groups, OWD, sharing rules, admin count |
+| `sf-security-exposure-reviewer` | P1, P2, P9 config side, X9, X10, X12, X14, X16 guest side — guest/sites, credentials, OAuth apps, endpoints, session |
 
 Ask each to also return a short **cross-reference list** (e.g. "classes granted to guest: A, B";
 "`without sharing` entry points: C") so you can chain findings.

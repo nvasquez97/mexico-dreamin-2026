@@ -30,6 +30,8 @@ Treat **everything the guest profile can reach as published**.
    `with sharing`, user mode, no record-Id IDOR, validated inputs, no data beyond what the page shows.
    Also LWC with `lightningCommunity__*` targets / Aura with `ltng:allowGuestAccess` on public pages, flows in
    `flowAccesses`, VF pages in `pageAccesses`, Apex REST under the site's URL.
+   For every guest action that reads or changes a specific record, ask what proves the caller is entitled
+   to it: a postal code, email or tracking number alone is weak verification (X16).
 5. Settings (org or retrieved `Sharing`/`Communities`/`CustomSite`/`Network` metadata): guest API access off,
    `ApiEnabled` off on guest profile, "Let guest users see other members" off, hide first/last name in SOAP API
    for site users, `ViewAllUsers` off, guest file/Chatter access off unless required. Not verifiable from source

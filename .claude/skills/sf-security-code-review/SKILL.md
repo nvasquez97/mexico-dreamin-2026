@@ -52,12 +52,17 @@ used by a guest-exposed LWC/Aura component — check `*.js-meta.xml` `lightningC
   `String.escapeSingleQuotes` is only sufficient for values inside quotes — not for field names, ORDER BY,
   ASC/DESC, LIMIT/OFFSET, or `IN (...)` lists built by joining.
 
-### 5. Authorization logic (X5, X6)
+### 5. Authorization logic (X5, X6, X16)
 - **IDOR**: method takes a record Id and reads/updates it without sharing or in system mode → any user can
   act on any record. Fix: `with sharing` + user mode, or explicit `UserRecordAccess` check.
 - **Mass assignment**: `JSON.deserialize(input, SObject.class)` / untyped maps copied into SObjects, then DML.
   Fix: DTO with allowed fields, set fields explicitly, `stripInaccessible`.
 - Custom permission checks (`FeatureManagement.checkPermission`) must be server-side, not only in LWC.
+- **Weak verification (X16)**: a guest/external action (view, edit, cancel, reschedule) authorized only by
+  facts that are guessable, public or printed on documents — postal code, email, phone, record or tracking
+  number, birth date. Also flag enumeration (different message/timing for "not found" vs "wrong value") and no
+  attempt limit/lockout. Fix: one-time token or link sent to a verified channel, or an authenticated session;
+  identical error responses; attempt limits.
 
 ### 6. Client side (X1–X4)
 - Visualforce: `escape="false"`, unencoded `{!$CurrentPage.parameters.*}`, merge fields in `<script>` or
