@@ -113,4 +113,5 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 - A6: workers never insert Shipment__c records in the org outside Apex tests, except the T6 seed, so the Auto Number sequence stays reproducible.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: sf project deploy start --source-dir force-app --test-level RunLocalTests @ f2dedeb, Succeeded (0AfEk00000h3sHeKAI), 98 tests, 0 failures · Coverage: org 90.79%, new classes DeliveryAccessCode 98.42%, ShipmentTriggerHandler 95.45%, ShipmentTrigger 100%
