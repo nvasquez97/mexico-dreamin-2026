@@ -85,4 +85,5 @@ Plan review: fixed (plan-reviewer a3f6306f6cc27c5d6)
 - B13 (T4 review, main-session decision in Mode: auto): no worker fix round for T4. The task-reviewer's High (AC-004.6 live POST not verified) and EXP-001 Medium (no login IP ranges) both depend on the owner (the consumer secret in Setup; EntregaYa's IP addresses); the conservative choice keeps AC-004.6's text and records both as open, instead of rewording the criterion. T4 Lows (simulate-status.sh usage text shows inline secret variables; attack-check.sh has no sandbox guard) go to Close.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: sf project deploy start --source-dir force-app --test-level RunLocalTests @ 139ffb7, Succeeded (0AfEk00000h4u2rKAA), 166 tests, 0 failures · Coverage: org 94.6%, new classes EntregaYaStatusService 100%, EntregaYaStatusResource 100%, EntregaYaStatusRequest 100%
