@@ -55,4 +55,27 @@ public with sharing class TestDataFactory {
         }
         return shipments;
     }
+
+    // ─── Users ────────────────────────────────────────────────────────────
+
+    /**
+     * @description Unsaved internal user with the given profile. The username is
+     *              made unique with the org id and the given key.
+     * @param profileId the profile of the user
+     * @param uniqueKey a short key (letters and digits) that makes the user unique in the test
+     * @return the unsaved user
+     */
+    public static User newUser(Id profileId, String uniqueKey) {
+        return new User(
+            ProfileId = profileId,
+            LastName = 'Test ' + uniqueKey,
+            Alias = uniqueKey.left(8),
+            Email = uniqueKey + '@example.com',
+            Username = uniqueKey + '.' + UserInfo.getOrganizationId() + '@example.com.rutacargo',
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            TimeZoneSidKey = 'America/Mexico_City'
+        );
+    }
 }

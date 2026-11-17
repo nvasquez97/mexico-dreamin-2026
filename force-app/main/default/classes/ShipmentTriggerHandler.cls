@@ -1,8 +1,10 @@
 /**
  * @description Logic of ShipmentTrigger. Before insert: every shipment starts
  *              as Requested (BR-09), gets a new delivery access code stored only
- *              as a salted hash (D1) and keeps its first estimated delivery
- *              (D4). Before update: the access code hash and a filled original
+ *              as an iterated salted hash (D1) and keeps its first estimated
+ *              delivery (D4). After insert: the clear codes issued for
+ *              DeliveryAccessCode.insertWithCodes are bound to the new record
+ *              Ids. Before update: the access code hash and a filled original
  *              estimated delivery cannot be changed; a blank original estimate
  *              follows the first estimate. Works only on Trigger.new and
  *              Trigger.oldMap: no SOQL, no DML.
@@ -22,6 +24,14 @@ public with sharing class ShipmentTriggerHandler {
             shipment.Status__c = INITIAL_STATUS;
             shipment.Original_Estimated_Delivery__c = shipment.Estimated_Delivery__c;
         }
+    }
+
+    /**
+     * @description After insert.
+     * @param newShipments Trigger.new
+     */
+    public static void afterInsert(List<Shipment__c> newShipments) {
+        DeliveryAccessCode.bindCodes(newShipments);
     }
 
     /**
