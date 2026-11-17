@@ -49,7 +49,7 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
   *Mutation:* remove the default value of Status__c — observed: `status_defaultsToRequested_whenInsertedWithoutStatus Fail ... Expected: Requested, Actual: null`
 - AC-F.6 (AC-003.5 support, P3) — Given the deployed metadata, When FieldDefinition and EntityDefinition are queried, Then Status__c, Estimated_Delivery__c and Delivery_Instructions__c have IsFieldHistoryTracked = true, Shipment__c internal and external sharing are Private, Account internal and external sharing are Private, and the Apex settings have the independent Auto Number sequence enabled.
   *Mutation:* set trackHistory false on Estimated_Delivery__c — observed: Tooling FieldDefinition query returns 2 history-tracked fields instead of 3 (odd/evidence/foundation/T1.md, Mutations)
-- AC-F.4 (D1, X8, X16) — Given 251 new shipments inserted in one DML, one of them with a Delivery_Access_Code_Hash__c set by the caller, When they are read back, Then every shipment has a salted hash, no record stores a clear code, the 251 clear codes returned to the inserting transaction are 10 characters from the alphabet `ABCDEFGHJKMNPQRSTUVWXYZ23456789` and all distinct, `DeliveryAccessCode.matches` accepts each shipment's own code and rejects another shipment's code, and the caller's value was replaced.
+- AC-F.4 (D1, X8, X16; amended after the T2 review, CODE-001 and CODE-002) — Given 251 new shipments inserted with `DeliveryAccessCode.insertWithCodes`, one of them with a Delivery_Access_Code_Hash__c set by the caller, When they are read back, Then every shipment has a salted, iterated hash (100 SHA-256 rounds, format versioned in the stored value), no record stores a clear code, the returned Map<Id,String> holds for each inserted Id a 12-character code from the alphabet `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, all distinct, `DeliveryAccessCode.matches` accepts each shipment's own code (also when typed in lower case or as XXXX-XXXX-XXXX) and rejects another shipment's code, and the caller's value was replaced; Given `Database.insert(rows, false)` with one invalid row, Then every successful row's code still matches its own record.
   *Mutation:* make the generator return a constant code — observed: <filled by the worker>
 - AC-F.15 (BR-09) — Given shipments inserted with Status__c Delivered and In transit, When they are read back, Then both are Requested (every creation path starts in Requested; later changes are updates).
   *Mutation:* remove the before-insert status reset — observed: <filled by the worker>
@@ -82,7 +82,7 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 
 ## Tasks
 - [x] T1 (S1): Account fields, Shipment__c object and fields, sharing models, field history and independent test auto-number — 7fa6794 · evidence: odd/evidence/foundation/T1.md · review: open — ACC-001 (Medium, platform auto-grant of Read/View All on Shipment__c to the Analytics Cloud Integration User profile; out of T1 scope, moved to T3 as AC-F.14); Low: evidence labels a compile error as the first red, SECURITY-JUSTIFICATION approver placeholder in ShipmentSchemaTest · reviewers: task-reviewer a10206a67252237cf, security-reviewer a688fc4b205b374ba, access-auditor a08315e64971902e0
-- [ ] T2 (S2): Shipment trigger: hashed delivery access code, protected fields and original estimated delivery — test first
+- [ ] T2 (S2): Shipment trigger: hashed delivery access code, protected fields and original estimated delivery — test first — review: findings · reviewers: task-reviewer ac54b1e83a15d8db7, security-reviewer aded4160729b7ea14, access-auditor a01094e4da9f17342
 - [ ] T3 (S3): Support agent permission set, group, sharing rules, tab and app — test first
 - [ ] T4 (S4): LWR site RutaCargo, published, locked-down guest profile and guest time zone — test first
 - [ ] T5 (S5): Brand theme, fonts, logos and header of the site — test first
@@ -94,6 +94,7 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 - A3: Daily Brew is not in the repo; headings use Montserrat Black in uppercase. The logo PNGs are stand-ins, used only on their own background color.
 - A4: Site users for the test customers are created by REQ-005 (it owns the customer profile and the account-owner role).
 - A5 (BR-06): every date and time on the site is formatted explicitly in America/Mexico_City (Apex and LWC), and the guest user's time zone is America/Mexico_City; the org default time zone is left as is.
+- A8 (T2 review CODE-001): the delivery access code is 12 characters (about 59 bits) hashed with 100 SHA-256 rounds and a 128-bit salt, so an exported hash cannot be cracked offline in practical time; the site shows it grouped as XXXX-XXXX-XXXX. Discarded: HMAC with a stored pepper (the pepper would be a secret stored in the org's metadata, P2).
 - A7: every `// SECURITY-JUSTIFICATION:` comment names its approver as `pending owner approval`; agents cannot approve. The README lists them for the owner.
 - A6: workers never insert Shipment__c records in the org outside Apex tests, except the T6 seed, so the Auto Number sequence stays reproducible.
 
