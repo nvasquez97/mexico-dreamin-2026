@@ -83,7 +83,7 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 ## Tasks
 - [x] T1 (S1): Account fields, Shipment__c object and fields, sharing models, field history and independent test auto-number — 7fa6794 · evidence: odd/evidence/foundation/T1.md · review: open — ACC-001 (Medium, platform auto-grant of Read/View All on Shipment__c to the Analytics Cloud Integration User profile; out of T1 scope, moved to T3 as AC-F.14); Low: evidence labels a compile error as the first red, SECURITY-JUSTIFICATION approver placeholder in ShipmentSchemaTest · reviewers: task-reviewer a10206a67252237cf, security-reviewer a688fc4b205b374ba, access-auditor a08315e64971902e0
 - [x] T2 (S2): Shipment trigger: hashed delivery access code, protected fields and original estimated delivery — cd29570 · evidence: odd/evidence/foundation/T2.md · review: fixed in 45b3eee · reviewers: task-reviewer ac54b1e83a15d8db7, security-reviewer aded4160729b7ea14, access-auditor a01094e4da9f17342
-- [ ] T3 (S3): Support agent permission set, group, sharing rules, tab and app — test first
+- [ ] T3 (S3): Support agent permission set, group, sharing rules, tab and app — test first — review: findings · reviewers: task-reviewer ac9201b9c77aac018, security-reviewer a18db472bc9c03e20, access-auditor aa77ab18046caad0c
 - [ ] T4 (S4): LWR site RutaCargo, published, locked-down guest profile and guest time zone — test first
 - [ ] T5 (S5): Brand theme, fonts, logos and header of the site — test first
 - [ ] T6 (S6): Idempotent seed and verify scripts, README run steps and assumptions — test first
