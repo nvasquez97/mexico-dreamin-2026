@@ -94,3 +94,9 @@
 - Type: environment
 - What: The four Salesforce plugins were disabled in ~/.claude/settings.json and only installed for other project folders, so the Skill tool returned "Unknown skill" and every agent read SKILL.md by hand (main cause of slow agents). Installed salesforce-development, salesforce-code-quality, experience-lwc and integration with `claude plugin install <p>@salesforce --scope project` on 2026-11-17; they load after a session restart. In the new session, check that the Skill tool lists salesforce-development:* skills; if it does, drop the "read SKILL.md from the cache" note from handoffs.
 - Why / evidence: measured: deploys 1–3 s, test runs 5–40 s, gate ~2.5 min; the gaps are agent turns.
+
+## 2026-11-17 16:00 — Session resumed; skills load; grouping approved
+- Type: decision
+- What: Resumed REQ-004 at the T4 review (org cargo-opus-t1, active scratch, default target-org; Mode: auto, unattended, whole run). The Skill tool now lists salesforce-development:*, salesforce-code-quality:*, experience-lwc:*, integration:* — handoffs no longer tell agents to read SKILL.md from the cache. Owner approved grouping: REQ-002+REQ-003 in one task document, REQ-006+REQ-007 in another; REQ-001 and REQ-005 alone (approved exception to "one task document per requirement"). Speed-ups in force: workers run only their own test classes and checks; 2–3 larger tasks per requirement; draft and plan-review the next requirement while workers run.
+- Why / evidence: /work arguments of this session.
+- Next: T4 reviews (task-reviewer, security-reviewer, access-auditor running), then REQ-004 Close; draft REQ-001 meanwhile.
