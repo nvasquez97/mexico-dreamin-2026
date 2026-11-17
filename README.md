@@ -216,6 +216,54 @@ One line each; the full text is in the Assumptions section of
   RutaCargo_Support_Agent permission set for the field permissions; it never
   uses system mode.
 
+## EntregaYa proof of delivery
+
+A verified recipient downloads the proof of delivery PDF from the delivery
+details on the site (REQ-002, AC-002.4). `ProofOfDeliveryService` calls
+`GET callout:EntregaYa_API/proofs/{proofId}` with a 10-second timeout, accepts
+the answer only when it is a 200 of at most 2,500,000 characters whose
+`trackingNumber` is the shipment's and whose `pdfBase64` is a PDF, and returns
+the PDF to the browser. Nothing is stored in Salesforce. Any failure shows
+"We could not get the proof of delivery, please try again later".
+
+- Credential (E11): the Named Credential `EntregaYa_API`, password
+  authentication, named principal. Apex sends
+  `Authorization: Bearer {!$Credential.Password}`, a merge field the platform
+  fills with the credential's password when it sends the request. The guest
+  user needs no permission set for it. The API key is never in this
+  repository, in Apex or in a log.
+- The repository holds the credential with no password and the placeholder URL
+  `https://entregaya.invalid`. The platform cannot create a password credential
+  without a password, so `scripts/setup/guest-proof-access.sh <alias>` creates
+  it once, before the force-app deploy, with the non-secret placeholder
+  password `not-set-enter-the-key-in-setup`. It never touches an existing
+  credential. It also removes the old `RutaCargo_Guest_Proof_Download`
+  assignment from the guest if one exists (`scripts/setup/DEPLOY-ORDER.md`).
+- `scripts/checks/guest-access-check.sh <alias>` checks that there is no key,
+  token, password or Authorization value in the repository, that the guest has
+  no permission set besides its profile's own, and that the credential has no
+  password in source and keeps the placeholder URL.
+
+### Enter the key and the URL (owner)
+
+1. Rotate the EntregaYa API key first: the original key is in the git history.
+2. In Setup, open Named Credentials, choose the **Legacy** list view (or "Named
+   Credentials (Legacy)"), then **EntregaYa API**, and click Edit.
+3. URL: the real EntregaYa base URL, in place of `https://entregaya.invalid`.
+4. Password: the rotated API key, typed by hand. Leave the username as it is,
+   "Generate Authorization Header" off and "Allow Merge Fields in HTTP Header"
+   on. Save.
+5. On the site, open a Delivered shipment's details and download its proof.
+   The live download is pending until you do this (E6).
+6. After a later force-app deploy, check the download again. The repository
+   file has no password, and nobody has tested whether a deploy keeps the
+   password you entered.
+
+The now-unused External Credential `EntregaYa` and permission set
+`RutaCargo_Guest_Proof_Download` of the discarded design stay deployed in
+cargo-opus-t1 and are not in this repository. Removing them from the org is
+your decision (a destructive deploy).
+
 ## Manual steps pending for the owner
 
 - EntregaYa (B4): read the consumer key and secret of the External Client App
@@ -232,7 +280,11 @@ One line each; the full text is in the Assumptions section of
   for this: they relax verification instead of restricting the caller.
 
 - Rotate the EntregaYa API key. It was redacted from the design in commit
-  18a2aa5, but it remains in the git history.
+  18a2aa5, but it remains in the git history. Then enter the rotated key and
+  the real base URL in the Named Credential EntregaYa API (see "EntregaYa proof
+  of delivery") and try a live download (E6).
+- Decide whether to remove the unused External Credential `EntregaYa` and
+  permission set `RutaCargo_Guest_Proof_Download` from cargo-opus-t1 (E11).
 - Approve or reject every `// SECURITY-JUSTIFICATION:` comment (find them with
   `grep -rn "SECURITY-JUSTIFICATION" force-app scripts`). Those marked "pending
   owner approval" wait for you; the one in `ShipmentSchemaTest.cls` names

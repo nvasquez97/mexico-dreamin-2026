@@ -28,8 +28,24 @@ Replace `<alias>` with the target org. Run each command on its own.
    sf project deploy start --source-dir force-app/main/default/networks --source-dir force-app/main/default/sites --source-dir force-app/main/default/digitalExperienceConfigs --source-dir force-app/main/default/digitalExperiences --source-dir force-app/main/default/navigationMenus --target-org <alias> --wait 30
    ```
 
+1b. The EntregaYa proof credential and the guest's permission sets
+   (req-002-003 E11). Idempotent. The platform refuses to create the
+   password-authenticated Named Credential `EntregaYa_API` from force-app,
+   because the file has no password, so this step creates it first with a
+   non-secret placeholder password. It never changes an existing credential.
+   It also removes a `RutaCargo_Guest_Proof_Download` assignment from the guest
+   if one exists:
+
+   ```bash
+   scripts/setup/guest-proof-access.sh <alias>
+   ```
+
+   The owner then enters the real URL and the rotated key in Setup (README,
+   "EntregaYa proof of delivery").
+
 2. Everything else, the guest profile included (it now exists, so the deploy
-   updates it):
+   updates it; `EntregaYa_API` now exists, so the deploy updates it without a
+   password):
 
    ```bash
    sf project deploy start --source-dir force-app --test-level RunLocalTests --target-org <alias> --wait 30
@@ -49,7 +65,10 @@ Replace `<alias>` with the target org. Run each command on its own.
    ```
 
 5. Check the guest (AC-F.9: Live, 0 object permissions, time zone, home 200,
-   guest Visualforce pages equal to the allow-list, self-registration refused):
+   guest Visualforce pages equal to the allow-list, self-registration refused;
+   req-002-003 AC-002.6: no permission set besides the profile's own, no key
+   or password in the repository, EntregaYa_API with no password and the
+   placeholder URL in source):
 
    ```bash
    scripts/checks/guest-access-check.sh <alias>

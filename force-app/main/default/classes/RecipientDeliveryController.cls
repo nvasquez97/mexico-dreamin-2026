@@ -10,8 +10,13 @@
  *              only an unexpected error is thrown, as a generic
  *              AuraHandledException. Not cacheable: every call is verified and
  *              may write the attempt counter.
- *              The downloadProof method (T2) reuses RecipientAccess
- *              .verifyBeforeCallout and .resetAttempts.
+ *              downloadProof (T2, S3) verifies with RecipientAccess
+ *              .verifyBeforeCallout: a failed check is counted (guard DML) and
+ *              returned with no callout; a successful check holds no lock and
+ *              makes no DML before the callout, and RecipientAccess.resetAttempts
+ *              resets a non-zero counter after it. Only a Delivered shipment
+ *              with a Proof_Id__c calls ProofOfDeliveryService; every EntregaYa
+ *              failure returns PROOF_UNAVAILABLE_MESSAGE and nothing else.
  */
 public with sharing class RecipientDeliveryController {
 
@@ -19,6 +24,8 @@ public with sharing class RecipientDeliveryController {
     public static final String OUTCOME_NOT_MATCHED = 'NOT_MATCHED';
     public static final String OUTCOME_LOCKED = 'LOCKED';
     public static final String OUTCOME_REJECTED = 'REJECTED';
+    public static final String OUTCOME_NOT_AVAILABLE = 'NOT_AVAILABLE';
+    public static final String OUTCOME_UNAVAILABLE = 'UNAVAILABLE';
 
     public static final String WINDOW_MESSAGE = 'The new delivery date is outside the allowed rescheduling window.';
     public static final String STATUS_MESSAGE = 'This delivery cannot be rescheduled in its current status.';
@@ -26,6 +33,8 @@ public with sharing class RecipientDeliveryController {
     public static final String NO_ESTIMATE_MESSAGE = 'This delivery has no estimated date to reschedule from yet.';
     public static final String INSTRUCTIONS_MESSAGE = 'Delivery instructions must be 1000 characters or fewer.';
     public static final String GENERIC_ERROR_MESSAGE = 'We could not complete your request. Please try again later.';
+    public static final String PROOF_NOT_AVAILABLE_MESSAGE = 'The proof of delivery is not available for this shipment.';
+    public static final String PROOF_UNAVAILABLE_MESSAGE = 'We could not get the proof of delivery, please try again later';
 
     private static final Set<String> RESCHEDULABLE_STATUSES = new Set<String>{ 'Picked up', 'In transit' };
     private static final String DELIVERED = 'Delivered';
@@ -53,6 +62,21 @@ public with sharing class RecipientDeliveryController {
         @AuraEnabled public String outcome;
         @AuraEnabled public String message;
         @AuraEnabled public RecipientDeliveryDetails details;
+    }
+
+    /**
+     * @description The answer to a proof download: an outcome (SUCCESS,
+     *              NOT_MATCHED, LOCKED, NOT_AVAILABLE, UNAVAILABLE), a message
+     *              from a closed list (null on success), whether the shipment has
+     *              a proof, and the proof (only on success). Nothing is stored.
+     */
+    public with sharing class ProofResponse {
+        @AuraEnabled public String outcome;
+        @AuraEnabled public String message;
+        @AuraEnabled public Boolean proofAvailable;
+        @AuraEnabled public String fileName;
+        @AuraEnabled public String signedBy;
+        @AuraEnabled public String pdfBase64;
     }
 
     /**
@@ -120,6 +144,47 @@ public with sharing class RecipientDeliveryController {
         }
     }
 
+    /**
+     * @description Downloads the proof of delivery of a verified recipient from
+     *              EntregaYa (AC-002.4, AC-002.5). Only a Delivered shipment with
+     *              a Proof_Id__c calls out; the PDF is returned, never stored.
+     * @param trackingNumber the tracking number
+     * @param postalCode the destination postal code
+     * @param accessCode the delivery access code
+     * @return the response; failures are returned, not thrown
+     * @throws AuraHandledException with a generic message on an unexpected error
+     */
+    @AuraEnabled
+    public static ProofResponse downloadProof(String trackingNumber, String postalCode, String accessCode) {
+        try {
+            failIfSimulated();
+            // No DML and no lock on success: the callout must follow uncommitted-work-free.
+            RecipientAccess.Verification verification =
+                RecipientAccess.verifyBeforeCallout(trackingNumber, postalCode, accessCode);
+            if (!verification.isVerified()) {
+                DeliveryResponse failed = failure(verification);
+                return proofResponse(failed.outcome, failed.message, false);
+            }
+            Shipment__c shipment = verification.shipment;
+            if (!hasProof(shipment)) {
+                RecipientAccess.resetAttempts(verification);
+                return proofResponse(OUTCOME_NOT_AVAILABLE, PROOF_NOT_AVAILABLE_MESSAGE, false);
+            }
+            ProofOfDeliveryService.Proof proof = fetchProof(shipment.Proof_Id__c, verification.trackingNumber);
+            RecipientAccess.resetAttempts(verification);
+            if (proof == null) {
+                return proofResponse(OUTCOME_UNAVAILABLE, PROOF_UNAVAILABLE_MESSAGE, true);
+            }
+            ProofResponse result = proofResponse(OUTCOME_SUCCESS, null, true);
+            result.fileName = proof.fileName;
+            result.signedBy = proof.signedBy;
+            result.pdfBase64 = proof.pdfBase64;
+            return result;
+        } catch (Exception unexpected) {
+            throw genericError();
+        }
+    }
+
     // ─── Rules ───────────────────────────────────────────────────────────
 
     // The first rule the reschedule breaks, or null when it is allowed.
@@ -140,6 +205,20 @@ public with sharing class RecipientDeliveryController {
             return WINDOW_MESSAGE;
         }
         return null;
+    }
+
+    private static Boolean hasProof(Shipment__c shipment) {
+        return shipment.Status__c == DELIVERED && String.isNotBlank(shipment.Proof_Id__c);
+    }
+
+    // The proof, or null on any EntregaYa failure; the failure's reason is not
+    // returned to the recipient (AC-002.5).
+    private static ProofOfDeliveryService.Proof fetchProof(String proofId, String trackingNumber) {
+        try {
+            return ProofOfDeliveryService.fetch(proofId, trackingNumber);
+        } catch (ProofOfDeliveryService.ProofOfDeliveryException unavailable) {
+            return null;
+        }
     }
 
     private static Integer reschedulesUsed(Shipment__c shipment) {
@@ -200,6 +279,14 @@ public with sharing class RecipientDeliveryController {
         return result;
     }
 
+    private static ProofResponse proofResponse(String outcome, String message, Boolean proofAvailable) {
+        ProofResponse result = new ProofResponse();
+        result.outcome = outcome;
+        result.message = message;
+        result.proofAvailable = proofAvailable;
+        return result;
+    }
+
     private static RecipientDeliveryDetails detailsOf(Shipment__c shipment) {
         RecipientDeliveryDetails details = new RecipientDeliveryDetails();
         details.recipientName = shipment.Recipient_Name__c;
@@ -212,7 +299,7 @@ public with sharing class RecipientDeliveryController {
         details.reschedulesLeft = Math.max(0, MAX_RESCHEDULES - reschedulesUsed(shipment));
         details.rescheduleFrom = details.canReschedule ? isoOf(windowStart()) : null;
         details.rescheduleTo = details.canReschedule ? isoOf(windowEnd(shipment)) : null;
-        details.proofAvailable = shipment.Status__c == DELIVERED && String.isNotBlank(shipment.Proof_Id__c);
+        details.proofAvailable = hasProof(shipment);
         return details;
     }
 

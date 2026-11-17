@@ -19,6 +19,9 @@
 #      FieldPermissions rows in every permission set and every custom profile
 #      (PermissionSet.IsCustom or not owned by a profile): only the standard
 #      administrator profiles see it, and only RecipientAccess writes it;
+#   3d. the guest user has no permission set besides its profile's own, and
+#      no permission set group (req-002-003 S3, E11, AC-002.6): the proof
+#      callout uses a password Named Credential that needs no permission;
 #   4. the guest user's TimeZoneSidKey is America/Mexico_City;
 #   5. the Visualforce pages enabled for the guest (profile "RutaCargo Profile"
 #      and every permission set assigned to the guest user) are exactly the
@@ -30,6 +33,15 @@
 #      PublicTrackingSelector (case-insensitive, as Apex), so its
 #      SECURITY-JUSTIFICATION's "only caller is PublicTrackingController" holds
 #      (req-001 SEC-001, P11);
+#   5d. source check (req-002-003 AC-002.6, E11, P2): no EntregaYa key, token
+#      or Authorization value in the repository (tracked and untracked files
+#      that are not ignored): no "Bearer <token>" literal; no API key, access
+#      token, secret or password assigned a literal other than the non-secret
+#      placeholder of scripts/setup/guest-proof-access.sh; every Apex
+#      Authorization header is exactly the merge field
+#      'Bearer {!$Credential.Password}'; the Named Credential EntregaYa_API has
+#      no password (the owner enters the key in Setup, README) and its URL is
+#      the placeholder https://entregaya.invalid;
 #   6. an anonymous GET (no session, no redirects followed) of the site home URL
 #      returns 200; the host comes from the site's own DomainSite row;
 #   7. an anonymous GET of the self-registration pages on the Visualforce site
@@ -59,13 +71,21 @@ GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,Fil
 # tracking (req-001 S1, C8) and of the recipient's delivery details and
 # reschedule (req-002-003 S2). Must match the classAccesses of the guest profile.
 GUEST_CLASSES='PublicTrackingController,RecipientDeliveryController'
+# The proof of delivery Named Credential (req-002-003 S3, E11): its URL in
+# source is the placeholder; the owner sets the real one and the key in Setup.
+PROOF_NAMED_CREDENTIAL='EntregaYa_API'
+PROOF_NAMED_CREDENTIAL_URL='https://entregaya.invalid'
+# The only password literal allowed in the repository: the non-secret
+# placeholder guest-proof-access.sh gives a newly created EntregaYa_API.
+PLACEHOLDER_PASSWORD='not-set-enter-the-key-in-setup'
 # Admin-only object: no grant in any permission set or custom profile.
 GUARD_OBJECT='Recipient_Access_Guard__c'
 # The without-sharing selector and the only source files that may name it:
 # itself, its single caller and that caller's test (req-001 SEC-001, P11).
 SELECTOR='PublicTrackingSelector'
 SELECTOR_FILES='PublicTrackingSelector.cls PublicTrackingController.cls PublicTrackingControllerTest.cls'
-SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/force-app/main/default"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SOURCE_ROOT="$REPO_ROOT/force-app/main/default"
 # Self-registration pages that must not answer an anonymous visitor.
 SELF_REG_PAGES='SiteRegister CommunitiesSelfReg'
 
@@ -171,6 +191,15 @@ else
     fail "$GUARD_OBJECT has $count FieldPermissions rows: $(jq -r '[.[] | (if .Parent.IsOwnedByProfile then "profile:" + .Parent.Profile.Name else "permset:" + .Parent.Name end) + ":" + .Field] | join(", ")' <<<"$guard_field_perms")"
 fi
 
+# ─── 3d. No permission set on the guest besides the profile's own ──────────
+extra_sets="$(query "SELECT PermissionSet.Name, PermissionSetGroupId FROM PermissionSetAssignment WHERE AssigneeId = '$guest_id' AND PermissionSet.IsOwnedByProfile = false")"
+count="$(jq 'length' <<<"$extra_sets")"
+if [[ "$count" -eq 0 ]]; then
+    pass "the guest user has no permission set or group besides its profile's own"
+else
+    fail "the guest user has $count permission set assignment(s) besides its profile's own: $(jq -r '[.[].PermissionSet.Name] | join(", ")' <<<"$extra_sets")"
+fi
+
 # ─── 4. Guest user time zone ────────────────────────────────────────────────
 tz="$(jq -r '.[0].TimeZoneSidKey // empty' <<<"$guest")"
 if [[ "$tz" == "$GUEST_TIME_ZONE" ]]; then
@@ -259,6 +288,64 @@ else
         pass "only $SELECTOR_FILES name $SELECTOR in the Apex source"
     else
         fail "Apex source outside the allow-list names the without-sharing $SELECTOR: $other_callers"
+    fi
+fi
+
+# ─── 5d. No EntregaYa key, token or Authorization value in the repository ──
+# git grep (case-insensitive) over tracked and untracked (not ignored) files
+# under the given path, the whole repository by default; exit 1 means no match,
+# anything above 1 is an error and fails the check.
+secret_scan() {
+    local label="$1" pattern="$2" path="${3:-.}" out status=0
+    out="$(git -C "$REPO_ROOT" grep --untracked -nIiE -e "$pattern" -- "$path" 2>&1)" || status=$?
+    if [[ "$status" -eq 1 ]]; then
+        pass "no $label in the repository"
+    elif [[ "$status" -eq 0 ]]; then
+        # Only file and line are printed, never the matched value.
+        fail "$label in the repository at: $(cut -d: -f1,2 <<<"$out" | paste -sd ' ' -)"
+    else
+        fail "could not scan the repository for $label: $out"
+    fi
+}
+secret_scan 'Bearer token literal' 'Bearer[[:space:]]+[A-Za-z0-9._~+/=-]{12,}'
+secret_scan 'API key, access token or secret literal' \
+    "(api[_-]?key|access[_-]?token|client[_-]?secret|secret)[\"']?[[:space:]]*[:=][[:space:]]*[\"'][A-Za-z0-9_+/=.-]{16,}[\"']"
+# A password literal (assignment or metadata element) other than the placeholder
+# (written literally or through guest-proof-access.sh's PLACEHOLDER_PASSWORD).
+password_literals="$(git -C "$REPO_ROOT" grep --untracked -nIiE \
+    -e "password[\"']?[[:space:]]*[:=][[:space:]]*[\"'][^\"'[:space:]]{8,}[\"']" -e '<password>[^<]+</password>' -- . 2>/dev/null \
+    | grep -vF -e "$PLACEHOLDER_PASSWORD" -e '<password>$PLACEHOLDER_PASSWORD</password>' || true)"
+if [[ -z "$password_literals" ]]; then
+    pass "no password literal in the repository besides the placeholder"
+else
+    fail "password literal in the repository at: $(cut -d: -f1,2 <<<"$password_literals" | paste -sd ' ' -)"
+fi
+# Every Apex Authorization header is the Named Credential's password merge field.
+auth_headers="$(git -C "$REPO_ROOT" grep --untracked -nIiE -e "setHeader\\([[:space:]]*'Authorization'" -- force-app 2>/dev/null || true)"
+auth_constants="$(git -C "$REPO_ROOT" grep --untracked -nIE -e "'Bearer " -- force-app 2>/dev/null || true)"
+bad_headers="$(grep -vE "setHeader\\('Authorization', AUTHORIZATION_MERGE_FIELD\\);" <<<"$auth_headers" | sed '/^$/d' || true)"
+bad_constants="$(grep -vF "AUTHORIZATION_MERGE_FIELD = 'Bearer {!\$Credential.Password}';" <<<"$auth_constants" \
+    | grep -v -- 'Test.cls:' | sed '/^$/d' || true)"
+if [[ -z "$bad_headers" && -z "$bad_constants" ]]; then
+    pass "every Apex Authorization header is the merge field 'Bearer {!\$Credential.Password}'"
+else
+    fail "Apex Authorization header not built from the Named Credential merge field at: $(printf '%s\n%s\n' "$bad_headers" "$bad_constants" | sed '/^$/d' | cut -d: -f1,2 | paste -sd ' ' -)"
+fi
+
+NC_FILE="$SOURCE_ROOT/namedCredentials/$PROOF_NAMED_CREDENTIAL.namedCredential-meta.xml"
+if [[ ! -f "$NC_FILE" ]]; then
+    fail "the $PROOF_NAMED_CREDENTIAL Named Credential file is missing"
+else
+    if grep -qi '<password>' "$NC_FILE"; then
+        fail "the $PROOF_NAMED_CREDENTIAL Named Credential has a password in source"
+    else
+        pass "the $PROOF_NAMED_CREDENTIAL Named Credential has no password in source (entered in Setup)"
+    fi
+    nc_url="$(grep -oE '<endpoint>[^<]*</endpoint>' "$NC_FILE" | sed -E 's#</?endpoint>##g')"
+    if [[ "$nc_url" == "$PROOF_NAMED_CREDENTIAL_URL" ]]; then
+        pass "the $PROOF_NAMED_CREDENTIAL Named Credential URL in source is the placeholder $PROOF_NAMED_CREDENTIAL_URL"
+    else
+        fail "the $PROOF_NAMED_CREDENTIAL Named Credential URL in source is '$nc_url', expected the placeholder $PROOF_NAMED_CREDENTIAL_URL"
     fi
 fi
 

@@ -10,6 +10,18 @@
  *              (statuses) and AC-003.4 (at most 2 reschedules). Each test inserts
  *              its own shipments: the clear access code exists only in the
  *              transaction that inserts it.
+ *              downloadProof (T2, S3): AC-002.4 (the proof of two verified
+ *              Delivered shipments through GET callout:EntregaYa_API/proofs/{id},
+ *              nothing stored; no callout and proofAvailable false when not
+ *              Delivered or without Proof_Id__c; another shipment's proof, bytes
+ *              that are not a PDF and a body over the cap get the AC-002.5
+ *              message), AC-002.5 (401, 404, 500 and a timeout get exactly that
+ *              message and no response text; no DML before the callout and a
+ *              non-zero counter reset after it), AC-002.1b (a failed
+ *              downloadProof is counted, makes no callout and shares the lock
+ *              with getDeliveryDetails) and AC-002.7 (the real site guest user
+ *              downloads although it cannot read Shipment__c). Every callout is
+ *              answered by an HttpCalloutMock.
  */
 @IsTest
 private with sharing class RecipientDeliveryControllerTest {
@@ -598,6 +610,393 @@ private with sharing class RecipientDeliveryControllerTest {
 
         Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'Accepted with null');
         Assert.areEqual(1, reload(fixture.shipmentId).Reschedule_Count__c, 'The count becomes 1');
+    }
+
+    // ─── downloadProof (T2) ──────────────────────────────────────────────
+
+    private static final String PROOF_UNAVAILABLE = 'We could not get the proof of delivery, please try again later';
+    private static final String PDF_BASE64 = EncodingUtil.base64Encode(Blob.valueOf('%PDF-1.4\n%proof\n%%EOF\n'));
+
+    // Answers each proof id with its tracking number and a small PDF (or with a
+    // fixed status, or a timeout); records every request and the DML statements
+    // made before it.
+    private with sharing class ProofMock implements HttpCalloutMock {
+        final Map<String, String> trackingByProofId = new Map<String, String>();
+        Integer statusCode = 200;
+        String pdfBase64 = PDF_BASE64;
+        String fixedBody;
+        Boolean timeout = false;
+        final List<String> endpoints = new List<String>();
+        final List<Integer> dmlBeforeCallout = new List<Integer>();
+
+        public HttpResponse respond(HttpRequest request) {
+            endpoints.add(request.getEndpoint());
+            dmlBeforeCallout.add(Limits.getDmlStatements());
+            if (timeout) {
+                throw new CalloutException('Read timed out');
+            }
+            String proofId = request.getEndpoint().substringAfterLast('/');
+            HttpResponse response = new HttpResponse();
+            response.setStatusCode(statusCode);
+            response.setStatus(statusCode == 200 ? 'OK' : 'Unauthorized Not Found Server Error');
+            response.setBody(fixedBody ?? JSON.serialize(new Map<String, Object>{
+                'proofId' => proofId,
+                'trackingNumber' => trackingByProofId.get(proofId),
+                'signedBy' => 'Signer of ' + proofId,
+                'fileName' => proofId + '.pdf',
+                'pdfBase64' => pdfBase64
+            }));
+            return response;
+        }
+    }
+
+    private static ProofMock setProofMock() {
+        ProofMock mock = new ProofMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+        return mock;
+    }
+
+    // One Delivered shipment with the given proof id.
+    private static Fixture insertDelivered(String proofId) {
+        Fixture fixture = insertShipment('Delivered', 0, ORIGINAL);
+        TestDataFactory.updateAsSystem(new List<Shipment__c>{
+            new Shipment__c(Id = fixture.shipmentId, Proof_Id__c = proofId)
+        });
+        return fixture;
+    }
+
+    private static RecipientDeliveryController.ProofResponse download(Fixture fixture) {
+        return RecipientDeliveryController.downloadProof(fixture.trackingNumber, POSTAL_CODE, fixture.code);
+    }
+
+    private static String wrongCodeOf(Fixture fixture) {
+        return (fixture.code.startsWith('A') ? 'B' : 'A') + fixture.code.substring(1);
+    }
+
+    private static Integer storedFiles() {
+        return [SELECT COUNT() FROM ContentVersion WITH SYSTEM_MODE]
+            + [SELECT COUNT() FROM Attachment WITH SYSTEM_MODE]
+            + [SELECT COUNT() FROM Document WITH SYSTEM_MODE];
+    }
+
+    private static Recipient_Access_Guard__c guardOf(Id shipmentId) {
+        List<Recipient_Access_Guard__c> guards = [
+            SELECT Failed_Attempts__c, Locked_Until__c FROM Recipient_Access_Guard__c
+            WHERE Shipment__c = :shipmentId WITH SYSTEM_MODE
+        ];
+        return guards.isEmpty() ? null : guards[0];
+    }
+
+    // The response is the AC-002.5 failure, with no proof and no response text.
+    private static void assertUnavailable(RecipientDeliveryController.ProofResponse response) {
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_UNAVAILABLE, response.outcome, 'The proof is unavailable');
+        Assert.areEqual(PROOF_UNAVAILABLE, response.message, 'Exactly the AC-002.5 message');
+        Assert.isNull(response.pdfBase64, 'No PDF');
+        Assert.isNull(response.fileName, 'No file name');
+        Assert.isNull(response.signedBy, 'No signer');
+        String serialized = JSON.serialize(response);
+        for (String leak : new List<String>{ 'Unauthorized', 'Not Found', 'Server Error', 'timed out', 'Exception' }) {
+            Assert.isFalse(serialized.containsIgnoreCase(leak), 'No response or exception text: ' + leak);
+        }
+    }
+
+    @IsTest
+    static void shouldReturnProofs_WhenTwoDeliveredShipmentsAreVerified() {
+        // AC-002.4: PRF-88231 and PRF-90417, each answered with its shipment's trackingNumber.
+        Account customer = TestDataFactory.insertCustomerAccount(ACCOUNT_NAME);
+        List<Fixture> fixtures = insertShipments(
+            new List<Shipment__c>{ newShipment(customer.Id, ORIGINAL), newShipment(customer.Id, ORIGINAL) },
+            new List<String>{ 'Delivered', 'Delivered' }, new List<Integer>{ 0, 0 });
+        TestDataFactory.updateAsSystem(new List<Shipment__c>{
+            new Shipment__c(Id = fixtures[0].shipmentId, Proof_Id__c = 'PRF-88231'),
+            new Shipment__c(Id = fixtures[1].shipmentId, Proof_Id__c = 'PRF-90417')
+        });
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', fixtures[0].trackingNumber);
+        mock.trackingByProofId.put('PRF-90417', fixtures[1].trackingNumber);
+        Integer filesBefore = storedFiles();
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse first = download(fixtures[0]);
+        RecipientDeliveryController.ProofResponse second = download(fixtures[1]);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, first.outcome, 'The first proof is returned');
+        Assert.areEqual('PRF-88231.pdf', first.fileName, 'The first file name');
+        Assert.areEqual('Signer of PRF-88231', first.signedBy, 'The first signer');
+        Assert.areEqual(PDF_BASE64, first.pdfBase64, 'The first PDF');
+        Assert.isTrue(first.proofAvailable, 'The first proof is available');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, second.outcome, 'The second proof is returned');
+        Assert.areEqual('PRF-90417.pdf', second.fileName, 'The second file name');
+        Assert.areEqual('Signer of PRF-90417', second.signedBy, 'The second signer');
+        Assert.areEqual(new List<String>{
+            'callout:EntregaYa_API/proofs/PRF-88231', 'callout:EntregaYa_API/proofs/PRF-90417'
+        }, mock.endpoints, 'One GET per proof, through the Named Credential');
+        Assert.areEqual(filesBefore, storedFiles(), 'No ContentVersion, Attachment or Document is created');
+    }
+
+    @IsTest
+    static void shouldNotCallOut_WhenShipmentIsNotDelivered() {
+        // AC-002.4: In transit with a Proof_Id__c, no callout and proofAvailable false.
+        Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
+        TestDataFactory.updateAsSystem(new List<Shipment__c>{
+            new Shipment__c(Id = fixture.shipmentId, Proof_Id__c = 'PRF-88231')
+        });
+        ProofMock mock = setProofMock();
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        Assert.areEqual(0, mock.endpoints.size(), 'No callout');
+        Assert.isFalse(response.proofAvailable, 'proofAvailable is false');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_AVAILABLE, response.outcome, 'Not available');
+        Assert.areEqual(RecipientDeliveryController.PROOF_NOT_AVAILABLE_MESSAGE, response.message, 'The not available message');
+        Assert.isNull(response.pdfBase64, 'No PDF');
+    }
+
+    @IsTest
+    static void shouldNotCallOut_WhenDeliveredWithoutProofId() {
+        // AC-002.4: Delivered without Proof_Id__c, no callout and proofAvailable false.
+        Fixture fixture = insertDelivered(null);
+        ProofMock mock = setProofMock();
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        Assert.areEqual(0, mock.endpoints.size(), 'No callout');
+        Assert.isFalse(response.proofAvailable, 'proofAvailable is false');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_AVAILABLE, response.outcome, 'Not available');
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenProofIsAnotherShipments() {
+        // AC-002.4 (E7): the response's trackingNumber is another shipment's.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', 'RC000009999');
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenBytesAreNotPdf() {
+        // AC-002.4: the bytes do not start with %PDF-.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', fixture.trackingNumber);
+        mock.pdfBase64 = EncodingUtil.base64Encode(Blob.valueOf('PK zip archive, not a PDF'));
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenBodyIsOverTheCap() {
+        // AC-002.4: a body of 2,500,001 characters.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.fixedBody = ' '.repeat(ProofOfDeliveryService.MAX_BODY_LENGTH + 1);
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenEntregaYaAnswers401() {
+        // AC-002.5: a wrong key.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.statusCode = 401;
+        mock.fixedBody = '{"error":"Unauthorized"}';
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenEntregaYaAnswers404() {
+        // AC-002.5: the proof does not exist.
+        Fixture fixture = insertDelivered('PRF-90417');
+        ProofMock mock = setProofMock();
+        mock.statusCode = 404;
+        mock.fixedBody = '{"error":"Not Found"}';
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenEntregaYaAnswers500() {
+        // AC-002.5: the service is unavailable.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.statusCode = 500;
+        mock.fixedBody = 'Internal Server Error';
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+    }
+
+    @IsTest
+    static void shouldReturnUnavailable_WhenCalloutTimesOut() {
+        // AC-002.5: a timeout (CalloutException).
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.timeout = true;
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+        Assert.areEqual(1, mock.endpoints.size(), 'The callout was attempted');
+    }
+
+    @IsTest
+    static void shouldMakeNoDmlBeforeCalloutAndResetCounter_WhenCounterIsNonZero() {
+        // AC-002.5 (S3): a verified request makes no DML before the callout; the
+        // non-zero counter is reset after it.
+        Fixture fixture = insertDelivered('PRF-88231');
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 3, null)
+        });
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', fixture.trackingNumber);
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The proof is returned');
+        Assert.areEqual(new List<Integer>{ 0 }, mock.dmlBeforeCallout, 'No DML before the callout');
+        Assert.areEqual(0, guardOf(fixture.shipmentId).Failed_Attempts__c, 'The counter is reset after the callout');
+    }
+
+    @IsTest
+    static void shouldResetCounter_WhenVerifiedCalloutFails() {
+        // AC-002.5 (S3): the recipient was verified, so the counter is reset even when EntregaYa fails.
+        Fixture fixture = insertDelivered('PRF-90417');
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 2, null)
+        });
+        ProofMock mock = setProofMock();
+        mock.statusCode = 500;
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = download(fixture);
+        Test.stopTest();
+
+        assertUnavailable(response);
+        Assert.areEqual(0, guardOf(fixture.shipmentId).Failed_Attempts__c, 'The counter is reset');
+    }
+
+    // ─── AC-002.1b: downloadProof failures ───────────────────────────────
+
+    @IsTest
+    static void shouldCountFailureWithoutCallout_WhenDownloadProofCodeIsWrong() {
+        // AC-002.1b: a failed downloadProof is counted on the guard and makes no callout.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+
+        Test.startTest();
+        RecipientDeliveryController.ProofResponse response = RecipientDeliveryController.downloadProof(
+            fixture.trackingNumber, POSTAL_CODE, wrongCodeOf(fixture));
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Not matched');
+        Assert.areEqual(RecipientAccess.NOT_MATCHED_MESSAGE, response.message, 'The shared message');
+        Assert.areEqual(0, mock.endpoints.size(), 'No callout');
+        Assert.areEqual(1, guardOf(fixture.shipmentId).Failed_Attempts__c, 'The failure is counted');
+    }
+
+    @IsTest
+    static void shouldLockWithoutCallout_WhenFailuresMixDetailsAndDownloadProof() {
+        // AC-002.1b: 3 failures through getDeliveryDetails and 2 through downloadProof
+        // lock the shipment; the sixth attempt, with the right values, gets the lock
+        // message and makes no callout.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', fixture.trackingNumber);
+        String wrongCode = wrongCodeOf(fixture);
+
+        Test.startTest();
+        for (Integer i = 0; i < 3; i++) {
+            RecipientDeliveryController.getDeliveryDetails(fixture.trackingNumber, POSTAL_CODE, wrongCode);
+        }
+        Decimal afterDetails = guardOf(fixture.shipmentId).Failed_Attempts__c;
+        for (Integer i = 0; i < 2; i++) {
+            RecipientDeliveryController.downloadProof(fixture.trackingNumber, POSTAL_CODE, wrongCode);
+        }
+        RecipientDeliveryController.ProofResponse sixth = download(fixture);
+        Test.stopTest();
+
+        Assert.areEqual(3, afterDetails, 'Three failures counted through getDeliveryDetails');
+        Assert.isNotNull(guardOf(fixture.shipmentId).Locked_Until__c, 'The fifth failure, through downloadProof, locks');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'Locked');
+        Assert.areEqual(RecipientAccess.LOCKED_MESSAGE, sixth.message, 'The lock message');
+        Assert.areEqual(0, mock.endpoints.size(), 'No callout while locked or failing');
+    }
+
+    // ─── AC-002.7: the real site guest user ──────────────────────────────
+
+    @IsTest
+    static void shouldDownloadProof_WhenGuestCannotReadShipment() {
+        // AC-002.7 (P10, P11): the guest downloads through the controller only.
+        Fixture fixture = insertDelivered('PRF-90417');
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-90417', fixture.trackingNumber);
+        RecipientDeliveryController.ProofResponse response;
+        Boolean guestCanRead;
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            guestCanRead = Schema.SObjectType.Shipment__c.isAccessible();
+            response = download(fixture);
+        }
+        Test.stopTest();
+
+        Assert.isFalse(guestCanRead, 'The guest has no access to Shipment__c');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The guest gets the proof');
+        Assert.areEqual(PDF_BASE64, response.pdfBase64, 'The guest gets the PDF');
+        Assert.areEqual(new List<String>{ 'callout:EntregaYa_API/proofs/PRF-90417' }, mock.endpoints, 'One callout');
+    }
+
+    @IsTest
+    static void shouldThrowGenericAuraHandledException_WhenDownloadProofFailsUnexpectedly() {
+        // S2/S3: an unexpected exception becomes a generic AuraHandledException.
+        Fixture fixture = insertDelivered('PRF-88231');
+        setProofMock();
+        RecipientDeliveryController.simulateUnexpectedFailure = true;
+
+        Test.startTest();
+        try {
+            download(fixture);
+            Assert.fail('An unexpected error must be thrown as AuraHandledException');
+        } catch (AuraHandledException expected) {
+            Assert.areEqual(RecipientDeliveryController.GENERIC_ERROR_MESSAGE, expected.getMessage(), 'A generic message');
+        }
+        Test.stopTest();
     }
 
     // ─── Unexpected errors ───────────────────────────────────────────────
