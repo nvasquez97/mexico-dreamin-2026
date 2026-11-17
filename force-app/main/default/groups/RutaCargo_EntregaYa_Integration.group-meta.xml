@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Group xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>The EntregaYa integration user only. Shipment__c records are shared Read/Write with this group by a criteria-based sharing rule so the integration can update shipment statuses (BR-04). Managers above the members in the role hierarchy do not inherit this access.</description>
+    <doesIncludeBosses>false</doesIncludeBosses>
+    <name>RutaCargo EntregaYa Integration</name>
+</Group>

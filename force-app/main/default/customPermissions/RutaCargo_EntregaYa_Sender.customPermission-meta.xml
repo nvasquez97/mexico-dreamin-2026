@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Allows the EntregaYa integration user to send shipment status updates to EntregaYaStatusResource (BR-04). Granted only through the RutaCargo_EntregaYa_Integration permission set; never to support agents, customers or the site guest.</description>
+    <isLicensed>false</isLicensed>
+    <label>Send EntregaYa status updates</label>
+</CustomPermission>

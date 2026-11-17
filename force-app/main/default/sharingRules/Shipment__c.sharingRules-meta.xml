@@ -15,4 +15,19 @@
         </criteriaItems>
         <includeRecordsOwnedByAll>true</includeRecordsOwnedByAll>
     </sharingCriteriaRules>
+    <sharingCriteriaRules>
+        <fullName>All_Shipments_To_EntregaYa_Integration</fullName>
+        <accessLevel>Edit</accessLevel>
+        <description>Every shipment (every record has a tracking number) is shared Read/Write with the EntregaYa integration group so status updates can be applied (BR-04). Field access is limited by the RutaCargo_EntregaYa_Integration permission set to the five status fields; delete stays with the owner and administrators.</description>
+        <label>All shipments to EntregaYa integration</label>
+        <sharedTo>
+            <group>RutaCargo_EntregaYa_Integration</group>
+        </sharedTo>
+        <criteriaItems>
+            <field>Name</field>
+            <operation>notEqual</operation>
+            <value></value>
+        </criteriaItems>
+        <includeRecordsOwnedByAll>true</includeRecordsOwnedByAll>
+    </sharingCriteriaRules>
 </SharingRules>

@@ -4,8 +4,10 @@
 #
 # Exits non-zero unless:
 #   1. Shipment__c object permissions come only from the System Administrator
-#      profile, the RutaCargo_Support_Agent permission set and the
-#      platform-locked Analytics Cloud Integration User profile (assumption A9);
+#      profile, the RutaCargo_Support_Agent permission set, the
+#      RutaCargo_EntregaYa_Integration permission set (exactly Read and Edit,
+#      req-004 S3) and the platform-locked Analytics Cloud Integration User
+#      profile (assumption A9);
 #   2. RutaCargo_Support_Agent grants exactly Read, Create and Edit (no Delete,
 #      no View All, no Modify All, no View All Fields);
 #   3. no profile or permission set other than System Administrator and the
@@ -40,6 +42,7 @@ cd "$ROOT"
 ADMIN_PROFILE='System Administrator'
 ANALYTICS_PROFILE='Analytics Cloud Integration User'
 AGENT_SET='RutaCargo_Support_Agent'
+INTEGRATION_SET='RutaCargo_EntregaYa_Integration'
 AGENT_GROUP='RutaCargo_Support_Agents'
 HASH_FIELD='Shipment__c.Delivery_Access_Code_Hash__c'
 
@@ -89,6 +92,12 @@ while IFS= read -r row; do
                 pass "$who grants Read/Create/Edit only ($flags)"
             else
                 fail "$who must grant exactly Read, Create and Edit ($flags)"
+            fi ;;
+        "permset:$INTEGRATION_SET")
+            if jq -e '.r and .e and (.c | not) and (.d | not) and (.va | not) and (.ma | not) and (.vaf | not)' <<<"$row" >/dev/null; then
+                pass "$who grants Read/Edit only ($flags)"
+            else
+                fail "$who must grant exactly Read and Edit ($flags)"
             fi ;;
         *)
             if jq -e '.va or .ma or .vaf' <<<"$row" >/dev/null; then

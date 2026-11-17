@@ -8,6 +8,8 @@ public with sharing class TestDataFactory {
 
     public static final String DEFAULT_ACCOUNT_NAME = 'Test Customer';
     public static final String PLATFORM_PROFILE_NAME = 'Standard Platform User';
+    public static final String INTEGRATION_PROFILE_NAME = 'Minimum Access - API Only Integrations';
+    public static final String API_INTEGRATION_PSL = 'SalesforceAPIIntegrationPsl';
 
     // ─── Accounts (customers) ─────────────────────────────────────────────
 
@@ -94,6 +96,33 @@ public with sharing class TestDataFactory {
             users.add(newUser(profileId, uniqueKey));
         }
         return users;
+    }
+
+    /**
+     * @description Unsaved API-only integration user (profile "Minimum Access -
+     *              API Only Integrations", Salesforce Integration license). The
+     *              org has 1 Salesforce Integration license, so a test must not
+     *              insert more than 1 of them.
+     * @param uniqueKey a short key (letters and digits) that makes the user unique in the test
+     * @return the unsaved user
+     */
+    public static User newIntegrationUser(String uniqueKey) {
+        Id profileId = [SELECT Id FROM Profile WHERE Name = :INTEGRATION_PROFILE_NAME WITH USER_MODE LIMIT 1].Id;
+        return newUser(profileId, uniqueKey);
+    }
+
+    /**
+     * @description Unsaved assignment of the "Salesforce API Integration"
+     *              permission set license, which a Salesforce Integration user
+     *              needs before a permission set can give it custom object access.
+     * @param userId the integration user
+     * @return the unsaved license assignment
+     */
+    public static PermissionSetLicenseAssign newApiIntegrationLicenseAssignment(Id userId) {
+        Id licenseId = [
+            SELECT Id FROM PermissionSetLicense WHERE DeveloperName = :API_INTEGRATION_PSL WITH USER_MODE LIMIT 1
+        ].Id;
+        return new PermissionSetLicenseAssign(AssigneeId = userId, PermissionSetLicenseId = licenseId);
     }
 
     /**
