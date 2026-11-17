@@ -1,0 +1,62 @@
+@import 'c/rcTheme';
+
+.rc-filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+    .rc-filters {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.rc-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.rc-item:hover {
+    border-color: var(--rc-electric);
+}
+
+.rc-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.rc-tn {
+    font-weight: 900;
+    font-size: 1.1rem;
+}
+
+.rc-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+    .rc-meta {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.rc-meta b {
+    display: block;
+    font-weight: 500;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}

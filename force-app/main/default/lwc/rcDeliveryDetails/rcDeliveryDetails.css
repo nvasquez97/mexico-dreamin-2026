@@ -1,0 +1,27 @@
+@import 'c/rcTheme';
+
+.rc-tn {
+    font-weight: 900;
+    font-size: 1.15rem;
+}
+
+.rc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.rc-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.rc-row .rc-field {
+    flex: 1 1 200px;
+    margin-bottom: 0;
+}

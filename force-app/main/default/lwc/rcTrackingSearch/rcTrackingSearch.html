@@ -1,0 +1,79 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">Track your package</p>
+        <h1 class="rc-display">Where is my package?</h1>
+        <p>Enter your tracking numbers (they start with RC) or your order references. No account needed.</p>
+
+        <form class="rc-card" onsubmit={handleSubmit}>
+            <fieldset class="rc-radios">
+                <legend class="rc-label">Search by</legend>
+                <label class={trackingClass}>
+                    <input type="radio" name="mode" value="tracking" checked={isTracking} onchange={handleMode} />
+                    Tracking number
+                </label>
+                <label class={referenceClass}>
+                    <input type="radio" name="mode" value="reference" checked={isReference} onchange={handleMode} />
+                    Order reference
+                </label>
+            </fieldset>
+
+            <div class="rc-field">
+                <label for="values">{valuesLabel}</label>
+                <textarea id="values" name="values" rows="3" value={values} onchange={handleValues} oninput={handleValues}
+                    placeholder={placeholder} aria-describedby="values-hint"></textarea>
+                <span id="values-hint" class="rc-hint">Up to 10 values, separated by commas or line breaks.</span>
+            </div>
+            <button type="submit" class="rc-btn" disabled={loading}>Track</button>
+            <template if:true={loading}>
+                <span class="rc-spinner" role="status" aria-label="Searching"></span>
+            </template>
+        </form>
+
+        <template if:true={error}>
+            <div class="rc-alert" role="alert">{error}</div>
+        </template>
+
+        <div aria-live="polite">
+            <template if:true={hasFound}>
+                <div class="rc-toolbar">
+                    <label for="sort" class="rc-label">Sort by</label>
+                    <select id="sort" onchange={handleSort}>
+                        <option value="status" selected={sortIsStatus}>Status</option>
+                        <option value="eta" selected={sortIsEta}>Estimated delivery date</option>
+                    </select>
+                </div>
+                <template for:each={sortedFound} for:item="s">
+                    <article key={s.trackingNumber} class="rc-card">
+                        <div class="rc-result-head">
+                            <span class="rc-tn">{s.trackingNumber}</span>
+                            <span class="rc-chip"><span class={s.dotClass}></span>{s.status}</span>
+                        </div>
+                        <dl class="rc-dl">
+                            <div><dt>From</dt><dd>{s.originCity}</dd></div>
+                            <div><dt>To</dt><dd>{s.destinationCity}</dd></div>
+                            <div><dt>Last location</dt><dd>{s.lastLocation}</dd></div>
+                            <div><dt>Last update</dt><dd>{s.lastUpdateText}</dd></div>
+                            <div><dt>Estimated delivery</dt><dd>{s.estimatedText}</dd></div>
+                        </dl>
+                        <p class="rc-actions" style="margin-top: 16px">
+                            <button type="button" class="rc-btn rc-btn-secondary" data-tn={s.trackingNumber} onclick={handleDetails}>
+                                Delivery details
+                            </button>
+                        </p>
+                    </article>
+                </template>
+            </template>
+
+            <template if:true={hasNotFound}>
+                <div class="rc-alert rc-info">
+                    <strong>Not found</strong>
+                    <ul class="rc-missing">
+                        <template for:each={result.notFound} for:item="nf">
+                            <li key={nf}>{nf}</li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,321 @@
+/* RutaCargo theme. Palette and type from the Brand Manual (docs/brand-manual.pdf):
+   blues lead; the tricolor (yellow / blue / red) only as small details, never as a background. */
+:host {
+    --rc-night: #0d1f5f;
+    --rc-electric: #016bfa;
+    --rc-cyan: #07e9f6;
+    --rc-white: #ffffff;
+    --rc-enamel: #d6e0ea;
+    --rc-yellow: #ffc91d;
+    --rc-red: #ff3636;
+    --rc-font: 'Montserrat', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --rc-display: 'Daily Brew', 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+    display: block;
+    font-family: var(--rc-font);
+    font-weight: 400;
+    color: var(--rc-night);
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+.rc-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+}
+
+/* Display voice: short, uppercase headlines only */
+.rc-display {
+    font-family: var(--rc-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+    margin: 0 0 8px;
+    font-size: clamp(1.9rem, 7vw, 3rem);
+    color: var(--rc-night);
+}
+
+.rc-eyebrow {
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rc-electric);
+    margin: 0 0 8px;
+}
+
+h2,
+h3 {
+    font-weight: 900;
+    margin: 0 0 8px;
+    line-height: 1.2;
+}
+
+h2 {
+    font-size: 1.35rem;
+}
+
+h3 {
+    font-size: 1.1rem;
+}
+
+p {
+    margin: 0 0 12px;
+}
+
+.rc-muted {
+    font-weight: 300;
+    font-size: 0.875rem;
+}
+
+.rc-card {
+    background: var(--rc-white);
+    border: 1px solid var(--rc-enamel);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.rc-card-flat {
+    background: var(--rc-enamel);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* Forms */
+.rc-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.rc-field label,
+.rc-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.rc-field input,
+.rc-field select,
+.rc-field textarea {
+    font: inherit;
+    color: var(--rc-night);
+    background: var(--rc-white);
+    border: 2px solid var(--rc-enamel);
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 48px;
+    width: 100%;
+}
+
+.rc-field textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.rc-field input:focus,
+.rc-field select:focus,
+.rc-field textarea:focus,
+.rc-btn:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--rc-cyan);
+    outline-offset: 2px;
+    border-color: var(--rc-electric);
+}
+
+.rc-hint {
+    font-weight: 300;
+    font-size: 0.8125rem;
+    margin-top: 4px;
+}
+
+.rc-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 16px;
+}
+
+@media (min-width: 640px) {
+    .rc-grid-2 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .rc-wrap {
+        padding-top: 40px;
+    }
+}
+
+/* Buttons: 48px tap targets, white on electric blue = 4.7:1 */
+.rc-btn {
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 48px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: 2px solid var(--rc-electric);
+    background: var(--rc-electric);
+    color: var(--rc-white);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rc-btn:hover {
+    background: var(--rc-night);
+    border-color: var(--rc-night);
+}
+
+.rc-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.rc-btn-secondary {
+    background: var(--rc-white);
+    color: var(--rc-night);
+    border-color: var(--rc-night);
+}
+
+.rc-btn-secondary:hover {
+    background: var(--rc-enamel);
+    border-color: var(--rc-night);
+}
+
+.rc-link {
+    color: var(--rc-electric);
+    font-weight: 700;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    text-decoration: underline;
+}
+
+/* Messages: dark text with a small colored edge, never red text on white */
+.rc-alert {
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-left: 6px solid var(--rc-red);
+    background: var(--rc-enamel);
+    font-weight: 500;
+}
+
+.rc-info {
+    border-left-color: var(--rc-electric);
+}
+
+.rc-success {
+    border-left-color: var(--rc-cyan);
+}
+
+/* Status chip: text always spells the status; the dot is only a detail */
+.rc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 4px 12px;
+    background: var(--rc-enamel);
+    color: var(--rc-night);
+    font-weight: 700;
+    font-size: 0.8125rem;
+}
+
+.rc-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--rc-electric);
+    flex: none;
+}
+
+.rc-dot-requested {
+    background: var(--rc-night);
+}
+
+.rc-dot-transit {
+    background: var(--rc-electric);
+}
+
+.rc-dot-out {
+    background: var(--rc-yellow);
+}
+
+.rc-dot-delivered {
+    background: var(--rc-cyan);
+    border: 2px solid var(--rc-night);
+}
+
+.rc-dot-exception {
+    background: var(--rc-red);
+}
+
+dl.rc-dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px 16px;
+}
+
+@media (min-width: 640px) {
+    dl.rc-dl {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+dl.rc-dl dt {
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+dl.rc-dl dd {
+    margin: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.rc-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--rc-enamel);
+    border-top-color: var(--rc-electric);
+    border-radius: 50%;
+    animation: rc-spin 0.8s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes rc-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.rc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rc-spinner {
+        animation: none;
+    }
+}

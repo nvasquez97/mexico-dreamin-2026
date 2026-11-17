@@ -1,0 +1,83 @@
+@import 'c/rcTheme';
+
+:host {
+    background: var(--rc-electric); /* the isotype PNG is cropped on this exact blue */
+}
+
+header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    flex-wrap: wrap;
+}
+
+.rc-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--rc-white);
+    text-decoration: none;
+    font-family: var(--rc-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 1.25rem;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+}
+
+.rc-brand img {
+    height: 52px;
+    width: auto;
+    display: block;
+}
+
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+nav button,
+nav a {
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--rc-white);
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    min-height: 44px;
+    padding: 0 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+nav button:hover,
+nav a:hover {
+    background: var(--rc-night);
+}
+
+nav button:focus-visible,
+nav a:focus-visible,
+.rc-brand:focus-visible {
+    outline: 3px solid var(--rc-cyan);
+    outline-offset: 2px;
+}
+
+nav .rc-cta {
+    background: var(--rc-white);
+    color: var(--rc-night);
+}
+
+nav .rc-cta:hover {
+    background: var(--rc-enamel);
+}

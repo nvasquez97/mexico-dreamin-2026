@@ -1,0 +1,68 @@
+<template>
+    <div class="rc-wrap">
+        <template if:true={isGuest}>
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">Log in to see your shipments</h1>
+            <p class="rc-actions">
+                <button type="button" class="rc-btn" onclick={goLogin}>Log in</button>
+                <button type="button" class="rc-btn rc-btn-secondary" onclick={goSignup}>Create account</button>
+            </p>
+        </template>
+
+        <template if:false={isGuest}>
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">My shipments</h1>
+            <p class="rc-actions">
+                <button type="button" class="rc-btn" onclick={goRequest}>Request a shipment</button>
+            </p>
+
+            <div class="rc-filters">
+                <div class="rc-field" style="margin-bottom: 0">
+                    <label for="search">Search by tracking number, recipient or reference</label>
+                    <input id="search" type="search" value={searchTerm} oninput={handleSearch} />
+                </div>
+                <div class="rc-field" style="margin-bottom: 0">
+                    <label for="status">Status</label>
+                    <select id="status" onchange={handleStatus}>
+                        <option value="">All statuses</option>
+                        <template for:each={statusOptions} for:item="o">
+                            <option key={o} value={o}>{o}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <template if:true={error}>
+                <div class="rc-alert" role="alert">{error}</div>
+            </template>
+
+            <div aria-live="polite">
+                <template if:true={isEmpty}>
+                    <div class="rc-card-flat">No shipments found.</div>
+                </template>
+                <template for:each={rows} for:item="s">
+                    <button key={s.trackingNumber} type="button" class="rc-card rc-item" data-tn={s.trackingNumber}
+                        onclick={handleOpen}>
+                        <span class="rc-item-head">
+                            <span class="rc-tn">{s.trackingNumber}</span>
+                            <span class="rc-chip"><span class={s.dotClass}></span>{s.status}</span>
+                        </span>
+                        <span class="rc-meta">
+                            <span><b>Requested</b>{s.requestedText}</span>
+                            <span><b>Recipient</b>{s.recipientName}</span>
+                            <span><b>Destination</b>{s.destinationCity}</span>
+                            <span><b>Service · Price</b>{s.serviceType} · {s.priceText}</span>
+                        </span>
+                    </button>
+                </template>
+            </div>
+
+            <template if:true={loading}>
+                <p><span class="rc-spinner" role="status" aria-label="Loading"></span></p>
+            </template>
+            <template if:true={hasMore}>
+                <button type="button" class="rc-btn rc-btn-secondary" onclick={handleMore} disabled={loading}>Load more</button>
+            </template>
+        </template>
+    </div>
+</template>

@@ -1,0 +1,51 @@
+<template>
+    <div class="rc-wrap">
+        <template if:true={isGuest}>
+            <h1 class="rc-display">Log in to continue</h1>
+            <p><button type="button" class="rc-btn" onclick={goLogin}>Log in</button></p>
+        </template>
+        <template if:false={isGuest}>
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">Shipment</h1>
+            <template if:true={error}>
+                <div class="rc-alert" role="alert">{error}</div>
+            </template>
+            <template if:true={loading}>
+                <p><span class="rc-spinner" role="status" aria-label="Loading"></span></p>
+            </template>
+            <template if:true={d}>
+                <section class="rc-card">
+                    <div class="rc-head">
+                        <span class="rc-tn">{d.summary.trackingNumber}</span>
+                        <span class="rc-chip"><span class={dotClass}></span>{d.summary.status}</span>
+                    </div>
+                    <dl class="rc-dl">
+                        <div><dt>Last location</dt><dd>{lastLocation}</dd></div>
+                        <div><dt>Last update</dt><dd>{lastUpdate}</dd></div>
+                        <div><dt>Estimated delivery</dt><dd>{estimated}</dd></div>
+                        <div><dt>Price</dt><dd>{price}</dd></div>
+                    </dl>
+                </section>
+                <section class="rc-card">
+                    <h2>What you entered</h2>
+                    <dl class="rc-dl">
+                        <div><dt>Requested</dt><dd>{requested}</dd></div>
+                        <div><dt>Service</dt><dd>{d.input.serviceType}</dd></div>
+                        <div><dt>Pickup address</dt><dd>{d.input.pickupAddress}, {d.input.pickupCity} {d.input.pickupPostalCode}</dd></div>
+                        <div><dt>Pickup date</dt><dd>{pickupDate}</dd></div>
+                        <div><dt>Recipient</dt><dd>{d.input.recipientName}</dd></div>
+                        <div><dt>Recipient phone</dt><dd>{d.input.recipientPhone}</dd></div>
+                        <div><dt>Recipient email</dt><dd>{d.input.recipientEmail}</dd></div>
+                        <div><dt>Delivery address</dt><dd>{d.input.recipientAddress}, {d.input.destinationCity} {d.input.destinationPostalCode}</dd></div>
+                        <div><dt>Contents</dt><dd>{d.input.packageDescription}</dd></div>
+                        <div><dt>Weight</dt><dd>{d.input.weightKg} kg</dd></div>
+                        <div><dt>Declared value</dt><dd>{declared}</dd></div>
+                        <div><dt>Your order reference</dt><dd>{reference}</dd></div>
+                        <div><dt>Delivery instructions</dt><dd>{instructions}</dd></div>
+                    </dl>
+                </section>
+            </template>
+            <p><button type="button" class="rc-link" onclick={goList}>Back to my shipments</button></p>
+        </template>
+    </div>
+</template>

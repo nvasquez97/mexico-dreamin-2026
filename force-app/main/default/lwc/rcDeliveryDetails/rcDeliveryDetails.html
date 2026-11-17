@@ -1,0 +1,103 @@
+<template>
+    <div class="rc-wrap">
+        <p class="rc-eyebrow">Delivery</p>
+        <h1 class="rc-display">Your delivery</h1>
+
+        <!-- Step 1: tracking number + postal code (AC-002.1) -->
+        <template if:false={details}>
+            <form class="rc-card" onsubmit={handleVerify}>
+                <p>To protect your privacy, confirm the <strong>destination postal code</strong> of the shipment.</p>
+                <div class="rc-grid rc-grid-2">
+                    <div class="rc-field">
+                        <label for="tn">Tracking number</label>
+                        <input id="tn" type="text" value={trackingNumber} onchange={handleTn} autocomplete="off"
+                            autocapitalize="characters" required />
+                    </div>
+                    <div class="rc-field">
+                        <label for="cp">Destination postal code</label>
+                        <input id="cp" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" value={postalCode}
+                            onchange={handleCp} autocomplete="postal-code" required aria-describedby="cp-hint" />
+                        <span id="cp-hint" class="rc-hint">5 digits.</span>
+                    </div>
+                </div>
+                <button type="submit" class="rc-btn" disabled={loading}>See delivery details</button>
+                <template if:true={loading}>
+                    <span class="rc-spinner" role="status" aria-label="Loading"></span>
+                </template>
+            </form>
+        </template>
+
+        <template if:true={error}>
+            <div class="rc-alert" role="alert">{error}</div>
+        </template>
+
+        <!-- Step 2: details (AC-002.2) -->
+        <template if:true={details}>
+            <section class="rc-card" aria-live="polite">
+                <div class="rc-head">
+                    <span class="rc-tn">{details.trackingNumber}</span>
+                    <span class="rc-chip"><span class={dotClass}></span>{details.status}</span>
+                </div>
+                <dl class="rc-dl">
+                    <div><dt>Recipient</dt><dd>{details.recipientName}</dd></div>
+                    <div><dt>Contact phone</dt><dd>{details.recipientPhone}</dd></div>
+                    <div><dt>Delivery address</dt><dd>{details.recipientAddress}</dd></div>
+                    <div><dt>Estimated delivery</dt><dd>{estimatedText}</dd></div>
+                    <div><dt>Delivery instructions</dt><dd>{instructionsText}</dd></div>
+                </dl>
+            </section>
+
+            <template if:true={success}>
+                <div class="rc-alert rc-success" role="status">{success}</div>
+            </template>
+
+            <!-- Proof of delivery (AC-002.4 / AC-002.5) -->
+            <template if:true={details.delivered}>
+                <section class="rc-card">
+                    <h2>Proof of delivery</h2>
+                    <p>The signed PDF is fetched from EntregaYa when you ask for it.</p>
+                    <button type="button" class="rc-btn" onclick={handleProof} disabled={loadingProof}>
+                        Download proof of delivery
+                    </button>
+                    <template if:true={loadingProof}>
+                        <span class="rc-spinner" role="status" aria-label="Fetching proof"></span>
+                    </template>
+                </section>
+            </template>
+
+            <!-- Reschedule (REQ-003) -->
+            <template if:false={details.delivered}>
+                <section class="rc-card">
+                    <h2>Change the date or instructions</h2>
+                    <template if:false={details.canReschedule}>
+                        <p class="rc-muted">{details.rescheduleBlockedReason}</p>
+                    </template>
+                    <template if:true={details.canReschedule}>
+                        <p class="rc-muted">
+                            You can reschedule {details.reschedulesLeft} more time(s), up to {maxText}.
+                        </p>
+                        <form onsubmit={handleReschedule}>
+                            <div class="rc-field">
+                                <label for="newdate">New delivery date</label>
+                                <input id="newdate" type="date" min={minDate} max={maxDate} value={newDate}
+                                    onchange={handleNewDate} required />
+                            </div>
+                            <div class="rc-field">
+                                <label for="instr">Delivery instructions</label>
+                                <textarea id="instr" maxlength="2000" value={instructions} onchange={handleInstructions}></textarea>
+                            </div>
+                            <button type="submit" class="rc-btn" disabled={saving}>Save new date</button>
+                            <template if:true={saving}>
+                                <span class="rc-spinner" role="status" aria-label="Saving"></span>
+                            </template>
+                        </form>
+                    </template>
+                </section>
+            </template>
+
+            <p>
+                <button type="button" class="rc-link" onclick={handleBack}>Look up another shipment</button>
+            </p>
+        </template>
+    </div>
+</template>

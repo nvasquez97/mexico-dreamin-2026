@@ -1,0 +1,46 @@
+<template>
+    <div class="rc-wrap">
+        <div class="rc-hero">
+            <img class="rc-logo" src={logo} alt="Coffee Blazers Summit: 2600 metros más cerca de la nube" />
+            <div>
+                <span class="rc-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+                <h1 class="rc-display">Door to door. Tracked all the way.</h1>
+                <p>Request a pickup at your address, follow your package and manage your delivery. No phone calls.</p>
+            </div>
+        </div>
+
+        <form class="rc-card" onsubmit={handleTrack}>
+            <h2>Where is my package?</h2>
+            <div class="rc-quick">
+                <div class="rc-field">
+                    <label for="tn">Tracking number</label>
+                    <input id="tn" type="text" placeholder="RC000001042" autocapitalize="characters" autocomplete="off"
+                        value={tn} onchange={handleTn} required />
+                </div>
+                <button type="submit" class="rc-btn">Track</button>
+            </div>
+        </form>
+
+        <p class="rc-actions">
+            <button type="button" class="rc-btn" onclick={goRequest}>Request a shipment</button>
+            <template if:true={isGuest}>
+                <button type="button" class="rc-btn rc-btn-secondary" onclick={goSignup}>Create account</button>
+            </template>
+        </p>
+
+        <div class="rc-steps">
+            <div class="rc-card">
+                <h3>1 · Request</h3>
+                <p>Tell us where to pick up and where to deliver. You see the price before you confirm.</p>
+            </div>
+            <div class="rc-card">
+                <h3>2 · Track</h3>
+                <p>Use the tracking number on the label. No account needed.</p>
+            </div>
+            <div class="rc-card">
+                <h3>3 · Receive</h3>
+                <p>Recipients can change the delivery date and download the proof of delivery.</p>
+            </div>
+        </div>
+    </div>
+</template>

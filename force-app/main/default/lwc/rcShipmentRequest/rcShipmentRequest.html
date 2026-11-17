@@ -1,0 +1,179 @@
+<template>
+    <div class="rc-wrap">
+        <template if:true={isGuest}>
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">Log in to ship</h1>
+            <p>Requesting a shipment needs a customer account.</p>
+            <p class="rc-actions">
+                <button type="button" class="rc-btn" onclick={goLogin}>Log in</button>
+                <button type="button" class="rc-btn rc-btn-secondary" onclick={goSignup}>Create account</button>
+            </p>
+        </template>
+
+        <template if:false={isGuest}>
+            <p class="rc-eyebrow">Door to door</p>
+            <h1 class="rc-display">Request a shipment</h1>
+
+            <template if:true={error}>
+                <div class="rc-alert" role="alert">{error}</div>
+            </template>
+
+            <!-- Step 1: form (AC-006.1) -->
+            <template if:true={stepForm}>
+                <form class="rc-card" onsubmit={handleReview}>
+                    <fieldset class="rc-set">
+                        <legend>Pickup</legend>
+                        <div class="rc-field">
+                            <label for="pickupAddress">Pickup address</label>
+                            <textarea id="pickupAddress" name="pickupAddress" maxlength="1000" value={form.pickupAddress}
+                                onchange={handleChange} required></textarea>
+                        </div>
+                        <div class="rc-grid rc-grid-2">
+                            <div class="rc-field">
+                                <label for="pickupCity">City</label>
+                                <input id="pickupCity" name="pickupCity" type="text" maxlength="80" value={form.pickupCity}
+                                    onchange={handleChange} required />
+                            </div>
+                            <div class="rc-field">
+                                <label for="pickupPostalCode">Postal code</label>
+                                <input id="pickupPostalCode" name="pickupPostalCode" type="text" inputmode="numeric" maxlength="5"
+                                    pattern="[0-9]{5}" value={form.pickupPostalCode} onchange={handleChange} required />
+                            </div>
+                        </div>
+                        <div class="rc-field">
+                            <label for="pickupDate">Pickup date</label>
+                            <input id="pickupDate" name="pickupDate" type="date" min={minDate} max={maxDate} value={form.pickupDate}
+                                onchange={handleChange} required aria-describedby="date-hint" />
+                            <span id="date-hint" class="rc-hint">A business day, from tomorrow up to 15 days from now.</span>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="rc-set">
+                        <legend>Recipient</legend>
+                        <div class="rc-field">
+                            <label for="recipientName">Name</label>
+                            <input id="recipientName" name="recipientName" type="text" maxlength="120" value={form.recipientName}
+                                onchange={handleChange} required />
+                        </div>
+                        <div class="rc-field">
+                            <label for="recipientAddress">Delivery address</label>
+                            <textarea id="recipientAddress" name="recipientAddress" maxlength="1000" value={form.recipientAddress}
+                                onchange={handleChange} required></textarea>
+                        </div>
+                        <div class="rc-grid rc-grid-2">
+                            <div class="rc-field">
+                                <label for="destinationCity">City</label>
+                                <input id="destinationCity" name="destinationCity" type="text" maxlength="80"
+                                    value={form.destinationCity} onchange={handleChange} required />
+                            </div>
+                            <div class="rc-field">
+                                <label for="destinationPostalCode">Postal code</label>
+                                <input id="destinationPostalCode" name="destinationPostalCode" type="text" inputmode="numeric"
+                                    maxlength="5" pattern="[0-9]{5}" value={form.destinationPostalCode} onchange={handleChange}
+                                    required />
+                            </div>
+                            <div class="rc-field">
+                                <label for="recipientPhone">Phone</label>
+                                <input id="recipientPhone" name="recipientPhone" type="tel" maxlength="20" value={form.recipientPhone}
+                                    onchange={handleChange} required />
+                            </div>
+                            <div class="rc-field">
+                                <label for="recipientEmail">Email</label>
+                                <input id="recipientEmail" name="recipientEmail" type="email" maxlength="80"
+                                    value={form.recipientEmail} onchange={handleChange} required />
+                            </div>
+                        </div>
+                        <div class="rc-field">
+                            <label for="deliveryInstructions">Delivery instructions (optional)</label>
+                            <textarea id="deliveryInstructions" name="deliveryInstructions" maxlength="2000"
+                                value={form.deliveryInstructions} onchange={handleChange}></textarea>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="rc-set">
+                        <legend>Package</legend>
+                        <div class="rc-field">
+                            <label for="serviceType">Service</label>
+                            <select id="serviceType" name="serviceType" onchange={handleChange} required>
+                                <option value="" disabled selected={noService}>Choose one</option>
+                                <option value="Standard" selected={isStandard}>Standard (5 business days)</option>
+                                <option value="Express" selected={isExpress}>Express (2 business days)</option>
+                            </select>
+                        </div>
+                        <div class="rc-grid rc-grid-2">
+                            <div class="rc-field">
+                                <label for="weightKg">Weight (kg)</label>
+                                <input id="weightKg" name="weightKg" type="number" inputmode="decimal" min="0.1" max="30" step="0.01"
+                                    value={form.weightKg} onchange={handleChange} required aria-describedby="w-hint" />
+                                <span id="w-hint" class="rc-hint">Maximum 30 kg.</span>
+                            </div>
+                            <div class="rc-field">
+                                <label for="declaredValue">Declared value (MXN)</label>
+                                <input id="declaredValue" name="declaredValue" type="number" inputmode="decimal" min="0" max="50000"
+                                    step="0.01" value={form.declaredValue} onchange={handleChange} required aria-describedby="v-hint" />
+                                <span id="v-hint" class="rc-hint">Maximum 50,000 MXN.</span>
+                            </div>
+                        </div>
+                        <div class="rc-field">
+                            <label for="packageDescription">What is inside?</label>
+                            <input id="packageDescription" name="packageDescription" type="text" maxlength="255"
+                                value={form.packageDescription} onchange={handleChange} required />
+                        </div>
+                        <div class="rc-field">
+                            <label for="customerReference">Your order reference (optional)</label>
+                            <input id="customerReference" name="customerReference" type="text" maxlength="80"
+                                value={form.customerReference} onchange={handleChange} />
+                        </div>
+                    </fieldset>
+
+                    <button type="submit" class="rc-btn" disabled={busy}>Review price</button>
+                    <template if:true={busy}>
+                        <span class="rc-spinner" role="status" aria-label="Calculating"></span>
+                    </template>
+                </form>
+            </template>
+
+            <!-- Step 2: price before confirming (AC-006.2) -->
+            <template if:true={stepReview}>
+                <section class="rc-card" aria-live="polite">
+                    <h2>Shipment price</h2>
+                    <p class="rc-price">{priceText}</p>
+                    <p class="rc-muted">
+                        {form.serviceType} service · {form.weightKg} kg · insurance included (1.5% of the declared value).
+                        Paid at pickup.
+                    </p>
+                    <dl class="rc-dl">
+                        <div><dt>Pickup</dt><dd>{form.pickupAddress}, {form.pickupCity} {form.pickupPostalCode}</dd></div>
+                        <div><dt>Pickup date</dt><dd>{pickupDateText}</dd></div>
+                        <div><dt>Deliver to</dt><dd>{form.recipientName}</dd></div>
+                        <div><dt>Delivery address</dt><dd>{form.recipientAddress}, {form.destinationCity} {form.destinationPostalCode}</dd></div>
+                    </dl>
+                    <p class="rc-actions" style="margin-top: 16px">
+                        <button type="button" class="rc-btn" onclick={handleConfirm} disabled={busy}>Confirm shipment</button>
+                        <button type="button" class="rc-btn rc-btn-secondary" onclick={handleEdit} disabled={busy}>Edit</button>
+                        <template if:true={busy}>
+                            <span class="rc-spinner" role="status" aria-label="Creating shipment"></span>
+                        </template>
+                    </p>
+                </section>
+            </template>
+
+            <!-- Step 3: created (AC-006.5) -->
+            <template if:true={stepDone}>
+                <section class="rc-card" aria-live="polite">
+                    <p class="rc-eyebrow">Shipment requested</p>
+                    <p class="rc-big-tn">{created.trackingNumber}</p>
+                    <p>Keep this tracking number. We will pick up your package on {pickupDateText}.</p>
+                    <dl class="rc-dl">
+                        <div><dt>Price</dt><dd>{createdPrice}</dd></div>
+                        <div><dt>Estimated delivery</dt><dd>{createdEta}</dd></div>
+                    </dl>
+                    <p class="rc-actions" style="margin-top: 16px">
+                        <button type="button" class="rc-btn" onclick={goMyShipments}>My shipments</button>
+                        <button type="button" class="rc-btn rc-btn-secondary" onclick={handleAnother}>Request another</button>
+                    </p>
+                </section>
+            </template>
+        </template>
+    </div>
+</template>

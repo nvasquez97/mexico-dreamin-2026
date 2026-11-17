@@ -1,0 +1,6 @@
+@import 'c/rcTheme';
+
+.rc-narrow {
+    max-width: 560px;
+    margin: 0 auto;
+}

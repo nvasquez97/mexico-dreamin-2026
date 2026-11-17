@@ -1,0 +1,70 @@
+@import 'c/rcTheme';
+
+.rc-radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    border: 0;
+    padding: 0;
+}
+
+.rc-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 2px solid var(--rc-enamel);
+    border-radius: 999px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.rc-radio.on {
+    border-color: var(--rc-electric);
+    background: var(--rc-white);
+    font-weight: 700;
+}
+
+.rc-radio input {
+    accent-color: var(--rc-electric);
+    width: 18px;
+    height: 18px;
+}
+
+.rc-result-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rc-tn {
+    font-weight: 900;
+    font-size: 1.15rem;
+}
+
+.rc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.rc-toolbar select {
+    font: inherit;
+    min-height: 44px;
+    border: 2px solid var(--rc-enamel);
+    border-radius: 12px;
+    padding: 0 12px;
+    color: var(--rc-night);
+    background: var(--rc-white);
+}
+
+ul.rc-missing {
+    margin: 8px 0 0;
+    padding-left: 20px;
+}

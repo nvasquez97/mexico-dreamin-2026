@@ -1,0 +1,28 @@
+@import 'c/rcTheme';
+
+fieldset.rc-set {
+    border: 0;
+    padding: 0;
+    margin: 0 0 8px;
+}
+
+fieldset.rc-set legend {
+    font-weight: 900;
+    font-size: 1.1rem;
+    padding: 0;
+    margin-bottom: 12px;
+}
+
+.rc-price {
+    font-weight: 900;
+    font-size: 2rem;
+    margin: 8px 0;
+}
+
+.rc-big-tn {
+    font-family: var(--rc-display);
+    font-weight: 900;
+    font-size: clamp(1.8rem, 8vw, 2.6rem);
+    letter-spacing: 0.04em;
+    word-break: break-all;
+}

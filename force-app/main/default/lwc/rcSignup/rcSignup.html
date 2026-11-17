@@ -1,0 +1,64 @@
+<template>
+    <div class="rc-wrap">
+        <div class="rc-narrow">
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">Create your account</h1>
+            <p>Request door-to-door shipments and follow them in one place.</p>
+
+            <template if:true={error}>
+                <div class="rc-alert" role="alert">
+                    {error}
+                    <template if:true={showLoginLink}>
+                        <button type="button" class="rc-link" onclick={goLogin}>Go to log in</button>
+                    </template>
+                </div>
+            </template>
+
+            <form class="rc-card" onsubmit={handleSubmit}>
+                <div class="rc-field">
+                    <label for="type">I am</label>
+                    <select id="type" name="customerType" onchange={handleChange} required>
+                        <option value="" disabled selected>Choose one</option>
+                        <option value="Individual">An individual</option>
+                        <option value="Business">A business</option>
+                    </select>
+                </div>
+                <div class="rc-field">
+                    <label for="accountName">{nameLabel}</label>
+                    <input id="accountName" name="accountName" type="text" maxlength="120" onchange={handleChange} required />
+                </div>
+                <div class="rc-grid rc-grid-2">
+                    <div class="rc-field">
+                        <label for="firstName">Contact first name</label>
+                        <input id="firstName" name="firstName" type="text" maxlength="40" autocomplete="given-name"
+                            onchange={handleChange} required />
+                    </div>
+                    <div class="rc-field">
+                        <label for="lastName">Contact last name</label>
+                        <input id="lastName" name="lastName" type="text" maxlength="80" autocomplete="family-name"
+                            onchange={handleChange} required />
+                    </div>
+                </div>
+                <div class="rc-field">
+                    <label for="email">Email</label>
+                    <input id="email" name="email" type="email" maxlength="60" autocomplete="email" onchange={handleChange} required />
+                </div>
+                <div class="rc-field">
+                    <label for="phone">Phone</label>
+                    <input id="phone" name="phone" type="tel" maxlength="20" autocomplete="tel" onchange={handleChange} required />
+                </div>
+                <div class="rc-field">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" minlength="10"
+                        onchange={handleChange} required aria-describedby="pw-hint" />
+                    <span id="pw-hint" class="rc-hint">At least 10 characters, with letters and numbers.</span>
+                </div>
+                <button type="submit" class="rc-btn" disabled={busy}>Create account</button>
+                <template if:true={busy}>
+                    <span class="rc-spinner" role="status" aria-label="Creating your account"></span>
+                </template>
+            </form>
+            <p>Already have an account? <button type="button" class="rc-link" onclick={goLogin}>Log in</button></p>
+        </div>
+    </div>
+</template>

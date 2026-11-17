@@ -1,0 +1,51 @@
+<template>
+    <div class="rc-wrap">
+        <div class="rc-narrow">
+            <p class="rc-eyebrow">Customers</p>
+            <h1 class="rc-display">{title}</h1>
+
+            <template if:true={error}>
+                <div class="rc-alert" role="alert">{error}</div>
+            </template>
+            <template if:true={notice}>
+                <div class="rc-alert rc-success" role="status">{notice}</div>
+            </template>
+
+            <template if:false={resetMode}>
+                <form class="rc-card" onsubmit={handleLogin}>
+                    <div class="rc-field">
+                        <label for="email">Email</label>
+                        <input id="email" type="email" autocomplete="username" value={email} onchange={handleEmail} required />
+                    </div>
+                    <div class="rc-field">
+                        <label for="password">Password</label>
+                        <input id="password" type="password" autocomplete="current-password" value={password}
+                            onchange={handlePassword} required />
+                    </div>
+                    <button type="submit" class="rc-btn" disabled={busy}>Log in</button>
+                    <template if:true={busy}>
+                        <span class="rc-spinner" role="status" aria-label="Logging in"></span>
+                    </template>
+                    <p style="margin-top: 16px">
+                        <button type="button" class="rc-link" onclick={showReset}>Forgot your password?</button>
+                    </p>
+                </form>
+                <p>New to RutaCargo? <button type="button" class="rc-link" onclick={goSignup}>Create your account</button></p>
+            </template>
+
+            <template if:true={resetMode}>
+                <form class="rc-card" onsubmit={handleReset}>
+                    <p>Enter your email and we will send you a link to choose a new password.</p>
+                    <div class="rc-field">
+                        <label for="remail">Email</label>
+                        <input id="remail" type="email" autocomplete="email" value={email} onchange={handleEmail} required />
+                    </div>
+                    <button type="submit" class="rc-btn" disabled={busy}>Send reset link</button>
+                    <p style="margin-top: 16px">
+                        <button type="button" class="rc-link" onclick={hideReset}>Back to log in</button>
+                    </p>
+                </form>
+            </template>
+        </div>
+    </div>
+</template>

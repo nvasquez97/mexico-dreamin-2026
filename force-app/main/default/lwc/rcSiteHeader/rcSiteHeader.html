@@ -1,0 +1,20 @@
+<template>
+    <header>
+        <button type="button" class="rc-brand" onclick={goHome} aria-label="RutaCargo home">
+            <img src={isotype} alt="" />
+            <span>RutaCargo</span>
+        </button>
+        <nav aria-label="Main">
+            <button type="button" data-page="Track__c" onclick={handleNav}>Track</button>
+            <button type="button" data-page="Request__c" onclick={handleNav}>Ship</button>
+            <template if:false={isGuest}>
+                <button type="button" data-page="My_Shipments__c" onclick={handleNav}>My shipments</button>
+                <a href={logoutUrl}>Log out</a>
+            </template>
+            <template if:true={isGuest}>
+                <button type="button" data-page="Login" onclick={handleNav}>Log in</button>
+                <button type="button" class="rc-cta" data-page="Register" onclick={handleNav}>Sign up</button>
+            </template>
+        </nav>
+    </header>
+</template>
