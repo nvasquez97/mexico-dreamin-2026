@@ -41,7 +41,7 @@ private with sharing class SupportAgentAccessTest {
     // so the test fixture is written and read back in system mode. Scope: setup
     // DML and verification reads of this test class only. Compensating control:
     // every action of the users under test runs inside System.runAs in USER_MODE.
-    // (pending owner approval)
+    // (pending owner approval, 2026-11-18)
     private static void insertAsSystem(List<SObject> records) {
         Database.insert(records, AccessLevel.SYSTEM_MODE);
     }

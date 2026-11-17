@@ -7,10 +7,11 @@
 #      profile, the RutaCargo_Support_Agent permission set and the
 #      platform-locked Analytics Cloud Integration User profile (assumption A9);
 #   2. RutaCargo_Support_Agent grants exactly Read, Create and Edit (no Delete,
-#      no View All, no Modify All);
+#      no View All, no Modify All, no View All Fields);
 #   3. no profile or permission set other than System Administrator and the
-#      locked Analytics Cloud Integration User profile has View All or Modify
-#      All on Shipment__c, and that profile has nothing beyond Read and View All;
+#      locked Analytics Cloud Integration User profile has View All, Modify All
+#      or View All Fields on Shipment__c, and that profile has nothing beyond
+#      Read and View All;
 #   4. the Analytics Cloud Integration User profile has 0 field permissions on
 #      Shipment__c and no active user but the platform's own Integration User
 #      (username integration@<lower-case 18-character org id>.com);
@@ -54,39 +55,39 @@ query() {
 }
 
 # ─── 1-3. Object permissions on Shipment__c ─────────────────────────────────
-perms="$(query "SELECT Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords FROM ObjectPermissions WHERE SobjectType = 'Shipment__c'")"
+perms="$(query "SELECT Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords, PermissionsViewAllFields FROM ObjectPermissions WHERE SobjectType = 'Shipment__c'")"
 
 rows="$(jq -c --arg admin "$ADMIN_PROFILE" --arg analytics "$ANALYTICS_PROFILE" --arg agent "$AGENT_SET" '
   .[] | {
     who: (if .Parent.IsOwnedByProfile then "profile:" + .Parent.Profile.Name else "permset:" + .Parent.Name end),
     r: .PermissionsRead, c: .PermissionsCreate, e: .PermissionsEdit, d: .PermissionsDelete,
-    va: .PermissionsViewAllRecords, ma: .PermissionsModifyAllRecords
-  } | select(.r or .c or .e or .d or .va or .ma)' <<<"$perms")"
+    va: .PermissionsViewAllRecords, ma: .PermissionsModifyAllRecords, vaf: .PermissionsViewAllFields
+  } | select(.r or .c or .e or .d or .va or .ma or .vaf)' <<<"$perms")"
 
 agent_seen=0
 while IFS= read -r row; do
     [[ -z "$row" ]] && continue
     who="$(jq -r .who <<<"$row")"
-    flags="$(jq -r '"read=\(.r) create=\(.c) edit=\(.e) delete=\(.d) viewAll=\(.va) modifyAll=\(.ma)"' <<<"$row")"
+    flags="$(jq -r '"read=\(.r) create=\(.c) edit=\(.e) delete=\(.d) viewAll=\(.va) modifyAll=\(.ma) viewAllFields=\(.vaf)"' <<<"$row")"
     case "$who" in
         "profile:$ADMIN_PROFILE")
             pass "$who ($flags)" ;;
         "profile:$ANALYTICS_PROFILE")
-            if jq -e '.c or .e or .d or .ma' <<<"$row" >/dev/null; then
+            if jq -e '.c or .e or .d or .ma or .vaf' <<<"$row" >/dev/null; then
                 fail "$who has more than the platform-locked Read/View All ($flags)"
             else
                 pass "$who, accepted platform exception A9 ($flags)"
             fi ;;
         "permset:$AGENT_SET")
             agent_seen=1
-            if jq -e '.r and .c and .e and (.d | not) and (.va | not) and (.ma | not)' <<<"$row" >/dev/null; then
+            if jq -e '.r and .c and .e and (.d | not) and (.va | not) and (.ma | not) and (.vaf | not)' <<<"$row" >/dev/null; then
                 pass "$who grants Read/Create/Edit only ($flags)"
             else
                 fail "$who must grant exactly Read, Create and Edit ($flags)"
             fi ;;
         *)
-            if jq -e '.va or .ma' <<<"$row" >/dev/null; then
-                fail "$who has View All or Modify All on Shipment__c ($flags)"
+            if jq -e '.va or .ma or .vaf' <<<"$row" >/dev/null; then
+                fail "$who has View All, Modify All or View All Fields on Shipment__c ($flags)"
             fi
             fail "$who grants access to Shipment__c ($flags)" ;;
     esac

@@ -5,10 +5,10 @@
         <accessLevel>Edit</accessLevel>
         <accountSettings>
             <caseAccessLevel>None</caseAccessLevel>
-            <contactAccessLevel>None</contactAccessLevel>
+            <contactAccessLevel>Edit</contactAccessLevel>
             <opportunityAccessLevel>None</opportunityAccessLevel>
         </accountSettings>
-        <description>Customer accounts (Customer Type Individual or Business) are shared Read/Write with the RutaCargo support agents (BR-03). Contacts follow the account (Controlled by Parent); opportunities and cases are not shared.</description>
+        <description>Customer accounts (Customer Type Individual or Business) are shared Read/Write with the RutaCargo support agents (BR-03). Contacts follow the account (Controlled by Parent, so the platform applies the account level, Edit); opportunities and cases are not shared.</description>
         <label>Customer accounts to support agents</label>
         <sharedTo>
             <group>RutaCargo_Support_Agents</group>
