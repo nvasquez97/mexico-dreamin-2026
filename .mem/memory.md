@@ -40,3 +40,15 @@
 - Why / evidence: odd/tasks/foundation.md
 - Next: record Plan review line, launch T1.
 - Open issue: the EntregaYa key stays in git history (commits 709c3cc..b85773a); owner must rotate it.
+
+## 2026-11-17 23:30 — foundation T1 ticked, T2 running
+- Type: status
+- What: T1 7fa6794 ticked (task-reviewer Low x2, security-reviewer approved, access-auditor ACC-001 Medium moved to T3 as AC-F.14). AC-F.15 added to T2 (trigger forces Status Requested on insert; seed must insert then update statuses). A7: SECURITY-JUSTIFICATION approver is "pending owner approval". T2 worker launched.
+- Why / evidence: odd/tasks/foundation.md task lines.
+- Next: review T2 with task-reviewer + security lens, then T3.
+
+## 2026-11-18 02:00 — foundation T2 ticked after one fix round
+- Type: review
+- What: T2 cd29570, fixed in 45b3eee: codes 12 chars, 100-round SHA-256 + 128-bit salt (v1$100$salt$hash, A8), DeliveryAccessCode.insertWithCodes(rows) returns Map<Id,String> in user mode (the only way to get clear codes). ~8 ms CPU per hash/check: >1,000 per sync transaction nears the CPU limit. Full GATE 65/65, 90.79%.
+- Why / evidence: odd/tasks/foundation.md T2 line; closing checks closed by task-reviewer and security-reviewer.
+- Next: T3 (support agent permset, group, sharing rules, ACC-001 profile fix). T6 seed must use insertWithCodes and needs FLS for the running admin (API 67 user mode).
