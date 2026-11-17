@@ -49,3 +49,6 @@ $RECYCLE.BIN/
 
 # Security audit reports (contain vulnerability details — never commit)
 .security-reports/
+
+# Local seed output: delivery access codes of the test data (never commit)
+.seed-output/
