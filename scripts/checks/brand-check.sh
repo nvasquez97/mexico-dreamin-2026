@@ -42,15 +42,27 @@
 #      #07E9F6 #D6E0EA #FFFFFF), so no derived shade off the palette; the
 #      platform's success (_Success*) and offline (_Offline*) roles are not
 #      checked (not reviewed; for the owner, A14);
-#  11. the header and footer regions of the scopedHeaderAndFooter theme layout
-#      hold sections whose background (backgroundImageOverlay, painted over the
-#      platform's own rgb(239, 240, 242) band) is night blue or white;
-#  12. the full logo never renders below 360 px wide (manual p.4): for every
-#      <img> of rcHeader, rcHome or rcTracking that shows a full logo (not the
-#      isotype), in the component CSS at every breakpoint where it is
-#      displayed, its width
-#      (or its height times the PNG's aspect ratio, or its width attribute) is
-#      an absolute length of 360 px or more and no max-width can shrink it.
+#  11. no platform gray around the header and footer (AC-001.8): the
+#      community_byo:scopedHeaderAndFooter layout paints its header and footer
+#      content wrappers rgb(239, 240, 242) (#EFF0F2) in its own stylesheet, with
+#      no styling hook, and a community_layout:section paints its
+#      backgroundImageOverlay only when it also has a background image. So each
+#      section of the header and footer regions must either have a background
+#      image under a palette overlay (#0D1F5F or #FFFFFF), or expose none of the
+#      wrapper: the branding set's row paddings (the section padding) are zero at
+#      every breakpoint, the section has no min-height, and its content covers
+#      it (the header region holds only components whose root box is night blue
+#      or white, the footer region holds no component). The published home page
+#      must carry the zero section paddings;
+#  12. the full logo's visible artwork is never below 360 px wide (manual p.4,
+#      AC-001.8): for every <img> of rcHeader, rcHome or rcTracking that shows a
+#      full logo (not the isotype), in the component CSS at every breakpoint
+#      where it is displayed, its width (or its height times the PNG's aspect
+#      ratio, or its width attribute) is an absolute length, no max-width can
+#      shrink it, and that width times the logo's visible-artwork ratio (the
+#      columns of the PNG that differ from the background it was cropped from,
+#      over its full width) is 360 px or more; at a 1366 px viewport the full
+#      logo is displayed.
 #
 # Usage: scripts/checks/brand-check.sh <org-alias>
 set -euo pipefail
@@ -299,9 +311,12 @@ done
 body_file="$(mktemp)"
 trap 'rm -f "$body_file"' EXIT
 code="$(curl -s -o "$body_file" -w '%{http_code}' --max-time 60 "$SITE_URL/" || true)"
+# The section paddings the published page carries (used by check 11).
+published_spacing=''
 if [[ "$code" != "200" ]]; then
     fail "anonymous GET $SITE_URL/ returns $code, expected 200"
 else
+    published_spacing="$(grep -oE -- '--dxp-s-section-content-spacing-[a-z-]+: *[^;"}]+' "$body_file" | sort -u || true)"
     if grep -qiE -- '--dxp-g-brand: *#016bfa' "$body_file"; then
         pass "the published home page carries --dxp-g-brand #016BFA"
     else
@@ -383,39 +398,158 @@ else
     fail "branding set colors off the palette: $off_palette"
 fi
 
-# ─── 11. Header and footer bands on a palette background ────────────────────
-bands="$(find "$BUNDLE"/sfdc_cms__themeLayout -name content.json -exec jq -c '
-  .. | objects | select(.definition? == "community_byo:scopedHeaderAndFooter")
-  | .children[]? | select(.name == "header" or .name == "footer")
-  | {region: .name,
-     overlays: [.children[]? | select(.definition == "community_layout:section")
-                | (.attributes.backgroundImageOverlay // "" | ascii_upcase)]}' {} + 2>/dev/null || true)"
-if [[ -z "$bands" ]]; then
-    fail "no scopedHeaderAndFooter theme layout with header and footer regions found"
-fi
-while IFS= read -r band; do
-    [[ -z "$band" ]] && continue
-    region="$(jq -r .region <<<"$band")"
-    overlays="$(jq -r '.overlays | join(",")' <<<"$band")"
-    if jq -e '(.overlays | length) > 0 and all(.overlays[]; . == "#0D1F5F" or . == "#FFFFFF")' <<<"$band" >/dev/null; then
-        pass "theme $region band sections have a palette background ($overlays)"
-    else
-        fail "theme $region band sections have background '${overlays:-none}', expected #0D1F5F or #FFFFFF over the platform's gray"
-    fi
-done <<<"$bands"
+# ─── 11. No platform gray around the header and footer ──────────────────────
+# community_byo:scopedHeaderAndFooter paints its header and footer content
+# wrappers rgb(239, 240, 242) in its own stylesheet (no styling hook), and a
+# community_layout:section sets its overlay color only when it has a background
+# image. A band is gray-free when each of its sections has an image under a
+# palette overlay, or exposes none of the wrapper (zero padding from the
+# branding set's row paddings, no min-height, one column, content that covers it).
+band_report="$(python3 -I - "$BUNDLE" "$BRANDING" force-app/main/default/lwc <<'PY'
+import json
+import pathlib
+import re
+import sys
 
-# ─── 12. Full logo never below 360 px wide ──────────────────────────────────
+bundle, branding, lwc = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
+PALETTE_BG = {"#0D1F5F", "#FFFFFF"}
+PADDINGS = ["HorizontalRowPaddingDesktop", "HorizontalRowPaddingMobile",
+            "VerticalRowPaddingDesktop", "VerticalRowPaddingMobile"]
+ZERO = re.compile(r"0*(\.0*)?(px|rem|em|%)?")
+values = json.loads(branding.read_text())["contentBody"]["values"]
+nonzero = [f"{k}={values.get(k, '')!r}" for k in PADDINGS
+           if not ZERO.fullmatch(str(values.get(k, "")).strip())]
+
+
+def walk(node):
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from walk(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from walk(value)
+
+
+def components(node):
+    return [n for n in walk(node) if n.get("type") == "component" and n is not node]
+
+
+def root_background(definition):
+    """Palette background of the component's root element box, or None."""
+    if not definition.startswith("c:"):
+        return None
+    name = definition[2:]
+    folder = lwc / name
+    html = (folder / f"{name}.html").read_text() if (folder / f"{name}.html").exists() else ""
+    css = (folder / f"{name}.css").read_text() if (folder / f"{name}.css").exists() else ""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"@media[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}", "", css)
+    host = re.search(r":host\s*\{([^}]*)\}", css)
+    if not host or not re.search(r"display:\s*block", host.group(1)):
+        return None
+    first = re.search(r"<template>\s*<\w+[^>]*\bclass=\"([\w-]+)", html)
+    if not first:
+        return None
+    rule = re.search(r"(?:^|\})\s*\." + re.escape(first.group(1)) + r"\s*\{([^}]*)\}", css)
+    if not rule:
+        return None
+    bg = re.search(r"background(?:-color)?:\s*(#[0-9a-fA-F]{6})\s*;", rule.group(1))
+    return bg.group(1).upper() if bg and bg.group(1).upper() in PALETTE_BG else None
+
+
+found = False
+for layout in sorted(bundle.glob("sfdc_cms__themeLayout/*/content.json")):
+    for shf in walk(json.loads(layout.read_text())):
+        if shf.get("definition") != "community_byo:scopedHeaderAndFooter":
+            continue
+        for region in shf.get("children", []):
+            if region.get("name") not in ("header", "footer"):
+                continue
+            found = True
+            where = f"{layout.parent.name} {region['name']} band"
+            sections = [c for c in region.get("children", []) if c.get("definition") == "community_layout:section"]
+            others = [c.get("definition") for c in region.get("children", []) if c.get("definition") != "community_layout:section"]
+            if others:
+                print(f"FAIL {where}: holds {', '.join(others)} outside a section, over the platform gray")
+            if not sections and not others:
+                print(f"OK {where}: empty, nothing over the platform gray")
+            for section in sections:
+                attrs = section.get("attributes", {})
+                overlay = str(attrs.get("backgroundImageOverlay", "")).upper()
+                image = attrs.get("backgroundImageConfig")
+                if image not in ("", None, {}) and overlay in PALETTE_BG:
+                    print(f"OK {where}: section has a background image under the palette overlay {overlay}")
+                    continue
+                problems = []
+                if nonzero:
+                    problems.append("the branding set's row paddings are not zero (" + ", ".join(nonzero) + "): the platform gray shows in the section padding (an overlay without a background image is not painted)")
+                if str(attrs.get("sectionMinHeight", "")).strip():
+                    problems.append(f"sectionMinHeight is {attrs['sectionMinHeight']!r}")
+                try:
+                    columns = json.loads(attrs.get("sectionConfig") or "{}").get("columns", [])
+                except ValueError:
+                    columns = []
+                if len(columns) != 1:
+                    problems.append(f"{len(columns)} columns (gutters show the gray)")
+                inner = components(section)
+                if region["name"] == "footer" and inner:
+                    problems.append("the footer holds " + ", ".join(c.get("definition", "?") for c in inner) + ", which do not cover the gray")
+                if region["name"] == "header":
+                    if len(inner) > 1:
+                        problems.append(f"{len(inner)} components (the spacer between them shows the gray)")
+                    for comp in inner:
+                        if root_background(comp.get("definition", "")) is None:
+                            problems.append(f"{comp.get('definition')} does not paint its whole box night blue or white")
+                if problems:
+                    for problem in problems:
+                        print(f"FAIL {where}: {problem}")
+                else:
+                    covered = ", ".join(c["definition"] for c in inner) or "no component"
+                    print(f"OK {where}: no padding, no min-height, one column, covered by {covered}")
+                    print("ZERO_PADDING")
+if not found:
+    print("FAIL no scopedHeaderAndFooter theme layout with header and footer regions found")
+PY
+)"
+needs_zero=0
+while IFS= read -r line; do
+    case "$line" in
+        OK*) pass "${line#OK }" ;;
+        FAIL*) fail "${line#FAIL }" ;;
+        ZERO_PADDING) needs_zero=1 ;;
+    esac
+done <<<"$band_report"
+if [[ "$needs_zero" -eq 1 ]]; then
+    # All eight section padding hooks published, all zero.
+    hooks="$(grep -c . <<<"$published_spacing" || true)"
+    nonzero_hooks="$(grep -vE ': *0*(\.0*)?(px|rem|em|%)?$' <<<"$published_spacing" | paste -sd ',' - || true)"
+    if [[ -n "$published_spacing" && "$hooks" -eq 8 && -z "$nonzero_hooks" ]]; then
+        pass "the published home page carries zero section paddings (8 hooks)"
+    else
+        fail "the published home page section paddings are not all zero (${nonzero_hooks:-$hooks hooks found}): publish the site"
+    fi
+fi
+
+# ─── 12. Full logo: visible artwork never below 360 px wide ─────────────────
 # shellcheck disable=SC2086
 size_report="$(python3 -I - "$SR/rcBrandLogos" $LWC_DIRS <<'PY'
 import pathlib
 import re
 import struct
 import sys
+import zlib
 
 logos, dirs = pathlib.Path(sys.argv[1]), [pathlib.Path(d) for d in sys.argv[2:]]
-FULL = {"logo-color.png", "logo-negative.png", "logo-one-color.png",
-        "logo-one-color-negative.png", "logotype.png"}
+# Each full logo and the background it was cropped from (docs/brand/README.txt,
+# the same table as logo_background above).
+FULL = {"logo-color.png": "#FFFFFF", "logo-negative.png": "#0D1F5F",
+        "logo-one-color.png": "#FFFFFF", "logo-one-color-negative.png": "#0D1F5F",
+        "logotype.png": "#D6E0EA"}
 MIN_PX = 360
+DESKTOP_PX = 1366
+# A pixel is artwork when a channel differs from the background by more than this.
+TOLERANCE = 24
 
 
 def absolute_px(value):
@@ -429,6 +563,53 @@ def absolute_px(value):
 def png_ratio(path):
     width, height = struct.unpack(">II", path.read_bytes()[16:24])
     return width / height
+
+
+def visible_ratio(path, background):
+    """Width of the columns that differ from the background, over the full width."""
+    data = path.read_bytes()
+    pos, idat = 8, b""
+    width = height = depth = color = interlace = None
+    while pos < len(data):
+        length, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + length]
+        pos += 12 + length
+        if kind == b"IHDR":
+            width, height, depth, color, _, _, interlace = struct.unpack(">IIBBBBB", body)
+        elif kind == b"IDAT":
+            idat += body
+    if depth != 8 or color not in (2, 6) or interlace:
+        raise ValueError(f"unsupported PNG (bit depth {depth}, color type {color}, interlace {interlace})")
+    bpp = 3 if color == 2 else 4
+    stride = width * bpp
+    raw = zlib.decompress(idat)
+    bg = [int(background[i:i + 2], 16) for i in (1, 3, 5)]
+    prev = bytearray(stride)
+    left, right = width, -1
+    for y in range(height):
+        start = y * (stride + 1)
+        kind, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for x in range(stride):
+            a = line[x - bpp] if x >= bpp else 0
+            b = prev[x]
+            if kind == 1:
+                line[x] = (line[x] + a) & 255
+            elif kind == 2:
+                line[x] = (line[x] + b) & 255
+            elif kind == 3:
+                line[x] = (line[x] + ((a + b) >> 1)) & 255
+            elif kind == 4:
+                c = prev[x - bpp] if x >= bpp else 0
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        for x in range(width):
+            o = x * bpp
+            if (abs(line[o] - bg[0]) > TOLERANCE or abs(line[o + 1] - bg[1]) > TOLERANCE
+                    or abs(line[o + 2] - bg[2]) > TOLERANCE):
+                left, right = min(left, x), max(right, x)
+        prev = line
+    return 0.0 if right < 0 else (right - left + 1) / width
 
 
 def declarations(body):
@@ -493,17 +674,26 @@ for folder in dirs:
         classes = cls.group(1).split() if cls else []
         attr_width = re.search(r'\bwidth="([0-9]+)"', tag)
         ratio = png_ratio(logos / logo)
+        try:
+            artwork = visible_ratio(logos / logo, FULL[logo])
+        except (ValueError, zlib.error) as error:
+            print(f"FAIL {name}: cannot measure the visible artwork of {logo}: {error}")
+            continue
         mine = [r for r in parsed if r[0] is not None and targets(r[1], classes)]
         unsupported = [r for r in parsed if r[0] is None]
         if unsupported:
             print(f"FAIL {name}: media query '{unsupported[0][1]}' cannot be checked for the logo size")
         problems, shown = [], []
-        for context in sorted({0.0} | {r[0] for r in mine}):
+        contexts = sorted({0.0} | {r[0] for r in mine})
+        desktop = max(c for c in contexts if c <= DESKTOP_PX)
+        for context in contexts:
             style = {}
             for min_px, _, decls in sorted(mine, key=lambda r: r[0]):
                 if min_px <= context:
                     style.update(decls)
             if style.get("display") == "none":
+                if context == desktop:
+                    problems.append(f"{logo} is not displayed at a {DESKTOP_PX} px viewport")
                 continue
             where = "every width" if context == 0 else f"min-width {context:g}px"
             width, height = style.get("width"), style.get("height")
@@ -526,19 +716,23 @@ for folder in dirs:
             max_width = style.get("max-width")
             if max_width and max_width != "none":
                 cap = absolute_px(max_width)
-                if cap is None or cap < MIN_PX:
-                    problems.append(f"{logo} at {where}: max-width '{max_width}' can shrink it below {MIN_PX} px")
+                if cap is None:
+                    problems.append(f"{logo} at {where}: max-width '{max_width}' is not an absolute length")
                     continue
                 rendered = min(rendered, cap)
-            if rendered < MIN_PX:
-                problems.append(f"{logo} at {where}: {rendered:.0f} px wide, below {MIN_PX} px")
+            visible = rendered * artwork
+            at_desktop = f", the box at a {DESKTOP_PX} px viewport" if context == desktop else ""
+            if visible < MIN_PX:
+                problems.append(f"{logo} at {where}: {rendered:.0f} px box x {artwork:.3f} visible artwork = "
+                                f"{visible:.0f} px of logo, below {MIN_PX} px{at_desktop}")
             else:
-                shown.append(f"{where}: {rendered:.0f} px")
+                shown.append(f"{where}: {rendered:.0f} px box, {visible:.0f} px visible{at_desktop}")
         if problems:
             for problem in problems:
                 print(f"FAIL {name}: {problem}")
         else:
-            print(f"OK {name}: {logo} is never below {MIN_PX} px wide ({'; '.join(shown) or 'not displayed'})")
+            print(f"OK {name}: {logo} visible artwork ({artwork:.3f} of its width) is never below "
+                  f"{MIN_PX} px ({'; '.join(shown) or 'not displayed'})")
 PY
 )"
 if [[ -z "$size_report" ]]; then

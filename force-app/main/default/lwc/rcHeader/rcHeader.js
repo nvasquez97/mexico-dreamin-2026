@@ -6,7 +6,8 @@ import BASE_PATH from "@salesforce/community/basePath";
 
 // docs/brand/README.txt: logo-negative.png is cropped from night blue
 // (#0D1F5F), the background of this header (rcHeader.css); it is shown only
-// where it fits at the manual's minimum width, 360 px (manual p.4).
+// where its visible artwork fits at the manual's minimum width, 360 px
+// (manual p.4): a 440 px box, since the PNG keeps a margin around the artwork.
 const HEADER_LOGO = "logo-negative.png";
 // isotype-tinto.png is cropped from electric blue (#016BFA), the tile it sits
 // on; it stands in for the full logo on narrow screens (manual p.5: the other
@@ -19,7 +20,8 @@ const FONT_STYLESHEET = "montserrat.css";
 
 /**
  * Site header of RutaCargo: the brand mark on night blue (the isotype on its
- * tile on narrow screens, the full negative logo at 360 px on wider ones) and
+ * tile on narrow screens, the full negative logo with at least 360 px of
+ * visible artwork on wider ones) and
  * the main navigation. The theme layout already renders the <header> landmark
  * around this component, so it adds only the <nav> landmark.
  */

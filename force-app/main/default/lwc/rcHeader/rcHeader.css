@@ -1,10 +1,13 @@
 /*
  * Brand manual, pages 4-7. Mobile first: the base rules fit 320 px; the
  * media queries only add room on wider screens.
- * Logo minimum size (p.4): the full logo is never shown below 360 px wide. Below
- * 30em (480 px) it cannot fit at that size with the navigation, so the header
- * shows the isotype on its electric-blue tile (p.5); from 30em it shows the
- * full negative logo at exactly 360 px on the night-blue header.
+ * Logo minimum size (p.4): the full logo's artwork is never shown below 360 px
+ * wide. logo-negative.png keeps a night-blue margin around the artwork: the
+ * artwork is 0.839 of the image width (scripts/checks/brand-check.sh measures
+ * it), so the image box is 440 px wide for 369 px of visible logo. Below 40em
+ * (640 px) that box does not fit beside the navigation, so the header shows the
+ * isotype on its electric-blue tile (p.5); from 40em it shows the full negative
+ * logo on the night-blue header.
  * Palette values with no SLDS styling hook (brand colors): night blue #0D1F5F
  * is the background logo-negative.png was cropped from; white text on it is
  * 15.2:1 and cyan #07E9F6 (the "shine" of the brand) on it is 10.1:1 (WCAG AA).
@@ -86,15 +89,18 @@
   outline-offset: 2px;
 }
 
-@media (min-width: 30em) {
+@media (min-width: 40em) {
   .rc-header__isotype {
     display: none;
   }
 
-  /* The manual's minimum on screen, in px on purpose: 360 x 190 px. */
+  /*
+   * In px on purpose: a 440 x 232 px box holds 369 px of visible artwork, above
+   * the manual's 360 px minimum.
+   */
   .rc-header__logo {
     display: block;
-    width: 360px;
+    width: 440px;
     height: auto;
   }
 }
