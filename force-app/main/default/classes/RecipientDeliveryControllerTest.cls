@@ -502,9 +502,15 @@ private with sharing class RecipientDeliveryControllerTest {
 
     @IsTest
     static void shouldUseMexicoCityDate_WhenNoTodayOverride() {
-        // AC-003.2 (BR-06): "today" is the date in America/Mexico_City.
+        // AC-003.2 (BR-06): "today" is the date in America/Mexico_City. SMOKE TEST: with no
+        // clock seam it runs at the real instant, so a wrong time zone is caught only in the
+        // hours when that zone's date differs from Mexico City's. The expected date is built
+        // independently (the zone's UTC offset at this instant), not with the code's expression;
+        // the window rules themselves are proven through todayOverride.
         Fixture fixture = insertShipment(IN_TRANSIT, 0, Date.today().addDays(3));
-        Date mexicoToday = Date.valueOf(Datetime.now().format('yyyy-MM-dd', 'America/Mexico_City'));
+        Datetime instant = Datetime.now();
+        Integer offsetSeconds = TimeZone.getTimeZone('America/Mexico_City').getOffset(instant) / 1000;
+        Date mexicoToday = instant.addSeconds(offsetSeconds).dateGmt();
 
         Test.startTest();
         RecipientDeliveryDetails details = RecipientDeliveryController.getDeliveryDetails(
@@ -1003,7 +1009,8 @@ private with sharing class RecipientDeliveryControllerTest {
 
     @IsTest
     static void shouldThrowGenericAuraHandledException_WhenUnexpectedErrorOccurs() {
-        // S2: an unexpected exception becomes a generic AuraHandledException, no internal text.
+        // AC-002.2 (BR-03: no internal value reaches the recipient), per the S2 rule that an
+        // unexpected exception becomes a generic AuraHandledException with no internal text.
         Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
         RecipientDeliveryController.simulateUnexpectedFailure = true;
 

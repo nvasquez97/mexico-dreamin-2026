@@ -181,6 +181,7 @@ private with sharing class RecipientAccessTest {
 
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Malformed code: not matched');
         Assert.areEqual('The details do not match this shipment', response.message, 'Malformed code: the shared message');
+        Assert.isNull(response.details, 'No details without verification');
     }
 
     @IsTest
@@ -194,6 +195,7 @@ private with sharing class RecipientAccessTest {
 
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Blank code: not matched');
         Assert.areEqual('The details do not match this shipment', response.message, 'Blank code: the shared message');
+        Assert.isNull(response.details, 'No details without verification');
     }
 
     @IsTest
@@ -241,10 +243,30 @@ private with sharing class RecipientAccessTest {
         Assert.areEqual(new List<Decimal>{ 1, 2, 3, 4 }, counts, 'Each counted failure must add one to the guard');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, fifth.outcome, 'The fifth failure itself is a plain failure');
         Recipient_Access_Guard__c guard = guardsOf(fixture.shipmentId)[0];
-        Assert.areEqual(0, guard.Failed_Attempts__c, 'The lock resets the counter');
+        Assert.areEqual(MAX_FAILURES, guard.Failed_Attempts__c, 'The counter stays at 5 while locked (CODE-001)');
         Assert.isTrue(guard.Locked_Until__c >= before.addMinutes(LOCK_MINUTES).addSeconds(-1)
             && guard.Locked_Until__c <= after.addMinutes(LOCK_MINUTES).addSeconds(1),
             'The shipment must be locked for 15 minutes, was ' + guard.Locked_Until__c);
+    }
+
+    @IsTest
+    static void shouldNotCountFurther_WhenGuardIsLockedWhenTheFailureIsCounted() {
+        // AC-002.1b (X16, CODE-001): a failure that passed the lock check before a parallel
+        // lock committed reaches countFailure on a row that is already locked; it is not
+        // counted again: the counter stays at 5 and the running lock is not moved.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, MAX_FAILURES, Datetime.now().addMinutes(10))
+        });
+        Recipient_Access_Guard__c before = guardsOf(fixture.shipmentId)[0];
+
+        Test.startTest();
+        RecipientAccess.countFailure(fixture.shipmentId);
+        Test.stopTest();
+
+        Recipient_Access_Guard__c after = guardsOf(fixture.shipmentId)[0];
+        Assert.areEqual(MAX_FAILURES, after.Failed_Attempts__c, 'A locked guard is not counted further');
+        Assert.areEqual(before.Locked_Until__c, after.Locked_Until__c, 'The running lock is not moved');
     }
 
     @IsTest

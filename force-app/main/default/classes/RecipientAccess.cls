@@ -13,7 +13,10 @@
  *              message. Only failures with the right postal code and a wrong code
  *              are counted on the guard row (upsert on Shipment_Key__c, then
  *              FOR UPDATE); 5 consecutive counted failures lock the shipment for 15
- *              minutes and reset the counter; a success resets a non-zero counter.
+ *              minutes and the counter stays at 5 while it is locked; a failure that
+ *              finds the row already locked (a parallel request that passed the lock
+ *              check before the lock committed) is not counted; a success resets a
+ *              non-zero counter.
  *              Failures and the lock are RETURNED, never thrown, so the guard DML
  *              commits on the site. The only Shipment__c write is saveReschedule,
  *              which sets Estimated_Delivery__c, Delivery_Instructions__c and
@@ -118,7 +121,7 @@ public without sharing class RecipientAccess {
     public static Verification verifyBeforeCallout(String trackingNumber, String postalCode, String accessCode) {
         Shipment__c row = findShipment(trackingNumber);
         Recipient_Access_Guard__c guard = row == null ? null : findGuard(row.Id);
-        if (guard != null && guard.Locked_Until__c != null && guard.Locked_Until__c > Datetime.now()) {
+        if (isLocked(guard)) {
             return new Verification(Outcome.LOCKED, LOCKED_MESSAGE);
         }
         Boolean postalMatches = row != null && normalizedPostalCode(row.Destination_Postal_Code__c) != null
@@ -212,7 +215,7 @@ public without sharing class RecipientAccess {
     }
 
     /** @description Thrown when the API is misused by server code (never by a recipient's input). */
-    public class RecipientAccessException extends Exception {}
+    public with sharing class RecipientAccessException extends Exception {}
 
     // ─── Internals ───────────────────────────────────────────────────────
 
@@ -243,6 +246,10 @@ public without sharing class RecipientAccess {
             LIMIT 1
         ];
         return guards.isEmpty() ? null : guards[0];
+    }
+
+    private static Boolean isLocked(Recipient_Access_Guard__c guard) {
+        return guard != null && guard.Locked_Until__c != null && guard.Locked_Until__c > Datetime.now();
     }
 
     private static String normalizedPostalCode(String value) {
@@ -277,8 +284,11 @@ public without sharing class RecipientAccess {
 
     // Counts one failure with the right postal code: the guard row is created or
     // touched by upsert on Shipment_Key__c (one row per shipment, and the row is
-    // locked by that write), re-read FOR UPDATE, incremented; the fifth failure
-    // locks the shipment for 15 minutes and resets the counter.
+    // locked by that write), re-read FOR UPDATE and re-checked: a row that is
+    // already locked is not counted (CODE-001, X16: a parallel request that passed
+    // the lock check before the lock committed); otherwise incremented, and the
+    // fifth failure locks the shipment for 15 minutes with the counter kept at 5.
+    @TestVisible
     private static void countFailure(Id shipmentId) {
         String key = String.valueOf(shipmentId);
         upsertGuard(new Recipient_Access_Guard__c(Shipment__c = shipmentId, Shipment_Key__c = key));
@@ -289,10 +299,13 @@ public without sharing class RecipientAccess {
             LIMIT 1
             FOR UPDATE
         ];
+        if (isLocked(guard)) {
+            return;
+        }
         Decimal failures = (guard.Failed_Attempts__c ?? 0) + 1;
         if (failures >= MAX_FAILED_ATTEMPTS) {
             guard.Locked_Until__c = Datetime.now().addMinutes(LOCK_MINUTES);
-            failures = 0;
+            failures = MAX_FAILED_ATTEMPTS;
         }
         guard.Failed_Attempts__c = failures;
         Database.update(guard, AccessLevel.SYSTEM_MODE);
