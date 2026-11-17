@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Shipment",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcShipmentDetail",
+              "id": "c5def153-ce0d-48f2-bac8-265f60eb529b",
+              "type": "component"
+            }
+          ],
+          "id": "203b3c50-f75c-437d-bd45-88b0900117b7",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Shipment",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "b313009b-0e17-4419-a4d6-6bbc08bc0e2d",
+              "type": "component"
+            }
+          ],
+          "id": "a267e363-6b28-465f-9395-306f849ade6b",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "7dd54dd6-2744-4b4a-a3f8-13733742a18d",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-shipment"
+  },
+  "urlName": "shipment"
+}

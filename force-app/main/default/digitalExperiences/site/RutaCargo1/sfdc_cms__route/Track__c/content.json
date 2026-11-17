@@ -1,0 +1,12 @@
+{
+  "type": "sfdc_cms__route",
+  "title": "Track a package",
+  "contentBody": {
+    "activeViewId": "track",
+    "configurationTags": [],
+    "pageAccess": "UseParent",
+    "routeType": "custom-track",
+    "urlPrefix": "track"
+  },
+  "urlName": "track"
+}

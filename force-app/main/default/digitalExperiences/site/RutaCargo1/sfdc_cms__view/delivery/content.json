@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Delivery details",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcDeliveryDetails",
+              "id": "64e74665-f042-4ea6-a7a9-1efff3a4f694",
+              "type": "component"
+            }
+          ],
+          "id": "ce67cd78-58d1-4778-a807-5b99a06d1ea8",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Delivery details",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "f4dd76cb-d372-4127-942f-45b9980ddea8",
+              "type": "component"
+            }
+          ],
+          "id": "6065857f-4f35-4129-bc9a-b0f2cd79c968",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "aa2b94a2-f13a-4836-bf72-0596932ecd0c",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-delivery"
+  },
+  "urlName": "delivery"
+}

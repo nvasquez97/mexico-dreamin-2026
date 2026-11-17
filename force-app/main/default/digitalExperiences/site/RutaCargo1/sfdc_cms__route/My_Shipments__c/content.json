@@ -1,0 +1,12 @@
+{
+  "type": "sfdc_cms__route",
+  "title": "My shipments",
+  "contentBody": {
+    "activeViewId": "myshipments",
+    "configurationTags": [],
+    "pageAccess": "UseParent",
+    "routeType": "custom-my-shipments",
+    "urlPrefix": "my-shipments"
+  },
+  "urlName": "my-shipments"
+}

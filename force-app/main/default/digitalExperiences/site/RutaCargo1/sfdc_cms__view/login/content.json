@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Login",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcLogin",
+              "id": "88478d83-7a39-4add-bb1c-3cb311783931",
+              "type": "component"
+            }
+          ],
+          "id": "a71b9590-6ebc-4a8f-9777-1b9c8dfc1be5",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Login",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "f72dec26-342f-49d5-a8c4-4e90f2f7a681",
+              "type": "component"
+            }
+          ],
+          "id": "c12df19d-1485-448d-ab84-93552964a698",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "d2ee12bd-aba2-4767-b483-8e528a7ae5e5",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "login-main"
+  },
+  "urlName": "login"
+}

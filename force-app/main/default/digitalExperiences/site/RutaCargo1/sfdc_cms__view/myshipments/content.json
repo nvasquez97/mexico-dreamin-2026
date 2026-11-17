@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "My shipments",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcMyShipments",
+              "id": "7ae684b2-c41c-4e32-8984-6a5ce50436bf",
+              "type": "component"
+            }
+          ],
+          "id": "4cc4c4bd-08fa-431e-84fb-b72fc9d91680",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "My shipments",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "7b212872-d900-4e91-aadf-f69c6c05afd5",
+              "type": "component"
+            }
+          ],
+          "id": "14c4380f-cc65-4160-9f73-f0998e778865",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "b95f6408-1e89-456e-bf6e-4de1ec32e5ff",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-my-shipments"
+  },
+  "urlName": "my-shipments"
+}

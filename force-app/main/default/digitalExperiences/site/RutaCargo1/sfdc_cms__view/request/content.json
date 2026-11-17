@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Request a shipment",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcShipmentRequest",
+              "id": "8f762460-68d0-4c86-a979-a36ecd7aed3e",
+              "type": "component"
+            }
+          ],
+          "id": "9e609f3c-4da4-412a-bf5b-58d016198404",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Request a shipment",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "e2681cb3-3d76-4aa4-91b2-ca61b5364cfc",
+              "type": "component"
+            }
+          ],
+          "id": "dd03c4aa-319d-4216-8305-5f8e201b323a",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "bdb6bc99-8b33-4d36-ab03-613ddb3ac93a",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-request"
+  },
+  "urlName": "request"
+}

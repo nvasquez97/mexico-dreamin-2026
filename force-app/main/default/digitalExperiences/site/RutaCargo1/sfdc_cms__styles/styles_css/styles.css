@@ -1,0 +1,7 @@
+/* RutaCargo: Brand Manual text typeface is Montserrat; the display face (Daily Brew) is used inside components. */
+html,
+body {
+    font-family: 'Montserrat', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #0d1f5f;
+    background: #ffffff;
+}

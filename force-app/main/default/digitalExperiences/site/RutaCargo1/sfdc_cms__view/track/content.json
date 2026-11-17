@@ -1,0 +1,50 @@
+{
+  "type": "sfdc_cms__view",
+  "title": "Track a package",
+  "contentBody": {
+    "component": {
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": {},
+              "definition": "c:rcTrackingSearch",
+              "id": "bbbe4242-ba47-435a-8f9c-efbb370e88d9",
+              "type": "component"
+            }
+          ],
+          "id": "c9f88353-b732-4c7b-b44f-2d6349e4352a",
+          "name": "content",
+          "title": "Content",
+          "type": "region"
+        },
+        {
+          "children": [
+            {
+              "attributes": {
+                "customHeadTags": "",
+                "description": "",
+                "pageTitle": "Track a package",
+                "recordId": "{!recordId}"
+              },
+              "definition": "community_builder:seoAssistant",
+              "id": "c2955537-c8e3-4964-8510-7506d372c991",
+              "type": "component"
+            }
+          ],
+          "id": "a760cd22-b95b-415d-8cc6-2323d63f5ee9",
+          "name": "sfdcHiddenRegion",
+          "title": "sfdcHiddenRegion",
+          "type": "region"
+        }
+      ],
+      "definition": "community_layout:sldsFlexibleLayout",
+      "id": "af3a4f3b-8a7c-4841-b7fb-32bda0bb0d14",
+      "type": "component"
+    },
+    "dataProviders": [],
+    "themeLayoutType": "Inner",
+    "viewType": "custom-track"
+  },
+  "urlName": "track"
+}
