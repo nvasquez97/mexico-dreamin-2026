@@ -173,3 +173,9 @@
 - What: "The Apex request is invalid" = logged-in user calling guest-only CustomerAuthController from the login page; visitor pages now redirect to My shipments (25ef1b2). Debug trace flags for Ana and guest expire ~03:00Z.
 - Why / evidence: feature doc L53.
 - Next: user retests in a private window.
+
+## 2026-11-16 21:15 — Branch synced with origin
+- Type: status
+- What: brand logo PNGs + README were already pushed as 3c625a2 "logos"; local duplicate dropped, branch tracks origin/feature/rutacargo-shipping-tracking.
+- Why / evidence: git diff HEAD origin/... empty before reset.
+- Next: user retests login in a private window (T16).
