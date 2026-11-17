@@ -93,7 +93,7 @@ public with sharing class EntregaYaStatusService {
     private static Boolean applying = false;
 
     /** @description The result of apply(): an outcome, and for failures a code and its fixed message. */
-    public class Result {
+    public with sharing class Result {
         /** @description What happened to the update. */
         public final Outcome outcome;
         /** @description The error code; null when the update was applied or ignored. */

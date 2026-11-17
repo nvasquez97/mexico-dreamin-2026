@@ -5,7 +5,8 @@
  *              1. the caller must hold the custom permission
  *                 RutaCargo_EntregaYa_Sender (BR-04), otherwise 403 FORBIDDEN and
  *                 nothing is parsed or changed;
- *              2. the body must be a JSON object whose five known keys
+ *              2. the body must be a JSON object of at most 16,384 bytes and 20
+ *                 levels of nesting (B10) whose five known keys
  *                 (trackingNumber, status, location, timestamp, proofId) hold
  *                 strings or null, otherwise 400 INVALID_JSON; other keys are
  *                 ignored and nothing is ever mapped into an SObject (X6);
@@ -34,6 +35,9 @@ global with sharing class EntregaYaStatusResource {
     private static final String TIMESTAMP = 'timestamp';
     private static final String PROOF_ID = 'proofId';
     private static final List<String> KNOWN_KEYS = new List<String>{ TRACKING_NUMBER, STATUS, LOCATION, TIMESTAMP, PROOF_ID };
+    // B10: the five-field contract is a flat object far below these limits.
+    private static final Integer MAX_BODY_BYTES = 16384;
+    private static final Integer MAX_NESTING_DEPTH = 20;
 
     private static final Map<EntregaYaStatusService.Outcome, Integer> HTTP_STATUS =
         new Map<EntregaYaStatusService.Outcome, Integer>{
@@ -52,7 +56,7 @@ global with sharing class EntregaYaStatusResource {
         };
 
     /** @description An HTTP answer: status code and JSON body. */
-    private class Reply {
+    private with sharing class Reply {
         private final Integer statusCode;
         private final String body;
 
@@ -132,18 +136,46 @@ global with sharing class EntregaYaStatusResource {
         return request;
     }
 
+    // B10 / X7: an empty body or one over MAX_BODY_BYTES is refused before it is
+    // turned into text, and a body nested deeper than MAX_NESTING_DEPTH before
+    // JSON.deserializeUntyped recurses into it: deep nesting raises an uncatchable
+    // LimitException (stack depth or CPU) that the catch-all in post() never sees.
     private static Map<String, Object> parseObject(Blob body) {
-        if (body == null) {
+        if (body == null || body.size() == 0 || body.size() > MAX_BODY_BYTES) {
             return null;
         }
         Object parsed;
         try {
-            parsed = JSON.deserializeUntyped(body.toString());
+            String text = body.toString();
+            if (!isShallow(text)) {
+                return null;
+            }
+            parsed = JSON.deserializeUntyped(text);
         } catch (JSONException malformed) {
             return null;
         } catch (StringException notText) {
             return null;
         }
         return parsed instanceof Map<String, Object> ? (Map<String, Object>) parsed : null;
+    }
+
+    // True when no object or array nests deeper than MAX_NESTING_DEPTH. JSONParser
+    // streams the tokens without recursion, so the walk is safe at any depth.
+    private static Boolean isShallow(String text) {
+        JSONParser parser = JSON.createParser(text);
+        Integer depth = 0;
+        JSONToken token = parser.nextToken();
+        while (token != null) {
+            if (token == JSONToken.START_OBJECT || token == JSONToken.START_ARRAY) {
+                depth++;
+                if (depth > MAX_NESTING_DEPTH) {
+                    return false;
+                }
+            } else if (token == JSONToken.END_OBJECT || token == JSONToken.END_ARRAY) {
+                depth--;
+            }
+            token = parser.nextToken();
+        }
+        return true;
     }
 }

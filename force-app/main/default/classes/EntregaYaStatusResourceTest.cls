@@ -2,7 +2,9 @@
  * @description Proves EntregaYaStatusResource (req-004 S2), the HTTP contract of
  *              POST /services/apexrest/entregaya/v1/status: AC-004.1 (200 updated
  *              and the shipment saved), AC-004.3 (HTTP codes: 404, 400 with each
- *              closed error code, no internals in any body), AC-004.7 (503 for a
+ *              closed error code, no internals in any body; B10: a body
+ *              over 16,384 bytes or nested deeper than 20 levels answers 400
+ *              INVALID_JSON), AC-004.7 (503 for a
  *              lock, 500 for any other failure, nothing changes, no exception
  *              text) and AC-004.5 Apex part (403 FORBIDDEN without the custom
  *              permission RutaCargo_EntregaYa_Sender, even for a support agent who
@@ -29,6 +31,14 @@ private with sharing class EntregaYaStatusResourceTest {
     private static final String ENDPOINT = '/services/apexrest/entregaya/v1/status';
     private static final String JSON_TYPE = 'application/json';
     private static final String FORBIDDEN_MESSAGE = 'This user may not send EntregaYa status updates.';
+    // B10: the largest accepted body and the deepest accepted nesting; a nesting
+    // depth under the size cap that raised an uncatchable "Maximum stack depth
+    // reached" before the depth check; the CPU budget (a fifth of the 10,000 ms
+    // synchronous limit) for answering the nested bodies.
+    private static final Integer MAX_BODY_BYTES = 16384;
+    private static final Integer MAX_NESTING_DEPTH = 20;
+    private static final Integer NESTING_DEPTH = 4000;
+    private static final Integer CPU_BUDGET_MS = 2000;
     // Fragments that must never reach EntregaYa (X7): stack traces, exception type
     // names and text, field API names, platform status codes.
     private static final List<String> INTERNALS = new List<String>{
@@ -361,6 +371,105 @@ private with sharing class EntregaYaStatusResourceTest {
         Shipment__c target = shipments()[0];
         assertRejected(new List<String>{ bodyWith(target, 'proofId', 'PRF 88231'), bodyWith(target, 'proofId', 'P'.repeat(101)) },
             400, EntregaYaStatusService.ErrorCode.INVALID_PROOF_ID);
+    }
+
+    // ─── AC-004.3 / B10: body size cap ────────────────────────────────────
+
+    // The body is padded with JSON whitespace, inside the object after "{" or after
+    // the closing "}", to exactly the given size in bytes.
+    private static String padTo(String body, Integer size, Boolean inside) {
+        String padding = ' '.repeat(size - Blob.valueOf(body).size());
+        String padded = inside ? '{' + padding + body.substring(1) : body + padding;
+        Assert.areEqual(size, Blob.valueOf(padded).size(), 'The padded body must be exactly ' + size + ' bytes');
+        return padded;
+    }
+
+    private static String nestedArrays(Integer depth) {
+        return '['.repeat(depth) + ']'.repeat(depth);
+    }
+
+    private static String nestedObjects(Integer depth) {
+        return '{"a":'.repeat(depth - 1) + '{}' + '}'.repeat(depth - 1);
+    }
+
+    // The JSON object body with one more, unknown, key "meta" holding the value.
+    private static String withMeta(String body, String value) {
+        return body.removeEnd('}') + ',"meta":' + value + '}';
+    }
+
+    @IsTest
+    static void post_answers400InvalidJson_forBodiesOverTheSizeCap() {
+        // AC-004.3 / B10: a body over 16 KB (valid fields padded to 16,385 bytes, or nested arrays) answers 400 INVALID_JSON; nothing changes
+        Shipment__c target = shipments()[0];
+        String overNested = nestedArrays(MAX_BODY_BYTES / 2 + 1);
+        Assert.areEqual(MAX_BODY_BYTES + 2, Blob.valueOf(overNested).size(), 'The nested body must be over the cap');
+        assertRejected(new List<String>{ padTo(validBody(target), MAX_BODY_BYTES + 1, true), overNested },
+            400, EntregaYaStatusService.ErrorCode.INVALID_JSON);
+    }
+
+    @IsTest
+    static void post_answers400InvalidJson_withinTheCpuBudget_forDeeplyNestedBodiesUnderTheCap() {
+        // AC-004.3 / B10: a body under 16 KB nested deeper than 20 levels (bare arrays, a known key, or valid fields
+        // plus an unknown key one level too deep) answers 400 INVALID_JSON, well within the CPU limit
+        Shipment__c target = shipments()[0];
+        List<String> bodies = new List<String>{
+            nestedArrays(NESTING_DEPTH), '{"trackingNumber":' + nestedArrays(NESTING_DEPTH) + '}',
+            withMeta(validBody(target), nestedArrays(MAX_NESTING_DEPTH))
+        };
+        for (String body : bodies) {
+            Assert.isTrue(Blob.valueOf(body).size() < MAX_BODY_BYTES, 'The nested body must be under the cap');
+        }
+        fixClock();
+        List<String> before = snapshots();
+        User caller = integrationUser();
+        Test.startTest();
+        Integer cpuBefore = Limits.getCpuTime();
+        List<String> summaries = postAll(caller, bodies);
+        Integer cpuUsed = Limits.getCpuTime() - cpuBefore;
+        Test.stopTest();
+        Assert.areEqual(repeated(error(400, EntregaYaStatusService.ErrorCode.INVALID_JSON), 3), summaries,
+            'A deeply nested body must answer 400 INVALID_JSON');
+        Assert.isTrue(cpuUsed < CPU_BUDGET_MS, 'The nested bodies must use under ' + CPU_BUDGET_MS + ' ms of CPU; used ' + cpuUsed);
+        Assert.areEqual(before, snapshots(), 'Nothing may change');
+    }
+
+    @IsTest
+    static void post_answersUpdated_forAnUnknownKeyNestedToExactlyTheDepthLimit() {
+        // AC-004.1 / B10 boundary: valid fields plus an unknown key nested to exactly 20 levels (arrays, objects) answer 200 updated
+        fixClock();
+        List<Shipment__c> rows = shipments();
+        List<String> bodies = new List<String>{
+            withMeta(validBody(rows[0]), nestedArrays(MAX_NESTING_DEPTH - 1)),
+            withMeta(JSON.serialize(fields(rows[1], 'Picked up', 'Guadalajara, JAL', '2026-11-21T09:05:00-06:00')),
+                nestedObjects(MAX_NESTING_DEPTH - 1))
+        };
+        Test.startTest();
+        List<String> summaries = postAll(integrationUser(), bodies);
+        Test.stopTest();
+        Assert.areEqual(repeated(success('updated'), 2), summaries, 'A body nested exactly 20 levels must be accepted');
+        List<Shipment__c> after = shipments();
+        Assert.areEqual('Out for delivery|Monterrey, NL|Picked up|Guadalajara, JAL',
+            after[0].Status__c + '|' + after[0].Last_Location__c + '|' + after[1].Status__c + '|' + after[1].Last_Location__c,
+            'Both shipments must hold their update');
+    }
+
+    @IsTest
+    static void post_answersUpdated_forValidBodiesExactlyAtTheSizeCap() {
+        // AC-004.1 / B10 boundary: valid fields padded with whitespace to exactly 16,384 bytes still answer 200 updated
+        fixClock();
+        List<Shipment__c> rows = shipments();
+        List<String> bodies = new List<String>{
+            padTo(validBody(rows[0]), MAX_BODY_BYTES, true),
+            padTo(JSON.serialize(fields(rows[1], 'Picked up', 'Guadalajara, JAL', '2026-11-21T09:05:00-06:00')), MAX_BODY_BYTES, false)
+        };
+        Test.startTest();
+        List<String> summaries = postAll(integrationUser(), bodies);
+        Test.stopTest();
+        Assert.areEqual(repeated(success('updated'), 2), summaries, 'A body of exactly 16,384 bytes must be accepted');
+        List<Shipment__c> after = shipments();
+        Assert.areEqual('Out for delivery|Monterrey, NL|Picked up|Guadalajara, JAL',
+            after[0].Status__c + '|' + after[0].Last_Location__c + '|' + after[1].Status__c + '|' + after[1].Last_Location__c,
+            'Both shipments must hold their update');
     }
 
     // ─── AC-004.7: lock and unexpected failures ───────────────────────────
