@@ -6,7 +6,9 @@
  *              (RC + 9 digits), status (exact match of the six picklist values),
  *              location (1-255 characters after trimming), timestamp (ISO-8601
  *              with a mandatory offset, not more than 10 minutes ahead of the
- *              server clock: B5) and proof id for Delivered (B1). The shipment is
+ *              server clock: B5), proof id for Delivered (B1) and, when a proof id
+ *              is present, its format (1-100 letters, digits, hyphens or
+ *              underscores: B9). The shipment is
  *              then locked with FOR UPDATE; the update is ignored when the shipment
  *              already has a Last_Update__c at or after the timestamp (B2), and is
  *              otherwise saved in user mode, so the caller's sharing and FLS apply.
@@ -27,7 +29,8 @@ public with sharing class EntregaYaStatusService {
     /** @description Closed list of error codes returned to EntregaYa. */
     public enum ErrorCode {
         INVALID_JSON, MISSING_FIELD, INVALID_TRACKING_NUMBER, INVALID_STATUS, INVALID_LOCATION,
-        INVALID_TIMESTAMP, PROOF_ID_REQUIRED, TRACKING_NOT_FOUND, TEMPORARILY_UNAVAILABLE, INTERNAL_ERROR
+        INVALID_TIMESTAMP, PROOF_ID_REQUIRED, INVALID_PROOF_ID, TRACKING_NOT_FOUND, TEMPORARILY_UNAVAILABLE,
+        INTERNAL_ERROR
     }
 
     private static final String DELIVERED = 'Delivered';
@@ -39,6 +42,8 @@ public with sharing class EntregaYaStatusService {
     private static final Pattern TIMESTAMP_FORMAT = Pattern.compile(
         '^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:(Z)|([+-])(\\d{2}):(\\d{2}))$');
     private static final Integer MAX_LOCATION_LENGTH = 255;
+    private static final Integer MAX_PROOF_ID_LENGTH = 100;
+    private static final Pattern PROOF_ID_FORMAT = Pattern.compile('^[A-Za-z0-9_-]{1,100}$');
     private static final Integer MAX_MINUTES_AHEAD = 10;
     private static final Integer MAX_OFFSET_MINUTES = 14 * 60;
     private static final Integer MIN_YEAR = 1700;
@@ -54,6 +59,7 @@ public with sharing class EntregaYaStatusService {
         ErrorCode.INVALID_LOCATION => 'The location must have between 1 and 255 characters.',
         ErrorCode.INVALID_TIMESTAMP => 'The timestamp must be ISO-8601 with an offset and not in the future.',
         ErrorCode.PROOF_ID_REQUIRED => 'A proof id is required when the status is Delivered.',
+        ErrorCode.INVALID_PROOF_ID => 'The proof id must have 1 to 100 letters, digits, hyphens or underscores.',
         ErrorCode.TRACKING_NOT_FOUND => 'No shipment has this tracking number.',
         ErrorCode.TEMPORARILY_UNAVAILABLE => 'The shipment is busy. Retry the update later.',
         ErrorCode.INTERNAL_ERROR => 'The update could not be processed.'
@@ -71,13 +77,15 @@ public with sharing class EntregaYaStatusService {
 
     /** @description Failures a test can simulate where the update is written (B7). */
     @TestVisible
-    private enum Simulation { LOCK_ON_UPDATE, LOCK_ON_QUERY, UNEXPECTED_DML, UNEXPECTED_OTHER }
+    private enum Simulation { LOCK_ON_UPDATE, LOCK_ON_QUERY, UNEXPECTED_DML, UNEXPECTED_OTHER, REAL_SAVE_ERROR }
 
     // Test seam (also used by T3): when set, the update is not written and the
     // matching failure happens in its place: LOCK_ON_UPDATE as the
     // UNABLE_TO_LOCK_ROW status code of the update, LOCK_ON_QUERY as the
     // QueryException of a FOR UPDATE wait timeout, UNEXPECTED_DML and
-    // UNEXPECTED_OTHER as exceptions.
+    // UNEXPECTED_OTHER as exceptions. REAL_SAVE_ERROR is the only one that
+    // writes: it makes the platform refuse the real update (a location over the
+    // field length, STRING_TOO_LONG), so the SaveResult carries a non-lock code.
     @TestVisible
     private static Simulation simulatedFailure;
 
@@ -162,7 +170,16 @@ public with sharing class EntregaYaStatusService {
         if (request.status == DELIVERED && String.isBlank(request.proofId)) {
             return ErrorCode.PROOF_ID_REQUIRED;
         }
+        if (request.proofId != null && !isValidProofId(request.proofId)) {
+            return ErrorCode.INVALID_PROOF_ID;
+        }
         return null;
+    }
+
+    // B9: 1-100 ASCII letters, digits, hyphens or underscores. The length is checked
+    // first so an oversized value never reaches the regex engine.
+    private static Boolean isValidProofId(String proofId) {
+        return proofId.length() <= MAX_PROOF_ID_LENGTH && PROOF_ID_FORMAT.matcher(proofId).matches();
     }
 
     private static Datetime now() {
@@ -258,6 +275,9 @@ public with sharing class EntregaYaStatusService {
             }
             when UNEXPECTED_OTHER {
                 throw new NullPointerException();
+            }
+            when REAL_SAVE_ERROR {
+                change.Last_Location__c = 'x'.repeat(MAX_LOCATION_LENGTH + 1);
             }
         }
         Database.SaveResult result = Database.update(change, false, AccessLevel.USER_MODE);

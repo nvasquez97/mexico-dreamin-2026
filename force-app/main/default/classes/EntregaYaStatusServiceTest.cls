@@ -3,7 +3,8 @@
  *              update saves), AC-004.4 (stale and equal timestamps ignored),
  *              AC-004.3 validation part (closed error codes, fixed messages),
  *              B5 (future guard), B7 (lock and unexpected errors mapped, never
- *              rethrown) and AC-004.9 (a direct update by the integration user is
+ *              rethrown; AC-004.7 service part, including a real non-lock save
+ *              failure), B9 (proof id format) and AC-004.9 (a direct update by the integration user is
  *              refused, the same change through the service is applied).
  *              Every call runs as the EntregaYa integration user (B8, reused or
  *              created by TestDataFactory) in System.runAs, so its permission set,
@@ -410,7 +411,8 @@ private with sharing class EntregaYaStatusServiceTest {
         Shipment__c target = shipments()[0];
         List<String> invalid = new List<String>{
             'yesterday', '', '2026-13-01T10:00:00Z', '2026-02-30T10:00:00Z', '2026-11-20T24:00:00Z',
-            '2026-11-20T10:60:00Z', '2026-11-20 10:00:00-06:00', '2026-11-20T10:00:00+15:00', '2026-11-20T10:00:00-0600'
+            '2026-11-20T10:60:00Z', '2026-11-20 10:00:00-06:00', '2026-11-20T10:00:00+15:00', '2026-11-20T10:00:00-0600',
+            '2026-11-20T10:00:00+05:60'
         };
         List<EntregaYaStatusRequest> requests = new List<EntregaYaStatusRequest>();
         for (String timestamp : invalid) {
@@ -470,6 +472,62 @@ private with sharing class EntregaYaStatusServiceTest {
     }
 
     @IsTest
+    static void apply_rejectsAProofIdOver100Characters() {
+        // AC-004.3, B9: a proofId of 101 characters gives INVALID_PROOF_ID, with Delivered or another status, and nothing changes
+        fixClock();
+        Shipment__c target = shipments()[0];
+        List<String> before = snapshots();
+        String overlong = 'P'.repeat(101);
+        Test.startTest();
+        List<String> outcomes = outcomesOf(new List<EntregaYaStatusRequest>{
+            TestDataFactory.newStatusRequest(target.Name, 'Delivered', 'Puebla, PUE', '2026-11-20T10:00:00Z', overlong),
+            TestDataFactory.newStatusRequest(target.Name, 'In transit', 'Puebla, PUE', '2026-11-20T10:00:00Z', overlong)
+        });
+        Test.stopTest();
+        Assert.areEqual(repeated('INVALID|INVALID_PROOF_ID', 2), outcomes, 'A proof id over 100 characters must be rejected');
+        Assert.areEqual(before, snapshots(), 'Nothing may change');
+    }
+
+    @IsTest
+    static void apply_rejectsAProofIdWithCharactersOutsideTheAllowedSet() {
+        // AC-004.3, B9: a proofId with characters other than letters, digits, hyphen and underscore gives INVALID_PROOF_ID
+        fixClock();
+        Shipment__c target = shipments()[0];
+        List<String> before = snapshots();
+        List<String> invalid = new List<String>{
+            'PRF 88231', 'PRF.88231', 'PRF-88231;', '<b>PRF</b>', 'PR\u00DCF-1', ' PRF-88231', 'PRF-88231\n'
+        };
+        List<EntregaYaStatusRequest> requests = new List<EntregaYaStatusRequest>();
+        for (String proofId : invalid) {
+            requests.add(TestDataFactory.newStatusRequest(target.Name, 'Delivered', 'Puebla, PUE', '2026-11-20T10:00:00Z', proofId));
+        }
+        requests.add(TestDataFactory.newStatusRequest(target.Name, 'In transit', 'Puebla, PUE', '2026-11-20T10:00:00Z', ''));
+        Test.startTest();
+        List<String> outcomes = outcomesOf(requests);
+        Test.stopTest();
+        Assert.areEqual(repeated('INVALID|INVALID_PROOF_ID', invalid.size() + 1), outcomes,
+            'Every proof id with another character, or empty when present, must be rejected');
+        Assert.areEqual(before, snapshots(), 'Nothing may change');
+    }
+
+    @IsTest
+    static void apply_acceptsAProofIdOf1To100AllowedCharacters() {
+        // AC-004.3, B9: proofIds of 100 and of 1 allowed characters are accepted and saved
+        fixClock();
+        List<Shipment__c> rows = shipments();
+        String longest = 'aZ9-_'.repeat(20);
+        Test.startTest();
+        List<String> outcomes = outcomesOf(new List<EntregaYaStatusRequest>{
+            TestDataFactory.newStatusRequest(rows[0].Name, 'Delivered', 'Puebla, PUE', '2026-11-20T10:00:00Z', longest),
+            TestDataFactory.newStatusRequest(rows[1].Name, 'Delivered', 'Merida, YUC', '2026-11-20T11:00:00Z', 'P')
+        });
+        Test.stopTest();
+        Assert.areEqual(repeated('UPDATED|null', 2), outcomes, 'Proof ids of 1 and 100 allowed characters are valid');
+        Assert.areEqual(longest + '|P', shipment(rows[0].Id).Proof_Id__c + '|' + shipment(rows[1].Id).Proof_Id__c,
+            'Both proof ids must be saved');
+    }
+
+    @IsTest
     static void apply_reportsTheFirstFailedCheck_inTheDecidedOrder() {
         // AC-004.3: order missing field, tracking, status, location, timestamp, proof id
         fixClock();
@@ -479,13 +537,16 @@ private with sharing class EntregaYaStatusServiceTest {
             TestDataFactory.newStatusRequest('bad', 'Lost', '', 'never', null),
             TestDataFactory.newStatusRequest('RC000000001', 'Lost', '', 'never', null),
             TestDataFactory.newStatusRequest('RC000000001', 'Delivered', '', 'never', null),
-            TestDataFactory.newStatusRequest('RC000000001', 'Delivered', 'Puebla, PUE', 'never', null)
+            TestDataFactory.newStatusRequest('RC000000001', 'Delivered', 'Puebla, PUE', 'never', null),
+            TestDataFactory.newStatusRequest('RC000000001', 'Delivered', 'Puebla, PUE', '2026-11-20T10:00:00Z', null),
+            TestDataFactory.newStatusRequest('RC000000001', 'In transit', 'Puebla, PUE', '2026-11-20T10:00:00Z', 'bad id')
         });
         Test.stopTest();
         Assert.areEqual(new List<String>{
             'INVALID|MISSING_FIELD', 'INVALID|INVALID_TRACKING_NUMBER', 'INVALID|INVALID_STATUS',
-            'INVALID|INVALID_LOCATION', 'INVALID|INVALID_TIMESTAMP'
-        }, outcomes, 'The first failed check must be reported');
+            'INVALID|INVALID_LOCATION', 'INVALID|INVALID_TIMESTAMP', 'INVALID|PROOF_ID_REQUIRED',
+            'INVALID|INVALID_PROOF_ID'
+        }, outcomes, 'The first failed check must be reported, before the shipment is looked up');
     }
 
     @IsTest
@@ -548,6 +609,25 @@ private with sharing class EntregaYaStatusServiceTest {
         Assert.areEqual('INTERNAL|INTERNAL_ERROR|' + expected + '|INTERNAL|INTERNAL_ERROR|' + expected,
             outcomeOf(dml) + '|' + dml.message + '|' + outcomeOf(other) + '|' + other.message,
             'Unexpected exceptions must map to INTERNAL with the fixed message');
+        Assert.areEqual(before, snapshots(), 'Nothing may change');
+    }
+
+    @IsTest
+    static void apply_returnsInternal_whenTheSaveReallyFails() {
+        // AC-004.7 (service part): a save the platform refuses with a non-lock status code is INTERNAL with the fixed message; nothing changes
+        fixClock();
+        List<Shipment__c> rows = shipments();
+        List<String> before = snapshots();
+        Test.startTest();
+        EntregaYaStatusService.simulatedFailure = EntregaYaStatusService.Simulation.REAL_SAVE_ERROR;
+        EntregaYaStatusService.Result moving = applyAsIntegration(validRequest(rows[0]));
+        EntregaYaStatusService.Result delivered = applyAsIntegration(TestDataFactory.newStatusRequest(
+            rows[1].Name, 'Delivered', 'Merida, YUC', '2026-11-20T10:00:00Z', 'PRF-90417'));
+        Test.stopTest();
+        String expected = EntregaYaStatusService.failure(EntregaYaStatusService.ErrorCode.INTERNAL_ERROR).message;
+        Assert.areEqual('INTERNAL|INTERNAL_ERROR|' + expected + '|INTERNAL|INTERNAL_ERROR|' + expected,
+            outcomeOf(moving) + '|' + moving.message + '|' + outcomeOf(delivered) + '|' + delivered.message,
+            'A real non-lock save failure must be INTERNAL with the fixed message, never retryable');
         Assert.areEqual(before, snapshots(), 'Nothing may change');
     }
 
