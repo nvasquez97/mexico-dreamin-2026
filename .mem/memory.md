@@ -106,3 +106,9 @@
 - What: T4 55bb487 ticked: security-reviewer and access-auditor APPROVED; task-reviewer High (AC-004.6 live POST not run) and EXP-001 Medium (no login IP ranges) recorded open, pending owner (B12, B6, B13); no worker fix round. REQ-004 Close Stage gate. REQ-001 plan committed 1e25e74 (odd/tasks/req-001-public-tracking.md, Base d0c2143), plan-reviewer running.
 - Why / evidence: T4 task line and B13 in odd/tasks/req-004-carrier-status.md.
 - Next: GATE @ HEAD, then test-reviewer, sf-security-auditor, access-auditor (tier 2, no interface); archive; REQ-001 T1.
+
+## 2026-11-17 17:10 — Pipeline status: REQ-004 Close fix round pending; REQ-001 T1 running; REQ-002+003 and REQ-005 planned
+- Type: status
+- What: REQ-004 gate @ 139ffb7 green (166/166, 94.6%); Close reviews: test-reviewer changes required (Medium simulate-status.sh exits 0 on any 2xx; Lows), sf-security-auditor pass, access-auditor approved; Stage fix round — the fix worker launches after REQ-001 T1 commits (one committing worker). REQ-001 T1 worker running (PublicTracking*). REQ-002+003 plan reviewed and fixed (3c64ca7; new object Recipient_Access_Guard__c, guest permset RutaCargo_Guest_Proof_Download; starts after REQ-001 archive). REQ-005 plan b59ead7 in plan review.
+- Why / evidence: the three task documents; reviewer ids on their lines.
+- Next: REQ-001 T1 review (task-reviewer, security-reviewer, access-auditor) + REQ-004 Close fix worker; then REQ-001 T2, T3.
