@@ -4,12 +4,16 @@
  *              auto number, the margin formula, the status default, field history
  *              and the sharing models.
  *              Covers AC-F.1, AC-F.2, AC-F.3, AC-F.12 and AC-F.6 of
- *              odd/tasks/foundation.md.
+ *              odd/tasks/foundation.md (the Apex settings part of AC-F.6 is
+ *              proven by scripts/checks/schema-check.sh).
  */
 @IsTest
 private with sharing class ShipmentSchemaTest {
 
     private static final Pattern TRACKING_NUMBER = Pattern.compile('^RC(\\d{9})$');
+    // AC-F.6: the support agent who reads FieldDefinition (see newSupportAgent).
+    private static final String AGENT_PERMISSION_SET = 'RutaCargo_Support_Agent';
+    private static final String AGENT_KEY = 'rcschema';
 
     // SECURITY-JUSTIFICATION: this class proves the data model (types, defaults,
     // formula, auto number), not access. At API 67 DML and SOQL default to user
@@ -233,10 +237,54 @@ private with sharing class ShipmentSchemaTest {
     }
 
     // ─── AC-F.6 (AC-003.5 support, P3) ────────────────────────────────────
-    // Field history (IsFieldHistoryTracked) and the Apex settings are proven by
-    // the Tooling queries recorded in odd/evidence/foundation/T1.md: Apex only
-    // sees FieldDefinition rows of fields the running user has FLS on, and the
-    // field permissions arrive with task T3.
+    // Apex sees a FieldDefinition row only for a field the running user has
+    // field-level security on, and the test admin has none on the RutaCargo
+    // fields (API 67), so field history is read as a support agent: the
+    // RutaCargo_Support_Agent permission set grants Read on the three tracked
+    // fields. The Apex settings (independent Auto Number sequence,
+    // enableGaplessTestAutoNum) are not readable from Apex; they are proven by
+    // scripts/checks/schema-check.sh, which retrieves Settings:Apex.
+
+    private static User newSupportAgent() {
+        User agent = TestDataFactory.newPlatformUsers(new List<String>{ AGENT_KEY })[0];
+        Id permissionSetId = [
+            SELECT Id FROM PermissionSet WHERE Name = :AGENT_PERMISSION_SET WITH SYSTEM_MODE LIMIT 1
+        ].Id;
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insertAsSystem(new List<User>{ agent });
+            insertAsSystem(TestDataFactory.newPermissionSetAssignments(permissionSetId, new List<User>{ agent }));
+        }
+        return agent;
+    }
+
+    @IsTest
+    static void fieldHistory_isTrackedOnStatusEstimatedDeliveryAndInstructions() {
+        // AC-F.6: Status__c, Estimated_Delivery__c and Delivery_Instructions__c
+        // have IsFieldHistoryTracked = true (read as a support agent)
+        Map<String, Boolean> expected = new Map<String, Boolean>{
+            'Delivery_Instructions__c' => true,
+            'Estimated_Delivery__c' => true,
+            'Status__c' => true
+        };
+        User agent = newSupportAgent();
+        Map<String, Boolean> actual = new Map<String, Boolean>();
+
+        Test.startTest();
+        System.runAs(agent) {
+            for (FieldDefinition field : [
+                SELECT QualifiedApiName, IsFieldHistoryTracked
+                FROM FieldDefinition
+                WHERE EntityDefinition.QualifiedApiName = 'Shipment__c'
+                    AND QualifiedApiName IN :expected.keySet()
+            ]) {
+                actual.put(field.QualifiedApiName, field.IsFieldHistoryTracked);
+            }
+        }
+        Test.stopTest();
+
+        Assert.areEqual(expected, actual,
+            'Status__c, Estimated_Delivery__c and Delivery_Instructions__c must be history tracked');
+    }
 
     @IsTest
     static void sharingModels_arePrivateForShipmentAndAccount() {

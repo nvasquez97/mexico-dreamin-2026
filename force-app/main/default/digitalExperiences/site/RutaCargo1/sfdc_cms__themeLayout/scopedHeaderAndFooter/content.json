@@ -12,7 +12,7 @@
         "children" : [ {
           "attributes" : {
             "backgroundImageConfig" : "",
-            "backgroundImageOverlay" : "rgba(0,0,0,0)",
+            "backgroundImageOverlay" : "#0D1F5F",
             "componentSpacerSize" : "",
             "layoutDirectionDesktop" : "row",
             "layoutDirectionMobile" : "column",
@@ -46,7 +46,7 @@
         "children" : [ {
           "attributes" : {
             "backgroundImageConfig" : "",
-            "backgroundImageOverlay" : "rgba(0,0,0,0)",
+            "backgroundImageOverlay" : "#0D1F5F",
             "componentSpacerSize" : "",
             "layoutDirectionDesktop" : "row",
             "layoutDirectionMobile" : "column",

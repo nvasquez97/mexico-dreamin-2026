@@ -1,7 +1,8 @@
 // Covers AC-F.10 (odd/tasks/foundation.md): the site header shows the brand
-// logo from the rcBrandLogos static resource, with alt text, and a navigation
-// landmark, and loads the Montserrat @font-face from the rcMontserrat static
-// resource.
+// marks from the rcBrandLogos static resource (the isotype for narrow screens
+// and the full negative logo for wider ones, assumption A14), with alt text
+// naming what they show, and a navigation landmark, and loads the Montserrat
+// @font-face from the rcMontserrat static resource.
 import { createElement } from "lwc";
 import RcHeader from "c/rcHeader";
 import { loadStyle } from "lightning/platformResourceLoader";
@@ -9,6 +10,7 @@ import { loadStyle } from "lightning/platformResourceLoader";
 const LOGOS_URL = "/rutacargo/sfsites/c/resource/1700000000000/rcBrandLogos";
 const FONT_URL = "/rutacargo/sfsites/c/resource/1700000000000/rcMontserrat";
 const BASE_PATH = "/rutacargo";
+const LOGO_ALT = "Coffee Blazers Summit";
 
 jest.mock(
   "@salesforce/resourceUrl/rcBrandLogos",
@@ -97,24 +99,46 @@ describe("c-rc-header", () => {
     jest.resetModules();
   });
 
-  it("AC-F.10: shows logo-negative.png from the rcBrandLogos static resource with alt text RutaCargo", () => {
+  it("AC-F.10 (A14): shows the full logo logo-negative.png from the rcBrandLogos static resource, with alt text Coffee Blazers Summit", () => {
     const element = render();
 
-    const logos = element.shadowRoot.querySelectorAll("img");
-    expect(logos.length).toBe(1);
-    expect(logos[0].getAttribute("src")).toBe(`${LOGOS_URL}/logo-negative.png`);
-    expect(logos[0].getAttribute("alt")).toBe("RutaCargo");
+    const logo = element.shadowRoot.querySelector("img.rc-header__logo");
+    expect(logo.getAttribute("src")).toBe(`${LOGOS_URL}/logo-negative.png`);
+    expect(logo.getAttribute("alt")).toBe(LOGO_ALT);
   });
 
-  it("AC-F.10: builds the logo URL from the static resource URL the platform gives", () => {
+  it("AC-F.10 (A14): shows the isotype isotype-tinto.png from the rcBrandLogos static resource, with alt text Coffee Blazers Summit", () => {
+    const element = render();
+
+    const isotype = element.shadowRoot.querySelector("img.rc-header__isotype");
+    expect(isotype.getAttribute("src")).toBe(`${LOGOS_URL}/isotype-tinto.png`);
+    expect(isotype.getAttribute("alt")).toBe(LOGO_ALT);
+  });
+
+  it("AC-F.10 (A14): shows exactly two brand images, the isotype and the full logo", () => {
+    const element = render();
+
+    const sources = Array.from(element.shadowRoot.querySelectorAll("img")).map(
+      (img) => img.getAttribute("src")
+    );
+    expect(sources).toEqual([
+      `${LOGOS_URL}/isotype-tinto.png`,
+      `${LOGOS_URL}/logo-negative.png`
+    ]);
+  });
+
+  it("AC-F.10: builds the logo URLs from the static resource URL the platform gives", () => {
     const { element } = renderWith({
       logosUrl: "/cargo/sfsites/c/resource/42/rcBrandLogos"
     });
 
-    const logo = element.shadowRoot.querySelector("img");
-    expect(logo.getAttribute("src")).toBe(
-      "/cargo/sfsites/c/resource/42/rcBrandLogos/logo-negative.png"
+    const sources = Array.from(element.shadowRoot.querySelectorAll("img")).map(
+      (img) => img.getAttribute("src")
     );
+    expect(sources).toEqual([
+      "/cargo/sfsites/c/resource/42/rcBrandLogos/isotype-tinto.png",
+      "/cargo/sfsites/c/resource/42/rcBrandLogos/logo-negative.png"
+    ]);
   });
 
   it("AC-F.10: renders a named nav landmark with a Track link to the site home", () => {
@@ -138,12 +162,13 @@ describe("c-rc-header", () => {
     expect(hrefs).toEqual(["/shipping/", "/shipping/"]);
   });
 
-  it("AC-F.10: the logo links to the site home", () => {
+  it("AC-F.10: both brand images link to the site home", () => {
     const element = render();
 
-    const logoLink = element.shadowRoot.querySelector("img").closest("a");
-    expect(logoLink).not.toBeNull();
-    expect(logoLink.getAttribute("href")).toBe(`${BASE_PATH}/`);
+    const hrefs = Array.from(element.shadowRoot.querySelectorAll("img")).map(
+      (img) => img.closest("a")?.getAttribute("href")
+    );
+    expect(hrefs).toEqual([`${BASE_PATH}/`, `${BASE_PATH}/`]);
   });
 
   it("AC-F.10: adds no second banner landmark, because the theme layout renders the <header>", () => {
@@ -185,9 +210,9 @@ describe("c-rc-header", () => {
     expect(element.shadowRoot.querySelector(".rc-header").dataset.font).toBe(
       "fallback"
     );
-    expect(element.shadowRoot.querySelector("img").getAttribute("alt")).toBe(
-      "RutaCargo"
-    );
+    expect(
+      element.shadowRoot.querySelector("img.rc-header__logo").getAttribute("alt")
+    ).toBe(LOGO_ALT);
     expect(element.shadowRoot.querySelector("nav")).not.toBeNull();
   });
 });

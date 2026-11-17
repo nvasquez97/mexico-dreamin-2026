@@ -701,6 +701,64 @@ private with sharing class DeliveryAccessCodeTest {
         Assert.areEqual(1, afterUnknown - afterKnown, 'A code on an unknown Id must also compute one hash');
     }
 
+    // Two shipments of the shared customer, owned by the test admin and shared
+    // with the agent only through a manual Edit share, with new codes the
+    // agent reissued (their only clear codes).
+    private static Map<Id, String> reissueTwoSharedAsAgent() {
+        List<Id> ids = new List<Id>(shipmentIdsOf(SHARED_ACCOUNT));
+        Map<Id, String> codes = reissueAsAgent(new Set<Id>{ ids[0], ids[1] });
+        Assert.areEqual(2, codes.size(), 'reissueCodes must return the codes of shipments A and B');
+        return codes;
+    }
+
+    @IsTest
+    static void verify_returnsTrue_asTheAgent_forSharedShipmentsTheyDoNotOwn() {
+        // AC-F.17 (with sharing): run as the support agent, whose access to A and
+        // B comes only from a share, each shipment's own code verifies
+        Map<Id, String> codes = reissueTwoSharedAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+        User agent = agent();
+        Boolean a;
+        Boolean b;
+
+        Test.startTest();
+        System.runAs(agent) {
+            a = DeliveryAccessCode.verify(ids[0], codes.get(ids[0]));
+            b = DeliveryAccessCode.verify(ids[1], codes.get(ids[1]));
+        }
+        Test.stopTest();
+
+        Assert.areEqual(0, [SELECT COUNT() FROM Shipment__c WHERE Id IN :ids AND OwnerId = :agent.Id WITH SYSTEM_MODE],
+            'The agent must not own A or B: access comes only from the share');
+        Assert.isTrue(a, 'The agent must verify A\'s own code on A, shared with them');
+        Assert.isTrue(b, 'The agent must verify B\'s own code on B, shared with them');
+    }
+
+    @IsTest
+    static void verify_returnsFalse_asAUserWithoutAShare_withTheSameHashWork() {
+        // AC-F.17 (with sharing, X16): run as a user with Read on Shipment__c but
+        // no share on A and B, A's and B's own codes are rejected, and each
+        // refused call still computes one hash, as a call on a shared shipment does
+        Map<Id, String> codes = reissueTwoSharedAsAgent();
+        List<Id> ids = new List<Id>(codes.keySet());
+        Boolean a;
+        Boolean b;
+        Integer hashes;
+
+        Test.startTest();
+        System.runAs(reader()) {
+            Integer start = DeliveryAccessCode.hashesComputed;
+            a = DeliveryAccessCode.verify(ids[0], codes.get(ids[0]));
+            b = DeliveryAccessCode.verify(ids[1], codes.get(ids[1]));
+            hashes = DeliveryAccessCode.hashesComputed - start;
+        }
+        Test.stopTest();
+
+        Assert.isFalse(a, 'A user without a share on A must not verify A\'s own code');
+        Assert.isFalse(b, 'A user without a share on B must not verify B\'s own code');
+        Assert.areEqual(2, hashes, 'Each refused call on a not-shared shipment must compute one hash (2 calls)');
+    }
+
     @IsTest
     static void verify_returnsFalse_whenTheIdIsNull() {
         // AC-F.17: no shipment, no match

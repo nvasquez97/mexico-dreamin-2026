@@ -9,6 +9,11 @@
 #   3. ObjectPermissions has 0 rows for the profile "RutaCargo Profile" and 0 rows
 #      for every permission set assigned to the guest user (the profile's own
 #      permission set included);
+#   3b. FieldPermissions has 0 rows on Shipment__c and on the Account custom
+#      fields (API names ending in __c) for the profile "RutaCargo Profile" and
+#      every permission set assigned to the guest user (the platform keeps rows
+#      on standard Account fields for the guest profile; with no Account object
+#      permission they grant nothing);
 #   4. the guest user's TimeZoneSidKey is America/Mexico_City;
 #   5. the Visualforce pages enabled for the guest (profile "RutaCargo Profile"
 #      and every permission set assigned to the guest user) are exactly the
@@ -17,7 +22,9 @@
 #      returns 200; the host comes from the site's own DomainSite row;
 #   7. an anonymous GET of the self-registration pages on the Visualforce site
 #      (/rutacargovforcesite/SiteRegister and /CommunitiesSelfReg) is refused:
-#      a non-200 status, or a 200 whose body only redirects to the LWR login.
+#      401, 403 or 404, a 3xx whose Location is the LWR login page, or a 200
+#      whose body only redirects to the LWR login. Any other answer (a timeout
+#      or no answer, 000, a 5xx, another status) fails: the refusal is not proven.
 #
 # Usage: scripts/checks/guest-access-check.sh <org-alias>
 set -euo pipefail
@@ -109,6 +116,19 @@ else
     fail "permission sets assigned to the guest user have $count ObjectPermissions rows: $(jq -r '[.[] | .Parent.Name + ":" + .SobjectType] | join(", ")' <<<"$assigned_perms")"
 fi
 
+# ─── 3b. No field permissions for the guest on RutaCargo data ───────────────
+guest_fls="$( { query "SELECT Field, Parent.Name FROM FieldPermissions WHERE SobjectType IN ('Shipment__c', 'Account') AND Parent.Profile.Name = 'RutaCargo Profile'"; \
+    query "SELECT Field, Parent.Name FROM FieldPermissions WHERE SobjectType IN ('Shipment__c', 'Account') AND ParentId IN (SELECT PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId = '$guest_id')"; } \
+    | jq -s -c '[.[][] | {field: .Field, parent: .Parent.Name}
+                 | select((.field | startswith("Shipment__c.")) or (.field | test("^Account\\.[A-Za-z0-9_]+__c$")))]
+                | unique')"
+count="$(jq 'length' <<<"$guest_fls")"
+if [[ "$count" -eq 0 ]]; then
+    pass "the guest has 0 FieldPermissions rows on Shipment__c and the Account custom fields"
+else
+    fail "the guest has $count FieldPermissions rows on Shipment__c or Account custom fields: $(jq -r '[.[] | .parent + ":" + .field] | join(", ")' <<<"$guest_fls")"
+fi
+
 # ─── 4. Guest user time zone ────────────────────────────────────────────────
 tz="$(jq -r '.[0].TimeZoneSidKey // empty' <<<"$guest")"
 if [[ "$tz" == "$GUEST_TIME_ZONE" ]]; then
@@ -185,15 +205,28 @@ fi
 # A refused page answers 401 with a script that sends the visitor to the LWR
 # login page. The CustomSite's own selfRegPage answers 200 with that same
 # script, so a 200 counts as refused only when its body is that redirect to
-# "<lwr prefix>/login?ec=302" and nothing renders a registration form.
+# "<lwr prefix>/login?ec=302" and nothing renders a registration form. A
+# timeout, no answer (000), a 5xx or any other status proves nothing and fails.
+# SELF_REG_TIMEOUT (seconds, default 60) bounds each GET.
 if site_url 'RutaCargo' 'ChatterNetwork'; then
     login_redirect="/${home_prefix:-rutacargo}/login?ec=302"
+    login_path="/${home_prefix:-rutacargo}/login"
     for page in $SELF_REG_PAGES; do
         url="$SITE_URL/$page"
         body_file="$(mktemp)"
-        code="$(curl -s -o "$body_file" -w '%{http_code}' --max-time 60 "$url" || true)"
-        if [[ "$code" != "200" ]]; then
+        read -r code location <<<"$(curl -s -o "$body_file" -w '%{http_code} %{redirect_url}' \
+            --max-time "${SELF_REG_TIMEOUT:-60}" "$url" || true)"
+        code="${code:-000}"
+        if [[ "$code" =~ ^(401|403|404)$ ]]; then
             pass "anonymous GET $url returns $code (refused)"
+        elif [[ "$code" =~ ^3[0-9][0-9]$ ]]; then
+            if [[ "$location" == "https://$(cut -d/ -f3 <<<"$SITE_URL")$login_path"* ]]; then
+                pass "anonymous GET $url returns $code to the login page $location (refused)"
+            else
+                fail "anonymous GET $url returns $code to '${location:-no Location}', expected a redirect to $login_path"
+            fi
+        elif [[ "$code" != "200" ]]; then
+            fail "anonymous GET $url returns $code, expected 401, 403, 404 or a redirect to login (refusal not proven)"
         elif grep -qF "$login_redirect" "$body_file" && ! grep -qi '<form' "$body_file"; then
             pass "anonymous GET $url returns 200 with only a redirect to $login_redirect (refused)"
         else

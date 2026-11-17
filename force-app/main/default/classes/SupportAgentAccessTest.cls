@@ -196,9 +196,12 @@ private with sharing class SupportAgentAccessTest {
         Map<Id, Shipment__c> created = new Map<Id, Shipment__c>([
             SELECT Id, Price__c, Status__c, Account__c FROM Shipment__c WHERE Id IN :codes.keySet() WITH SYSTEM_MODE
         ]);
+        Assert.areEqual(2, codes.size(), 'insertWithCodes must return one code per created shipment');
         Assert.areEqual(2, created.size(), 'Both shipments created by the agent must exist');
         Assert.areEqual(310, created.get(rows[0].Id).Price__c, 'First created shipment keeps its price');
         Assert.areEqual(520, created.get(rows[1].Id).Price__c, 'Second created shipment keeps its price');
+        Assert.areEqual('Requested', created.get(rows[0].Id).Status__c, 'First created shipment starts as Requested');
+        Assert.areEqual('Requested', created.get(rows[1].Id).Status__c, 'Second created shipment starts as Requested');
         Assert.areEqual(customerId, created.get(rows[1].Id).Account__c, 'The shipment belongs to the shared account');
     }
 

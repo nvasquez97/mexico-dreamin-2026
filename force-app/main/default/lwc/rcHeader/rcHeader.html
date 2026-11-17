@@ -1,10 +1,19 @@
 <template>
   <div class="rc-header" data-font={fontState}>
     <a class="rc-header__brand" href={homeUrl}>
+      <!-- Narrow screens: the isotype on its electric-blue tile. Wider
+           screens: the full negative logo at 360 px. CSS shows one at a time. -->
+      <img
+        class="rc-header__isotype"
+        src={isotypeUrl}
+        alt="Coffee Blazers Summit"
+        width="800"
+        height="760"
+      />
       <img
         class="rc-header__logo"
         src={logoUrl}
-        alt="RutaCargo"
+        alt="Coffee Blazers Summit"
         width="1460"
         height="770"
       />

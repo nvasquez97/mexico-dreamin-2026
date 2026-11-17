@@ -12,8 +12,10 @@
 #      theme (branding set, site styles) or in the rcHeader / rcHome CSS;
 #   3. every logo a component shows comes from the rcBrandLogos static resource,
 #      exists there, sits on the background color it was cropped from
-#      (docs/brand/README.txt) and every <img> has alt="RutaCargo"; rcHeader shows
-#      logo-negative.png on night blue;
+#      (docs/brand/README.txt) and every <img> has alt="Coffee Blazers Summit",
+#      the name the logo shows (assumption A14); rcHeader shows exactly
+#      isotype-tinto.png (on its electric-blue tile) and logo-negative.png (on
+#      night blue);
 #   4. the Montserrat @font-face is a stylesheet of the rcMontserrat static
 #      resource whose src is a font file of that same resource (relative URL),
 #      and the header component loads that stylesheet from the static resource;
@@ -31,7 +33,22 @@
 #   8. anonymous GETs (no session, no redirects followed) through the site URL:
 #      the logo returns 200 with an image content type, the font stylesheet 200
 #      text/css with the Montserrat @font-face, and the font file 200 with a font
-#      content type. The host comes from the site's own DomainSite row.
+#      content type. The host comes from the site's own DomainSite row;
+#   9. the tricolor red #FF3636 and yellow #FFC91D is never a background or a
+#      state color (manual p.6): no branding set value, no CSS background and
+#      no theme layout or view attribute uses them;
+#  10. every hex color of the branding set is a palette value (#0D1F5F #016BFA
+#      #07E9F6 #D6E0EA #FFFFFF), so no derived shade off the palette; the
+#      platform's success (_Success*) and offline (_Offline*) roles are not
+#      checked (not reviewed; for the owner, A14);
+#  11. the header and footer regions of the scopedHeaderAndFooter theme layout
+#      hold sections whose background (backgroundImageOverlay, painted over the
+#      platform's own rgb(239, 240, 242) band) is night blue or white;
+#  12. the full logo never renders below 360 px wide (manual p.4): for every
+#      <img> of rcHeader or rcHome that shows a full logo (not the isotype), in
+#      the component CSS at every breakpoint where it is displayed, its width
+#      (or its height times the PNG's aspect ratio, or its width attribute) is
+#      an absolute length of 360 px or more and no max-width can shrink it.
 #
 # Usage: scripts/checks/brand-check.sh <org-alias>
 set -euo pipefail
@@ -173,20 +190,21 @@ for dir in $LWC_DIRS; do
     done
     html="$(cat "$dir"/*.html 2>/dev/null | tr '\n' ' ' || true)"  # one line: tags span lines
     imgs="$(grep -o '<img' <<<"$html" | wc -l | tr -d ' ' || true)"
-    alts="$(grep -o '<img[^>]*alt="RutaCargo"' <<<"$html" | wc -l | tr -d ' ' || true)"
+    alts="$(grep -o '<img[^>]*alt="Coffee Blazers Summit"' <<<"$html" | wc -l | tr -d ' ' || true)"
     if [[ "$imgs" == "$alts" ]]; then
-        pass "$name: every <img> ($imgs) has alt=\"RutaCargo\""
+        pass "$name: every <img> ($imgs) has alt=\"Coffee Blazers Summit\" (A14)"
     else
-        fail "$name: $imgs <img>, only $alts with alt=\"RutaCargo\""
+        fail "$name: $imgs <img>, only $alts with alt=\"Coffee Blazers Summit\" (A14)"
     fi
     if [[ "$name" == "rcHeader" ]]; then
         header_logos="$logos"
     fi
 done
-if [[ "$header_logos" == "logo-negative.png" ]]; then
-    pass "rcHeader shows logo-negative.png"
+header_logos="$(tr '\n' ' ' <<<"$header_logos" | sed 's/ *$//')"
+if [[ "$header_logos" == "isotype-tinto.png logo-negative.png" ]]; then
+    pass "rcHeader shows isotype-tinto.png and logo-negative.png"
 else
-    fail "rcHeader shows '$header_logos', expected logo-negative.png only"
+    fail "rcHeader shows '$header_logos', expected isotype-tinto.png and logo-negative.png"
 fi
 
 # ─── 4. Montserrat @font-face from the static resource, loaded by the header ─
@@ -325,5 +343,210 @@ if [[ -n "$font_file" ]]; then
         fail "anonymous GET $url returns $code '${ctype:-}', expected 200 with a font content type"
     fi
 fi
+
+# ─── 9. Tricolor red and yellow: never a background or state color ─────────
+for hex in '#FF3636' '#FFC91D'; do
+    keys="$(jq -r --arg h "$hex" '.contentBody.values | to_entries[] | select(.value | strings | ascii_upcase | contains($h)) | .key' "$BRANDING" | paste -sd ',' - || true)"
+    if [[ -n "$keys" ]]; then
+        fail "branding set uses tricolor $hex for $keys (manual p.6: never a background or state color)"
+    else
+        pass "branding set does not use tricolor $hex"
+    fi
+    # shellcheck disable=SC2086
+    css_hits="$(grep -ilE "background(-color)?:[^;]*$hex" $css_files 2>/dev/null | paste -sd ',' - || true)"
+    if [[ -n "$css_hits" ]]; then
+        fail "CSS paints a background with tricolor $hex in: $css_hits"
+    else
+        pass "no CSS background uses tricolor $hex"
+    fi
+    layout_hits="$(grep -rilF "$hex" "$BUNDLE"/sfdc_cms__themeLayout "$BUNDLE"/sfdc_cms__view 2>/dev/null | paste -sd ',' - || true)"
+    if [[ -n "$layout_hits" ]]; then
+        fail "theme layouts or views use tricolor $hex in: $layout_hits"
+    else
+        pass "no theme layout or view uses tricolor $hex"
+    fi
+done
+
+# ─── 10. Branding set hex colors are palette values ─────────────────────────
+off_palette="$(jq -r '
+  ["#0D1F5F", "#016BFA", "#07E9F6", "#D6E0EA", "#FFFFFF"] as $allowed
+  | .contentBody.values | to_entries[]
+  | select(.key | test("^_(Success|Offline)") | not)
+  | select(.value | strings | test("^#[0-9A-Fa-f]{3,8}$"))
+  | select(.value | ascii_upcase | IN($allowed[]) | not)
+  | "\(.key)=\(.value)"' "$BRANDING" | paste -sd ',' - || true)"
+if [[ -z "$off_palette" ]]; then
+    pass "every branding set hex color is a palette value (success and offline roles not checked)"
+else
+    fail "branding set colors off the palette: $off_palette"
+fi
+
+# ─── 11. Header and footer bands on a palette background ────────────────────
+bands="$(find "$BUNDLE"/sfdc_cms__themeLayout -name content.json -exec jq -c '
+  .. | objects | select(.definition? == "community_byo:scopedHeaderAndFooter")
+  | .children[]? | select(.name == "header" or .name == "footer")
+  | {region: .name,
+     overlays: [.children[]? | select(.definition == "community_layout:section")
+                | (.attributes.backgroundImageOverlay // "" | ascii_upcase)]}' {} + 2>/dev/null || true)"
+if [[ -z "$bands" ]]; then
+    fail "no scopedHeaderAndFooter theme layout with header and footer regions found"
+fi
+while IFS= read -r band; do
+    [[ -z "$band" ]] && continue
+    region="$(jq -r .region <<<"$band")"
+    overlays="$(jq -r '.overlays | join(",")' <<<"$band")"
+    if jq -e '(.overlays | length) > 0 and all(.overlays[]; . == "#0D1F5F" or . == "#FFFFFF")' <<<"$band" >/dev/null; then
+        pass "theme $region band sections have a palette background ($overlays)"
+    else
+        fail "theme $region band sections have background '${overlays:-none}', expected #0D1F5F or #FFFFFF over the platform's gray"
+    fi
+done <<<"$bands"
+
+# ─── 12. Full logo never below 360 px wide ──────────────────────────────────
+# shellcheck disable=SC2086
+size_report="$(python3 -I - "$SR/rcBrandLogos" $LWC_DIRS <<'PY'
+import pathlib
+import re
+import struct
+import sys
+
+logos, dirs = pathlib.Path(sys.argv[1]), [pathlib.Path(d) for d in sys.argv[2:]]
+FULL = {"logo-color.png", "logo-negative.png", "logo-one-color.png",
+        "logo-one-color-negative.png", "logotype.png"}
+MIN_PX = 360
+
+
+def absolute_px(value):
+    match = re.fullmatch(r"([0-9]*\.?[0-9]+)(px|rem|em)", (value or "").strip())
+    if not match:
+        return None
+    number = float(match.group(1))
+    return number if match.group(2) == "px" else number * 16
+
+
+def png_ratio(path):
+    width, height = struct.unpack(">II", path.read_bytes()[16:24])
+    return width / height
+
+
+def declarations(body):
+    out = {}
+    for item in body.split(";"):
+        if ":" in item:
+            key, value = item.split(":", 1)
+            out[key.strip().lower()] = value.strip().lower()
+    return out
+
+
+def rules(css):
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    found = []
+    media_re = re.compile(r"@media([^{]+)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
+    for media in media_re.finditer(css):
+        condition = media.group(1)
+        minimum = re.search(r"min-width:\s*([0-9.]+)(px|em|rem)", condition)
+        if not minimum or re.search(r"max-width|orientation|print", condition):
+            found.append((None, condition.strip(), {}))
+            continue
+        min_px = float(minimum.group(1)) * (1 if minimum.group(2) == "px" else 16)
+        for rule in re.finditer(r"([^{}]+)\{([^{}]*)\}", media.group(2)):
+            found.append((min_px, rule.group(1), declarations(rule.group(2))))
+    base = media_re.sub("", css)
+    for rule in re.finditer(r"([^{}]+)\{([^{}]*)\}", base):
+        found.append((0.0, rule.group(1), declarations(rule.group(2))))
+    return found
+
+
+def targets(selector, classes):
+    for part in selector.split(","):
+        last = part.strip().split()[-1] if part.strip() else ""
+        last = re.sub(r":[a-z-]+(\([^)]*\))?$", "", last)
+        if any(re.search(r"\." + re.escape(c) + r"(?![\w-])", last) for c in classes):
+            return True
+    return False
+
+
+for folder in dirs:
+    name = folder.name
+    js = "".join(p.read_text() for p in folder.glob("*.js"))
+    html = " ".join(p.read_text() for p in folder.glob("*.html")).replace("\n", " ")
+    css = "".join(p.read_text() for p in folder.glob("*.css"))
+    consts = dict(re.findall(r'const\s+(\w+)\s*=\s*"([A-Za-z0-9-]+\.png)"', js))
+    fields = {}
+    for field, template in re.findall(r"(\w+)\s*=\s*\x60([^\x60]*)\x60", js):
+        pngs = re.findall(r"[A-Za-z0-9-]+\.png", template)
+        pngs += [consts[c] for c in re.findall(r"\$\{(\w+)\}", template) if c in consts]
+        if pngs:
+            fields[field] = pngs[0]
+    parsed = rules(css)
+    for tag in re.findall(r"<img\b[^>]*>", html):
+        src = re.search(r"src=\{(\w+)\}", tag)
+        logo = fields.get(src.group(1)) if src else None
+        if logo is None:
+            literal = re.search(r'src="[^"]*?([A-Za-z0-9-]+\.png)"', tag)
+            logo = literal.group(1) if literal else None
+        if logo not in FULL:
+            continue
+        cls = re.search(r'class="([^"]*)"', tag)
+        classes = cls.group(1).split() if cls else []
+        attr_width = re.search(r'\bwidth="([0-9]+)"', tag)
+        ratio = png_ratio(logos / logo)
+        mine = [r for r in parsed if r[0] is not None and targets(r[1], classes)]
+        unsupported = [r for r in parsed if r[0] is None]
+        if unsupported:
+            print(f"FAIL {name}: media query '{unsupported[0][1]}' cannot be checked for the logo size")
+        problems, shown = [], []
+        for context in sorted({0.0} | {r[0] for r in mine}):
+            style = {}
+            for min_px, _, decls in sorted(mine, key=lambda r: r[0]):
+                if min_px <= context:
+                    style.update(decls)
+            if style.get("display") == "none":
+                continue
+            where = "every width" if context == 0 else f"min-width {context:g}px"
+            width, height = style.get("width"), style.get("height")
+            if width and width != "auto":
+                rendered = absolute_px(width)
+                if rendered is None:
+                    problems.append(f"{logo} at {where}: width '{width}' is not an absolute length")
+                    continue
+            elif height and height != "auto":
+                h = absolute_px(height)
+                if h is None:
+                    problems.append(f"{logo} at {where}: height '{height}' is not an absolute length")
+                    continue
+                rendered = h * ratio
+            elif attr_width:
+                rendered = float(attr_width.group(1))
+            else:
+                problems.append(f"{logo} at {where}: no width")
+                continue
+            max_width = style.get("max-width")
+            if max_width and max_width != "none":
+                cap = absolute_px(max_width)
+                if cap is None or cap < MIN_PX:
+                    problems.append(f"{logo} at {where}: max-width '{max_width}' can shrink it below {MIN_PX} px")
+                    continue
+                rendered = min(rendered, cap)
+            if rendered < MIN_PX:
+                problems.append(f"{logo} at {where}: {rendered:.0f} px wide, below {MIN_PX} px")
+            else:
+                shown.append(f"{where}: {rendered:.0f} px")
+        if problems:
+            for problem in problems:
+                print(f"FAIL {name}: {problem}")
+        else:
+            print(f"OK {name}: {logo} is never below {MIN_PX} px wide ({'; '.join(shown) or 'not displayed'})")
+PY
+)"
+if [[ -z "$size_report" ]]; then
+    fail "no full logo found in rcHeader or rcHome to check its minimum size"
+fi
+while IFS= read -r line; do
+    case "$line" in
+        OK*) pass "${line#OK }" ;;
+        FAIL*) fail "${line#FAIL }" ;;
+    esac
+done <<<"$size_report"
 
 finish

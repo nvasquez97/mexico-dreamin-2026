@@ -1,6 +1,10 @@
 /*
- * Brand manual, pages 5-7. Mobile first: the base rules fit 320 px; the
- * media query only adds room on wider screens.
+ * Brand manual, pages 4-7. Mobile first: the base rules fit 320 px; the
+ * media queries only add room on wider screens.
+ * Logo minimum size (p.4): the full logo is never shown below 360 px wide. Below
+ * 30em (480 px) it cannot fit at that size with the navigation, so the header
+ * shows the isotype on its electric-blue tile (p.5); from 30em it shows the
+ * full negative logo at exactly 360 px on the night-blue header.
  * Palette values with no SLDS styling hook (brand colors): night blue #0D1F5F
  * is the background logo-negative.png was cropped from; white text on it is
  * 15.2:1 and cyan #07E9F6 (the "shine" of the brand) on it is 10.1:1 (WCAG AA).
@@ -37,11 +41,18 @@
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
 }
 
-.rc-header__logo {
+.rc-header__isotype {
   display: block;
-  /* No SLDS hook for a logo height; intentional value (about 91 x 48 px). */
+  /* No SLDS hook for a logo size; intentional value (about 51 x 48 px). */
   height: 3rem;
   width: auto;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  /* The tile: the color isotype-tinto.png was cropped from. */
+  background-color: #016bfa;
+}
+
+.rc-header__logo {
+  display: none;
 }
 
 .rc-header__list {
@@ -75,13 +86,22 @@
   outline-offset: 2px;
 }
 
+@media (min-width: 30em) {
+  .rc-header__isotype {
+    display: none;
+  }
+
+  /* The manual's minimum on screen, in px on purpose: 360 x 190 px. */
+  .rc-header__logo {
+    display: block;
+    width: 360px;
+    height: auto;
+  }
+}
+
 @media (min-width: 48em) {
   .rc-header {
     padding-block: var(--slds-g-spacing-3, 0.75rem);
     padding-inline: var(--slds-g-spacing-6, 2rem);
-  }
-
-  .rc-header__logo {
-    height: 4rem;
   }
 }

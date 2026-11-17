@@ -19,6 +19,11 @@
 #   6. the deployed sharing rules share every shipment and the customer accounts
 #      (Customer_Type__c Individual or Business) with the RutaCargo_Support_Agents
 #      group, Read/Write (Edit), with no opportunity or case access.
+#   7. every profile or permission set that can read the Account credit fields
+#      (Credit_Limit__c, Credit_Risk__c, Customer_Type__c), other than
+#      RutaCargo_Support_Agent and the System Administrator profile, has 0
+#      assignees, active or not (ACC-001: the platform grants the
+#      AncCrmIntegrationUser permission set Read on them).
 #
 # Usage: scripts/checks/shipment-access-check.sh <org-alias>
 set -euo pipefail
@@ -189,6 +194,37 @@ while IFS= read -r line; do
         FAIL*) fail "${line#FAIL }" ;;
     esac
 done <<<"$rule_report"
+
+# ─── 7. Account credit fields: no assignee outside the allowed holders ──────
+CREDIT_FIELDS="'Account.Credit_Limit__c', 'Account.Credit_Risk__c', 'Account.Customer_Type__c'"
+credit_fls="$(query "SELECT ParentId, Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name, Field FROM FieldPermissions WHERE SobjectType = 'Account' AND Field IN ($CREDIT_FIELDS) AND PermissionsRead = true")"
+holders="$(jq -c --arg admin "$ADMIN_PROFILE" --arg agent "$AGENT_SET" '
+  [.[] | {id: .ParentId,
+          who: (if .Parent.IsOwnedByProfile then "profile:" + .Parent.Profile.Name else "permset:" + .Parent.Name end),
+          field: .Field}]
+  | map(select(.who != "profile:" + $admin and .who != "permset:" + $agent))
+  | group_by(.id) | .[] | {id: .[0].id, who: .[0].who, fields: ([.[].field] | sort | join(", "))}' <<<"$credit_fls")"
+holder_count=0
+while IFS= read -r holder; do
+    [[ -z "$holder" ]] && continue
+    holder_count=$((holder_count + 1))
+    holder_id="$(jq -r .id <<<"$holder")"
+    who="$(jq -r .who <<<"$holder")"
+    fields="$(jq -r .fields <<<"$holder")"
+    # Every Id is validated as a PermissionSet Id before it enters the query.
+    if [[ ! "$holder_id" =~ ^0PS[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
+        fail "unexpected FieldPermissions ParentId '$holder_id'"
+        continue
+    fi
+    assignees="$(query "SELECT Assignee.Username, Assignee.IsActive FROM PermissionSetAssignment WHERE PermissionSetId = '$holder_id'")"
+    n="$(jq 'length' <<<"$assignees")"
+    if [[ "$n" == "0" ]]; then
+        pass "$who can read $fields and has 0 assignees"
+    else
+        fail "$who can read $fields and has $n assignee(s): $(jq -r '[.[] | .Assignee.Username + (if .Assignee.IsActive then "" else " (inactive)" end)] | join(", ")' <<<"$assignees")"
+    fi
+done <<<"$holders"
+echo "info: $holder_count holder(s) of the Account credit fields besides $AGENT_SET and $ADMIN_PROFILE"
 
 if [[ "$violations" -gt 0 ]]; then
     echo "shipment-access-check: $violations violation(s) in $ORG"
