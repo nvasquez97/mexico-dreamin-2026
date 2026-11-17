@@ -20,6 +20,11 @@
 #      allow-list GUEST_PAGES below: no self-registration page;
 #   5b. the Apex classes enabled for the guest (same scope as 5) are exactly the
 #      allow-list GUEST_CLASSES below (req-001 AC-001.6);
+#   5c. source check: no Apex class or trigger under force-app/main/default
+#      other than SELECTOR_FILES below names the without-sharing
+#      PublicTrackingSelector (case-insensitive, as Apex), so its
+#      SECURITY-JUSTIFICATION's "only caller is PublicTrackingController" holds
+#      (req-001 SEC-001, P11);
 #   6. an anonymous GET (no session, no redirects followed) of the site home URL
 #      returns 200; the host comes from the site's own DomainSite row;
 #   7. an anonymous GET of the self-registration pages on the Visualforce site
@@ -48,6 +53,11 @@ GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,Fil
 # Apex classes the guest may call: only the public tracking entry point
 # (req-001 S1, C8). Must match the classAccesses of the guest profile.
 GUEST_CLASSES='PublicTrackingController'
+# The without-sharing selector and the only source files that may name it:
+# itself, its single caller and that caller's test (req-001 SEC-001, P11).
+SELECTOR='PublicTrackingSelector'
+SELECTOR_FILES='PublicTrackingSelector.cls PublicTrackingController.cls PublicTrackingControllerTest.cls'
+SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/force-app/main/default"
 # Self-registration pages that must not answer an anonymous visitor.
 SELF_REG_PAGES='SiteRegister CommunitiesSelfReg'
 
@@ -199,6 +209,30 @@ else
     extra="$(comm -23 <(tr ',' '\n' <<<"$enabled_classes" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_classes") | paste -sd ',' -)"
     missing="$(comm -13 <(tr ',' '\n' <<<"$enabled_classes" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_classes") | paste -sd ',' -)"
     fail "guest Apex classes differ from the allow-list: not allowed '$extra', missing '$missing'"
+fi
+
+# ─── 5c. Only PublicTrackingController calls the without-sharing selector ──
+# Every .cls and .trigger file that names the selector (whole word, any case);
+# grep exits 1 when nothing matches and 2 on an error, which fails the check.
+selector_refs=''
+grep_status=0
+scan_dirs=("$SOURCE_ROOT/classes")
+if [[ -d "$SOURCE_ROOT/triggers" ]]; then
+    scan_dirs+=("$SOURCE_ROOT/triggers")
+fi
+selector_refs="$(grep -rliw --include='*.cls' --include='*.trigger' -- "$SELECTOR" "${scan_dirs[@]}" 2>&1)" \
+    || grep_status=$?
+if [[ "$grep_status" -gt 1 || ! -d "$SOURCE_ROOT/classes" ]]; then
+    fail "could not scan the Apex source for $SELECTOR: ${selector_refs:-no classes directory}"
+else
+    other_callers="$(comm -23 \
+        <(sed '/^$/d; s#.*/##' <<<"$selector_refs" | sort -u) \
+        <(tr ' ' '\n' <<<"$SELECTOR_FILES" | sort -u) | paste -sd ',' -)"
+    if [[ -z "$other_callers" ]]; then
+        pass "only $SELECTOR_FILES name $SELECTOR in the Apex source"
+    else
+        fail "Apex source outside the allow-list names the without-sharing $SELECTOR: $other_callers"
+    fi
 fi
 
 # ─── 6. Anonymous GET of the site home URL ──────────────────────────────────

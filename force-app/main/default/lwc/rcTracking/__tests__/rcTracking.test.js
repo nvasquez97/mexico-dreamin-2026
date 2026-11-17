@@ -266,6 +266,107 @@ describe("c-rc-tracking", () => {
     });
   });
 
+  describe("AC-001.3 client: values longer than 50 characters", () => {
+    // The server lists a value of 51 to 520 characters as not found, but
+    // answers the generic error above 520 (one raw entry): the client lists
+    // every value longer than 50 characters itself and never sends it.
+    const LONG_51 = `PO-${"X".repeat(48)}`;
+    const LONG_600 = `RC${"9".repeat(598)}`;
+    const EXACTLY_50 = `PO-${"Y".repeat(47)}`;
+
+    function notFoundValues(element) {
+      return queryAll(element, '[data-id="not-found"] li').map(text);
+    }
+
+    it("AC-001.3: a 51-character value is not sent and is listed as Not found", async () => {
+      search.mockResolvedValue(response([shipment()], []));
+      const element = render();
+
+      await searchFor(element, `RC000000001, ${LONG_51}`);
+
+      expect(search).toHaveBeenCalledWith({
+        mode: "TRACKING_NUMBER",
+        values: ["RC000000001"]
+      });
+      expect(notFoundValues(element)).toEqual([LONG_51]);
+      expect(cardNumbers(element)).toEqual(["RC000000001"]);
+    });
+
+    it("AC-001.3: only values longer than 50 characters make no Apex call and are all Not found", async () => {
+      const element = render();
+
+      await searchFor(element, `${LONG_600}\n${LONG_51}`, "REFERENCE");
+
+      expect(search).not.toHaveBeenCalled();
+      expect(errorText(element)).toBeNull();
+      expect(notFoundValues(element)).toEqual([LONG_600, LONG_51]);
+      expect(text(query(element, '[data-id="summary"]'))).toBe(
+        "0 shipments found."
+      );
+    });
+
+    it("AC-001.3: a value of exactly 50 characters is sent to the server", async () => {
+      search.mockResolvedValue(response([], [EXACTLY_50]));
+      const element = render();
+
+      await searchFor(element, EXACTLY_50, "REFERENCE");
+
+      expect(search).toHaveBeenCalledWith({
+        mode: "REFERENCE",
+        values: [EXACTLY_50]
+      });
+      expect(notFoundValues(element)).toEqual([EXACTLY_50]);
+    });
+
+    it.each([
+      [
+        "long value first",
+        `${LONG_51}, RC999999999, RC000000001`,
+        [LONG_51, "RC999999999"]
+      ],
+      [
+        "long value last",
+        `RC999999999, RC000000001, ${LONG_600}`,
+        ["RC999999999", LONG_600]
+      ]
+    ])(
+      "AC-001.3: long values merge with the server's Not found in input order (%s)",
+      async (label, typed, expected) => {
+        search.mockResolvedValue(response([shipment()], ["RC999999999"]));
+        const element = render();
+
+        await searchFor(element, typed);
+
+        expect(search).toHaveBeenCalledWith({
+          mode: "TRACKING_NUMBER",
+          values: ["RC999999999", "RC000000001"]
+        });
+        expect(notFoundValues(element)).toEqual(expected);
+      }
+    );
+
+    it("AC-001.3: a truncated answer lists no value as Not found, long ones included (as the server)", async () => {
+      search.mockResolvedValue(response([shipment()], [], true));
+      const element = render();
+
+      await searchFor(element, `PO-7781, ${LONG_51}`, "REFERENCE");
+
+      expect(query(element, '[data-id="not-found"]')).toBeNull();
+      expect(text(query(element, '[data-id="truncated"]'))).toBe(
+        TRUNCATION_TEXT
+      );
+    });
+
+    it("AC-001.3: a long value still counts toward the 10-value cap", async () => {
+      const element = render();
+
+      await searchFor(element, [...values(10), LONG_51].join("\n"));
+
+      expect(search).not.toHaveBeenCalled();
+      expect(errorText(element)).toBe(CAP_ERROR);
+    });
+  });
+
   describe("AC-001.4: client-side sorting", () => {
     const AC_RESULTS = [
       shipment({
@@ -446,6 +547,46 @@ describe("c-rc-tracking", () => {
       const status = query(element, '[data-id="summary"]');
       expect(status.getAttribute("aria-live")).toBe("polite");
       expect(text(status)).toBe("2 shipments found.");
+    });
+
+    it("AC-001.7: the live region stays in the accessibility tree while empty (visually hidden, never display: none)", () => {
+      const css = fs.readFileSync(
+        path.resolve(__dirname, "..", "rcTracking.css"),
+        "utf8"
+      );
+      const summaryRules = Array.from(
+        css.matchAll(/([^{}]*\.rc-tracking__summary[^{}]*)\{([^}]*)\}/g)
+      );
+      const emptyRule = summaryRules.find(([, selector]) =>
+        selector.includes(".rc-tracking__summary:empty")
+      );
+
+      expect(summaryRules.length).toBeGreaterThanOrEqual(2);
+      summaryRules.forEach(([, , body]) => {
+        expect(body).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+      });
+      expect(emptyRule[2]).toMatch(/position:\s*absolute;/);
+      expect(emptyRule[2]).toMatch(/width:\s*1px;/);
+      expect(emptyRule[2]).toMatch(/height:\s*1px;/);
+      expect(emptyRule[2]).toMatch(/overflow:\s*hidden;/);
+      expect(emptyRule[2]).toMatch(/clip-path:\s*inset\(50%\);/);
+      expect(emptyRule[2]).toMatch(/white-space:\s*nowrap;/);
+    });
+
+    it("AC-001.7: a new search keeps the live region rendered while it is cleared", async () => {
+      search.mockResolvedValueOnce(response([shipment()]));
+      search.mockResolvedValueOnce(
+        response([shipment(), shipment({ trackingNumber: "RC000000002" })])
+      );
+      const element = render();
+
+      await searchFor(element, "RC000000001");
+      const region = query(element, '[data-id="summary"]');
+      expect(text(region)).toBe("1 shipment found.");
+      await searchFor(element, "RC000000001, RC000000002");
+
+      expect(query(element, '[data-id="summary"]')).toBe(region);
+      expect(text(region)).toBe("2 shipments found.");
     });
 
     it("AC-001.7: a known server message is shown as sent (cap message)", async () => {

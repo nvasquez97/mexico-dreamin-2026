@@ -6,8 +6,10 @@
  *              City dates, no private value, no Id), AC-001.3 (server: notFound
  *              in input order, 50-row cap with truncated), AC-001.5 (trim and
  *              case-insensitive de-duplication) and AC-001.6 (the real site guest
- *              user gets the results of shipments it cannot read). Tests that do
- *              not use System.runAs run as the running administrator.
+ *              user gets the results of shipments it cannot read, with exactly the
+ *              BR-01 keys and no private value, and is refused a mode outside the
+ *              closed list). Tests that do not use System.runAs run as the running
+ *              administrator.
  */
 @IsTest
 private with sharing class PublicTrackingControllerTest {
@@ -38,6 +40,7 @@ private with sharing class PublicTrackingControllerTest {
     private static final Decimal CARRIER_COST = 1234.56;
     private static final String INTERNAL_NOTE = 'Internal note: customer pays late';
     private static final String LAST_LOCATION = 'Queretaro hub';
+    private static final String SECOND_LOCATION = 'Saltillo hub';
     private static final Set<String> BR01_KEYS = new Set<String>{
         'trackingNumber', 'status', 'originCity', 'destinationCity', 'lastLocation', 'lastUpdate', 'estimatedDelivery'
     };
@@ -59,6 +62,7 @@ private with sharing class PublicTrackingControllerTest {
         List<Shipment__c> shipments = TestDataFactory.newShipments(customer.Id, SETUP_SIZE);
         setPrivateAndPublicFields(shipments[0], REFERENCE, FIRST_UPDATE, FIRST_ESTIMATE);
         setPrivateAndPublicFields(shipments[1], null, SECOND_UPDATE, SECOND_ESTIMATE);
+        shipments[1].Last_Location__c = SECOND_LOCATION;
         shipments[2].Customer_Reference__c = SHARED_REFERENCE;
         shipments[3].Customer_Reference__c = SHARED_REFERENCE;
         insertAsSystem(shipments);
@@ -112,6 +116,32 @@ private with sharing class PublicTrackingControllerTest {
         return [SELECT Name FROM Shipment__c WHERE Customer_Reference__c = :reference WITH SYSTEM_MODE ORDER BY Name];
     }
 
+    // The private values (BR-03) and record Ids of the two fully filled shipments.
+    private static Set<String> privateValuesOf(List<Shipment__c> shipments) {
+        Set<String> privateValues = new Set<String>{ String.valueOf(PRICE), String.valueOf(CARRIER_COST), INTERNAL_NOTE };
+        for (Shipment__c shipment : shipments) {
+            privateValues.addAll(new List<String>{
+                shipment.Recipient_Name__c, shipment.Recipient_Address__c, shipment.Recipient_Phone__c,
+                shipment.Recipient_Email__c, shipment.Delivery_Access_Code_Hash__c,
+                String.valueOf(shipment.Account__c).left(15), String.valueOf(shipment.Id).left(15)
+            });
+        }
+        return privateValues;
+    }
+
+    // Calls search with a value list whose blank entries are all dropped, and
+    // proves that the response is empty and that no SOQL query ran.
+    private static void assertEmptyWithoutQuery(List<String> values) {
+        Test.startTest();
+        Integer queriesBefore = Limits.getQueries();
+        PublicTrackingResult result = PublicTrackingController.search(REFERENCE_MODE, values);
+        Integer queriesRun = Limits.getQueries() - queriesBefore;
+        Test.stopTest();
+        Assert.areEqual(0, queriesRun, 'Blank values must not be queried');
+        Assert.areEqual(0, result.results.size(), 'Blank values find no shipment');
+        Assert.areEqual(0, result.notFound.size(), 'Blank values are dropped, not listed as not found');
+    }
+
     // Calls search, expects an AuraHandledException with the given message, and
     // proves that no SOQL query ran.
     private static void assertRejectedWithoutQuery(String mode, List<String> values, String expectedMessage) {
@@ -139,6 +169,18 @@ private with sharing class PublicTrackingControllerTest {
         Assert.areEqual(new List<String>{ names[4], names[5], names[6] }, trackingNumbersOf(result),
             'The three tracking numbers A, B and C must be found, ordered by tracking number');
         Assert.areEqual(0, result.notFound.size(), 'Every value was found');
+    }
+
+    @IsTest
+    static void search_trackingValuesSplitOnLineBreaks_returnsThreeResults() {
+        List<String> names = namesOf(setupShipments());
+        List<String> values = new List<String>{ names[7] + '\n' + names[8] + '\r\n' + names[9] };
+        Test.startTest();
+        PublicTrackingResult result = PublicTrackingController.search(TRACKING, values);
+        Test.stopTest();
+        Assert.areEqual(new List<String>{ names[7], names[8], names[9] }, trackingNumbersOf(result),
+            'One entry "A\\nB\\r\\nC" must be split on LF and CRLF into three tracking numbers');
+        Assert.areEqual(0, result.notFound.size(), 'No piece of a line break may be searched as a value');
     }
 
     @IsTest
@@ -237,6 +279,11 @@ private with sharing class PublicTrackingControllerTest {
     }
 
     @IsTest
+    static void search_nullMode_isRejectedWithoutQuery() {
+        assertRejectedWithoutQuery(null, new List<String>{ REFERENCE }, GENERIC_MESSAGE);
+    }
+
+    @IsTest
     static void search_unexpectedException_givesOnlyTheGenericMessage() {
         String name = setupShipments()[0].Name;
         PublicTrackingController.failForTest = true;
@@ -295,7 +342,18 @@ private with sharing class PublicTrackingControllerTest {
         Assert.areEqual(2, result.results.size(), 'Both shipments must be returned before their estimates are checked');
         Assert.areEqual('2026-11-25', result.results[0].estimatedDelivery, 'First shipment estimate as ISO date');
         Assert.areEqual('2026-11-21', result.results[1].estimatedDelivery, 'Second shipment estimate as ISO date');
-        Assert.areEqual(LAST_LOCATION, result.results[0].lastLocation, 'The last location is public (BR-01)');
+    }
+
+    @IsTest
+    static void search_lastLocation_isEachShipmentsOwn() {
+        Shipment__c first = shipmentUpdatedAt(FIRST_UPDATE);
+        Shipment__c second = shipmentUpdatedAt(SECOND_UPDATE);
+        Test.startTest();
+        PublicTrackingResult result = PublicTrackingController.search(TRACKING, new List<String>{ first.Name, second.Name });
+        Test.stopTest();
+        Assert.areEqual(2, result.results.size(), 'Both shipments must be returned before their locations are checked');
+        Assert.areEqual(LAST_LOCATION, result.results[0].lastLocation, 'First shipment last location (BR-01)');
+        Assert.areEqual(SECOND_LOCATION, result.results[1].lastLocation, 'Second shipment last location (BR-01)');
     }
 
     @IsTest
@@ -303,19 +361,14 @@ private with sharing class PublicTrackingControllerTest {
         List<Shipment__c> shipments = setupShipments();
         List<String> searched = new List<String>{ shipments[0].Name, shipments[1].Name };
         Test.startTest();
-        String serialized = JSON.serialize(PublicTrackingController.search(TRACKING, searched));
+        PublicTrackingResult result = PublicTrackingController.search(TRACKING, searched);
         Test.stopTest();
-        Assert.isTrue(serialized.contains(searched[0]) && serialized.contains(searched[1]),
-            'Both shipments must be in the response, so the checks below are not vacuous');
-        Set<String> privateValues = new Set<String>{ String.valueOf(PRICE), String.valueOf(CARRIER_COST), INTERNAL_NOTE };
-        for (Shipment__c shipment : new List<Shipment__c>{ shipments[0], shipments[1] }) {
-            privateValues.addAll(new List<String>{
-                shipment.Recipient_Name__c, shipment.Recipient_Address__c, shipment.Recipient_Phone__c,
-                shipment.Recipient_Email__c, shipment.Delivery_Access_Code_Hash__c,
-                String.valueOf(shipment.Account__c).left(15), String.valueOf(shipment.Id).left(15)
-            });
-        }
-        for (String privateValue : privateValues) {
+        // Both shipments are results and nothing is a miss, so the checks below
+        // run on a response that carries the two fully filled shipments.
+        Assert.areEqual(searched, trackingNumbersOf(result), 'Both shipments must be results before the response is inspected');
+        Assert.areEqual(0, result.notFound.size(), 'Both shipments must be found, not echoed in notFound');
+        String serialized = JSON.serialize(result);
+        for (String privateValue : privateValuesOf(new List<Shipment__c>{ shipments[0], shipments[1] })) {
             Assert.isFalse(serialized.contains(privateValue), 'The response must not contain ' + privateValue);
         }
     }
@@ -422,14 +475,23 @@ private with sharing class PublicTrackingControllerTest {
     }
 
     @IsTest
-    static void search_blankValues_returnEmptyWithoutQuery() {
-        Test.startTest();
-        Integer queriesBefore = Limits.getQueries();
-        PublicTrackingResult result = PublicTrackingController.search(REFERENCE_MODE, new List<String>{ ' ', '', null });
-        Integer queriesRun = Limits.getQueries() - queriesBefore;
-        Test.stopTest();
-        Assert.areEqual(0, queriesRun, 'Blank values must not be queried');
-        Assert.areEqual(0, result.results.size() + result.notFound.size(), 'Blank values are dropped');
+    static void search_spaceOnlyValue_returnsEmptyWithoutQuery() {
+        assertEmptyWithoutQuery(new List<String>{ ' ' });
+    }
+
+    @IsTest
+    static void search_emptyValue_returnsEmptyWithoutQuery() {
+        assertEmptyWithoutQuery(new List<String>{ '' });
+    }
+
+    @IsTest
+    static void search_nullEntry_returnsEmptyWithoutQuery() {
+        assertEmptyWithoutQuery(new List<String>{ null });
+    }
+
+    @IsTest
+    static void search_nullValues_returnsEmptyWithoutQuery() {
+        assertEmptyWithoutQuery(null);
     }
 
     // ─── AC-001.6 (P1, P2, P3, P10, P11) ──────────────────────────────────
@@ -464,5 +526,51 @@ private with sharing class PublicTrackingControllerTest {
             'The guest must get both shipments through the controller');
         Assert.areEqual('Requested', result.results[0].status, 'The guest gets the status');
         Assert.areEqual('2026-11-20 21:00', result.results[1].lastUpdate, 'The guest gets Mexico City dates');
+    }
+
+    @IsTest
+    static void siteGuest_search_eachResultHasExactlyTheBr01Keys() {
+        User guest = TestDataFactory.siteGuestUser();
+        List<Shipment__c> shipments = setupShipments();
+        List<String> searched = new List<String>{ shipments[0].Name, shipments[1].Name };
+        PublicTrackingResult result;
+        Test.startTest();
+        System.runAs(guest) {
+            result = PublicTrackingController.search(TRACKING, searched);
+        }
+        Test.stopTest();
+        Assert.areEqual(searched, trackingNumbersOf(result), 'The guest must get both shipments before their keys are checked');
+        for (PublicTrackingResult.TrackedShipment shipment : result.results) {
+            Map<String, Object> serialized = (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(shipment));
+            Assert.areEqual(BR01_KEYS, serialized.keySet(), 'A guest result must have exactly the seven BR-01 keys');
+        }
+    }
+
+    @IsTest
+    static void siteGuest_search_responseContainsNoPrivateValueAndNoId() {
+        User guest = TestDataFactory.siteGuestUser();
+        List<Shipment__c> shipments = setupShipments();
+        List<String> searched = new List<String>{ shipments[0].Name, shipments[1].Name };
+        PublicTrackingResult result;
+        Test.startTest();
+        System.runAs(guest) {
+            result = PublicTrackingController.search(TRACKING, searched);
+        }
+        Test.stopTest();
+        Assert.areEqual(searched, trackingNumbersOf(result), 'The guest must get both shipments before the response is inspected');
+        Assert.areEqual(0, result.notFound.size(), 'Both shipments must be found, not echoed in notFound');
+        String serialized = JSON.serialize(result);
+        for (String privateValue : privateValuesOf(new List<Shipment__c>{ shipments[0], shipments[1] })) {
+            Assert.isFalse(serialized.contains(privateValue), 'The guest response must not contain ' + privateValue);
+        }
+    }
+
+    @IsTest
+    static void siteGuest_modePriceField_isRejectedWithoutQuery() {
+        User guest = TestDataFactory.siteGuestUser();
+        String name = setupShipments()[0].Name;
+        System.runAs(guest) {
+            assertRejectedWithoutQuery('Price__c', new List<String>{ name }, GENERIC_MESSAGE);
+        }
     }
 }

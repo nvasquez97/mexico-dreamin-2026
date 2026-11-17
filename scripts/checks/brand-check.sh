@@ -415,10 +415,11 @@ bundle, branding, lwc = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), pa
 PALETTE_BG = {"#0D1F5F", "#FFFFFF"}
 PADDINGS = ["HorizontalRowPaddingDesktop", "HorizontalRowPaddingMobile",
             "VerticalRowPaddingDesktop", "VerticalRowPaddingMobile"]
-ZERO = re.compile(r"0*(\.0*)?(px|rem|em|%)?")
+# A zero has at least one digit: an empty or a missing padding is not zero.
+ZERO = re.compile(r"(0+(\.0*)?|\.0+)(px|rem|em|%)?")
 values = json.loads(branding.read_text())["contentBody"]["values"]
-nonzero = [f"{k}={values.get(k, '')!r}" for k in PADDINGS
-           if not ZERO.fullmatch(str(values.get(k, "")).strip())]
+nonzero = [f"{k} missing" if k not in values else f"{k}={values[k]!r}" for k in PADDINGS
+           if k not in values or not ZERO.fullmatch(str(values[k]).strip())]
 
 
 def walk(node):
@@ -523,7 +524,8 @@ done <<<"$band_report"
 if [[ "$needs_zero" -eq 1 ]]; then
     # All eight section padding hooks published, all zero.
     hooks="$(grep -c . <<<"$published_spacing" || true)"
-    nonzero_hooks="$(grep -vE ': *0*(\.0*)?(px|rem|em|%)?$' <<<"$published_spacing" | paste -sd ',' - || true)"
+    # A zero has at least one digit: an empty hook value is not zero.
+    nonzero_hooks="$(grep -vE ': *(0+(\.0*)?|\.0+)(px|rem|em|%)? *$' <<<"$published_spacing" | paste -sd ',' - || true)"
     if [[ -n "$published_spacing" && "$hooks" -eq 8 && -z "$nonzero_hooks" ]]; then
         pass "the published home page carries zero section paddings (8 hooks)"
     else

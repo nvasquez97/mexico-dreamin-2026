@@ -4,6 +4,10 @@ import search from "@salesforce/apex/PublicTrackingController.search";
 // The server's rule (PublicTrackingController, AC-001.1): at most 10 values
 // after trim, dropping empties and case-insensitive de-duplication.
 const MAX_VALUES = 10;
+// The server lists a value longer than 50 characters as not found without
+// querying it, but answers its generic error for an entry over 520 characters:
+// the client lists such values as not found itself and never sends them.
+const MAX_VALUE_LENGTH = 50;
 const CAP_ERROR = "Enter up to 10 values.";
 const EMPTY_ERROR = "Enter at least one value.";
 const GENERIC_ERROR = "We could not complete the search. Please try again.";
@@ -90,8 +94,7 @@ function toCard(result, index) {
     lastLocation: textOf(source.lastLocation),
     lastUpdate: textOf(source.lastUpdate),
     estimatedDelivery,
-    estimatedDeliveryText: textOf(estimatedDelivery),
-    titleId: `rc-tracking-card-${index}`
+    estimatedDeliveryText: textOf(estimatedDelivery)
   };
 }
 
@@ -102,6 +105,32 @@ function isValidResponse(response) {
     Array.isArray(response.results) &&
     Array.isArray(response.notFound)
   );
+}
+
+function isTooLong(value) {
+  return value.length > MAX_VALUE_LENGTH;
+}
+
+/**
+ * The values to list under "Not found", in input order: the typed values the
+ * server did not find and, as the server would, the values longer than 50
+ * characters, except when the answer is truncated (a truncated answer lists
+ * no value as missing). A server value that matches no typed value is kept,
+ * after them.
+ */
+function mergeNotFound(values, serverNotFound, truncated) {
+  const missing = new Set(serverNotFound.map((value) => value.toUpperCase()));
+  const typed = new Set(values.map((value) => value.toUpperCase()));
+  const merged = values.filter((value) => {
+    if (isTooLong(value)) {
+      return !truncated;
+    }
+    return missing.has(value.toUpperCase());
+  });
+  serverNotFound
+    .filter((value) => !typed.has(value.toUpperCase()))
+    .forEach((value) => merged.push(value));
+  return merged;
 }
 
 function messageFor(error) {
@@ -186,17 +215,23 @@ export default class RcTracking extends LightningElement {
       this.errorMessage = CAP_ERROR;
       return;
     }
+    const sendable = values.filter((value) => !isTooLong(value));
+    if (sendable.length === 0) {
+      this.showResponse(values, {
+        results: [],
+        notFound: [],
+        truncated: false
+      });
+      return;
+    }
     this.isLoading = true;
-    search({ mode: this.mode, values })
+    search({ mode: this.mode, values: sendable })
       .then((response) => {
         if (!isValidResponse(response)) {
           this.errorMessage = GENERIC_ERROR;
           return;
         }
-        this.cards = response.results.map(toCard);
-        this.notFound = response.notFound.map((value) => String(value));
-        this.truncated = response.truncated === true;
-        this.hasSearched = true;
+        this.showResponse(values, response);
       })
       .catch((error) => {
         this.errorMessage = messageFor(error);
@@ -204,6 +239,17 @@ export default class RcTracking extends LightningElement {
       .finally(() => {
         this.isLoading = false;
       });
+  }
+
+  showResponse(values, response) {
+    this.cards = response.results.map(toCard);
+    this.truncated = response.truncated === true;
+    this.notFound = mergeNotFound(
+      values,
+      response.notFound.map((value) => String(value)),
+      this.truncated
+    );
+    this.hasSearched = true;
   }
 
   clearResults() {

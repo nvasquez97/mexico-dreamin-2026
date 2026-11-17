@@ -46,8 +46,18 @@
   line-height: 1.5;
 }
 
+/*
+ * The empty live region stays in the accessibility tree (WCAG 4.1.3), so the
+ * result count is announced when it arrives; visually hidden and out of the
+ * grid flow, it adds no gap while empty.
+ */
 .rc-tracking__summary:empty {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .rc-tracking__form {
