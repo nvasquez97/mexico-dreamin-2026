@@ -59,7 +59,7 @@ Plan review: fixed (plan-reviewer a1641868ac0d75f8f)
 | T3 | S3 | AC-001.8 | force-app/main/default/lwc/rcHeader/** (css, html, js, __tests__), force-app/main/default/digitalExperiences/site/RutaCargo1/sfdc_cms__brandingSet/**, force-app/main/default/digitalExperiences/site/RutaCargo1/sfdc_cms__themeLayout/scopedHeaderAndFooter/content.json, force-app/main/default/digitalExperiences/site/RutaCargo1/sfdc_cms__theme/**, scripts/checks/brand-check.sh | no | task-worker | experience-lwc:experience-lwc-generate, experience-lwc:experience-accessibility-validate, salesforce-development:platform-metadata-api-context-get, salesforce-development:platform-metadata-deploy | task-reviewer |
 
 ## Tasks
-- [ ] T1 (S1): Guest tracking controller, system-mode selector of the BR-01 fields, guest class access and its check — test first
+- [ ] T1 (S1): Guest tracking controller, system-mode selector of the BR-01 fields, guest class access and its check — test first — review: findings · reviewers: task-reviewer a2e5fc33e4b76e879, security-reviewer af74d845deba9d2c0, access-auditor a493ddcff6c54bfe0
 - [ ] T2 (S2): rcTracking LWC on the home page: modes, up to 10 values, results, Not found, sorting — test first
 - [ ] T3 (S3): Header brand fixes carried from the foundation: logo ≥360 px visible, no gray wrapper — check first
 
