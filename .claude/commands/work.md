@@ -18,6 +18,8 @@ Start or resume ODD for: $ARGUMENTS
        round, or its closing check if the fix is already committed. If a
        reviewer id cannot be resumed, use the narrow fallback of the odd
        skill;
+     - the Task analysis is filled and the `Plan review:` line is empty:
+       resume at the plan review;
      - an unticked task: resume from it;
      - every task ticked: resume Close at its `Stage:` line (pending: the
        gate; gate or reviews: the requirement reviews, resuming reviewers by

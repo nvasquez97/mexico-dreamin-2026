@@ -4,5 +4,42 @@
     "salesforce-code-quality@salesforce": true,
     "experience-lwc@salesforce": true,
     "integration@salesforce": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/odd_handoff_check.py",
+            "timeout": 15,
+            "statusMessage": "Checking the ODD handoff…"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/odd_tick_check.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/odd_memory_check.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }

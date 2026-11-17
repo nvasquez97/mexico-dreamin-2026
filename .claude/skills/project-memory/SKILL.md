@@ -82,6 +82,10 @@ After every write, check the size:
 
     wc -c .mem/memory.md
 
+A hook (.claude/hooks/odd_memory_check.py) also checks the size and looks for
+anything that resembles a secret after every write to memory.md. When it
+reports either one, fix it before any other work.
+
 If it is larger than 50 KB (51200 bytes), rotate before doing anything else:
 
 1. Write a summary of the current memory.md, at most 10 KB. Keep: the run

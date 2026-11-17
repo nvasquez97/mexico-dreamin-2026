@@ -15,7 +15,12 @@ Always respond in English, even when the user writes in Spanish.
   question only for what the request already states.
 - One task document per requirement, in odd/tasks/.
 - Analyze before executing: fill the Task analysis table (scope, executor and
-  reviewers for every task) before the first worker is launched.
+  reviewers for every task), then have plan-reviewer review it, before the
+  first worker is launched.
+- Every subagent gets its handoff block (Handoff, Fix handoff or Review
+  handoff) with the task's data, so it never rebuilds the context from zero.
+  Hooks in .claude/hooks check handoffs, tick lines and memory: when one
+  refuses, fix the cause; never work around it.
 - Do not write production code in the main session for tier 1 and tier 2
   work. Launch one task-worker per task, with a Handoff block.
 - After every task commit, and before ticking it, launch task-reviewer over
@@ -41,6 +46,7 @@ Always respond in English, even when the user writes in Spanish.
 | Phase | Agent |
 |---|---|
 | Explore, when the scope is unknown | Explore (built-in) |
+| Review the plan, before the first worker | plan-reviewer |
 | Execute a task | task-worker |
 | Review after every task | task-reviewer |
 | Security lens, on tasks that touch security | security-reviewer, access-auditor |

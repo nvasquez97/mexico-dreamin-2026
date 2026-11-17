@@ -14,7 +14,7 @@ except the project's development org.
 ## The spine
 
     Read & infer → Explore → Problems → Solutions → Classify → Checkpoint
-      → Task analysis (scope, executor and reviewers per task)
+      → Task analysis (scope, executor and reviewers per task) → Plan review
       → Execute (one worker per task: red → green → mutations → commit)
       → Review (after every task) → Fix round → Tick
       → Close (gate, requirement reviews, fix round) → Archive
@@ -30,6 +30,7 @@ except the project's development org.
 | 4 | Classify | Main session | The Tier line |
 | 5 | Checkpoint | The owner, who approves Problems and Solutions and chooses the mode | The Approved line and the Mode line |
 | 6 | Task analysis | Main session | Acceptance lines, and the task table with scope, executor and reviewers |
+| 6b | Plan review | plan-reviewer | clean, or findings fixed by the main session in one round |
 | 7 | Execute | task-worker, one per task | One commit per task and its evidence file |
 | 8 | Review | task-reviewer after every task; the security lens when the task touches security | clean, or findings and one fix round |
 | 9 | Tick | Main session | The task line checked, with sha, evidence and review result |
@@ -128,6 +129,7 @@ Branch: <branch>
 Org: <target org alias>
 Approved: <who>, <date>
 Base: <HEAD sha before the first task of this document>
+Plan review: <clean | fixed | open — <finding>> (plan-reviewer <id>)
 
 ## Findings
 - <fact> (`path:line`)
@@ -191,6 +193,25 @@ Task analysis table. For each task:
 Keep each task small: one behavior, one commit, about 400 changed lines at
 most. Order the tasks so that each one leaves the tests green.
 
+## Plan review (phase 6b)
+
+A plan is cheap to fix; code built from a wrong plan is not. After the Task
+analysis is committed (`odd(<slug>): plan`) and before the first worker:
+
+1. Launch plan-reviewer with a Review handoff: Target is the plan commit,
+   Requirement is the requirement id and the path of the design document.
+2. If it returns blocking findings, the main session fixes the task document
+   itself, once (the plan is its own work), commits it as
+   `odd(<slug>): plan fix`, and resumes the same plan-reviewer for the
+   closing check.
+3. Record the result on the `Plan review:` line of the header. A finding
+   still open after the closing check: in Mode: auto, record it there and
+   continue; in Mode: interactive, show it to the owner.
+4. In Mode: interactive, show the reviewed task table and ask whether to
+   start.
+
+Hardening task documents get the same plan review.
+
 ## Execute (phase 7)
 
 - Every tier 1 and tier 2 task runs in a task-worker subagent. The main
@@ -212,6 +233,12 @@ most. Order the tasks so that each one leaves the tests green.
   banner. That is why the main session, which has the plugins loaded, picks
   the skills during the task analysis and names the org and the skills in
   every handoff.
+- A hook (.claude/hooks/odd_handoff_check.py) refuses to launch an ODD agent
+  whose prompt lacks its handoff block, misses a required field, or leaves a
+  template placeholder such as `<sha>`. When it refuses, complete the handoff
+  from the task document and launch again; never work around it. A launch
+  outside ODD (a probe, a question) starts its prompt with
+  `Handoff-exempt: <reason>`.
 - Launch each worker with a Handoff block:
 
 ```markdown
@@ -238,8 +265,34 @@ most. Order the tasks so that each one leaves the tests green.
 ## Review (phase 8)
 
 - After every task commit, and before ticking the task, launch task-reviewer
-  (read-only) over that sha, with the Acceptance lines, the scope, the
-  evidence path, the org, the skills of the task and its Security mark.
+  (read-only) over that sha, with a Review handoff.
+- Every reviewer, at every phase (task, plan, close), is launched with a
+  Review handoff, so it starts from the task's data instead of from zero:
+
+```markdown
+## Review handoff
+- Task document: odd/tasks/<slug>.md
+- Task: T# (S#) | Plan of <slug> | Close of <slug>
+- Target: <sha> (a task or the plan commit) | <Base>..<HEAD> (a close)
+- Acceptance: <the lines VERBATIM, with their *Mutation:* lines>
+- Scope: <the files the task may touch, or the requirement's files>
+- Evidence: <odd/evidence/<slug>/T#.md, or odd/evidence/<slug>/ at Close>
+- Org: <target org alias>; never production
+- Skills: <the task's skills, by full name>
+- Security: yes | no
+- Coverage: <the gate's coverage, for test-reviewer>
+- Requirement: <the requirement id and the design document path, for plan-reviewer>
+- Return: <the format of the agent's Return section>
+```
+
+  Required fields: every reviewer needs Task document, Task, Target, Org and
+  Return. On top of those: task-reviewer needs Acceptance, Scope, Evidence,
+  Skills and Security; security-reviewer and access-auditor need Acceptance
+  and Scope; test-reviewer needs Acceptance, Evidence and Coverage;
+  brand-reviewer and sf-security-auditor need Scope; plan-reviewer needs
+  Requirement. A fresh closing check (when the reviewer cannot be resumed)
+  needs only the five common fields plus `- Findings:` with the findings
+  verbatim.
 - If the Task analysis marks the task Security: yes, also launch
   security-reviewer and access-auditor over the same sha. The reviewers are
   read-only, so launch them in parallel, in one message.
@@ -308,6 +361,8 @@ most. Order the tasks so that each one leaves the tests green.
     - [x] T4 (S2): <task> — <sha> · evidence: odd/evidence/<slug>/T4.md · review: open — <finding> (not resolved in the fix round)
 
 A task is ticked only with its sha, its evidence path and its review result.
+A hook (.claude/hooks/odd_tick_check.py) refuses a tick line without them, or
+whose commit or evidence file does not exist.
 
 ## Close and Archive (phases 10 and 11)
 
