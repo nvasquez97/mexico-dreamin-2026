@@ -20,6 +20,10 @@ public with sharing class PublicTrackingController {
     // Closed list of modes; Set.contains is case-sensitive.
     private static final Set<String> MODES = new Set<String>{ MODE_TRACKING_NUMBER, MODE_REFERENCE };
     private static final Integer MAX_RAW_ENTRIES = 100;
+    // 10 values of up to 50 characters, each followed by a comma and a space.
+    // Checked before split(): System.LimitException cannot be caught, so the
+    // size of the work must be bounded before it starts.
+    private static final Integer MAX_ENTRY_LENGTH = 520;
     private static final Integer MAX_VALUES = 10;
     private static final Integer MAX_VALUE_LENGTH = 50;
     private static final Integer MAX_RESULTS = 50;
@@ -35,21 +39,23 @@ public with sharing class PublicTrackingController {
     private static Boolean failForTest = false;
 
     /** @description A rejection whose message is safe to show to the caller. */
-    private class SearchRejectedException extends Exception {}
+    private with sharing class SearchRejectedException extends Exception {}
 
     /** @description An unexpected failure raised by the test seam. */
-    private class SearchFailureException extends Exception {}
+    private with sharing class SearchFailureException extends Exception {}
 
     /**
      * @description Searches shipments for an anonymous visitor.
      * @param mode TRACKING_NUMBER or REFERENCE (closed list)
-     * @param values at most 100 entries; each may hold several values separated
-     *               by commas or line breaks; at most 10 distinct values after
+     * @param values at most 100 entries of at most 520 characters; each may hold
+     *               several values separated by commas or line breaks; at most
+     *               10 distinct values after
      *               trimming and case-insensitive de-duplication
      * @return the BR-01 results, the values not found and the truncation flag
      * @throws AuraHandledException with "Enter up to 10 values." for too many
-     *         values, or "We could not complete the search. Please try again."
-     *         for anything else
+     *         values or more than 100 entries, or "We could not complete the
+     *         search. Please try again." for anything else (an entry longer than
+     *         520 characters, a mode outside the list, an unexpected error)
      */
     @AuraEnabled
     public static PublicTrackingResult search(String mode, List<String> values) {
@@ -66,6 +72,9 @@ public with sharing class PublicTrackingController {
         if (values != null && values.size() > MAX_RAW_ENTRIES) {
             throw new SearchRejectedException(COUNT_MESSAGE);
         }
+        if (hasOversizedEntry(values)) {
+            throw new SearchRejectedException(GENERIC_MESSAGE);
+        }
         if (mode == null || !MODES.contains(mode)) {
             throw new SearchRejectedException(GENERIC_MESSAGE);
         }
@@ -77,6 +86,19 @@ public with sharing class PublicTrackingController {
         List<String> keys = normalize(values, spellingByKey);
         List<Shipment__c> rows = selectRows(byTrackingNumber, queryableKeys(keys, byTrackingNumber));
         return buildResult(rows, keys, spellingByKey, byTrackingNumber);
+    }
+
+    // True when any raw entry is longer than MAX_ENTRY_LENGTH (at most 100 checks).
+    private static Boolean hasOversizedEntry(List<String> values) {
+        if (values == null) {
+            return false;
+        }
+        for (String entry : values) {
+            if (entry != null && entry.length() > MAX_ENTRY_LENGTH) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Splits, trims, drops empties and de-duplicates case-insensitively. Returns

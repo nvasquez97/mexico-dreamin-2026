@@ -1,8 +1,8 @@
 /**
  * @description Proves PublicTrackingController.search, the guest tracking search
  *              of odd/tasks/req-001-public-tracking.md (S1): AC-001.1 (server:
- *              split values, modes, 10-value cap, 100 raw entries, closed mode
- *              list, generic errors), AC-001.2 (exactly the BR-01 keys, Mexico
+ *              split values, modes, 10-value cap, 100 raw entries, 520-character
+ *              entries, closed mode list, generic errors), AC-001.2 (exactly the BR-01 keys, Mexico
  *              City dates, no private value, no Id), AC-001.3 (server: notFound
  *              in input order, 50-row cap with truncated), AC-001.5 (trim and
  *              case-insensitive de-duplication) and AC-001.6 (the real site guest
@@ -26,6 +26,10 @@ private with sharing class PublicTrackingControllerTest {
     private static final Integer SETUP_SIZE = 10;
     private static final Integer BULK_SIZE = 251;
     private static final Integer RESULT_CAP = 50;
+    private static final Integer MAX_RAW_ENTRIES = 100;
+    // 10 values of up to 50 characters, each followed by a comma and a space.
+    private static final Integer MAX_ENTRY_LENGTH = 520;
+    private static final Integer HUGE_ENTRY_PAIRS = 500000;
     private static final Datetime FIRST_UPDATE = Datetime.newInstanceGmt(2026, 11, 20, 16, 0, 0);
     private static final Datetime SECOND_UPDATE = Datetime.newInstanceGmt(2026, 11, 21, 3, 0, 0);
     private static final Date FIRST_ESTIMATE = Date.newInstance(2026, 11, 25);
@@ -184,6 +188,45 @@ private with sharing class PublicTrackingControllerTest {
     }
 
     @IsTest
+    static void search_exactlyHundredRawEntries_areAccepted() {
+        List<String> names = namesOf(setupShipments());
+        List<String> values = new List<String>();
+        for (Integer i = 0; i < MAX_RAW_ENTRIES; i++) {
+            values.add(names[Math.mod(i, names.size())]);
+        }
+        Test.startTest();
+        PublicTrackingResult result = PublicTrackingController.search(TRACKING, values);
+        Test.stopTest();
+        Assert.areEqual(names, trackingNumbersOf(result), '100 raw entries holding 10 distinct values must be accepted');
+    }
+
+    @IsTest
+    static void search_entryAtLengthBound_isAccepted() {
+        List<String> names = namesOf(setupShipments());
+        String entry = String.join(names, ', ').rightPad(MAX_ENTRY_LENGTH);
+        Assert.areEqual(MAX_ENTRY_LENGTH, entry.length(), 'The entry must be exactly at the bound');
+        Test.startTest();
+        PublicTrackingResult result = PublicTrackingController.search(TRACKING, new List<String>{ entry });
+        Test.stopTest();
+        Assert.areEqual(names, trackingNumbersOf(result), 'An entry of 520 characters with 10 values must be accepted');
+    }
+
+    @IsTest
+    static void search_entryLongerThanBound_isRejectedWithoutQuery() {
+        String entry = 'a,'.repeat(MAX_ENTRY_LENGTH / 2) + 'a';
+        Assert.areEqual(MAX_ENTRY_LENGTH + 1, entry.length(), 'The entry must be one character over the bound');
+        assertRejectedWithoutQuery(REFERENCE_MODE, new List<String>{ entry }, GENERIC_MESSAGE);
+    }
+
+    @IsTest
+    static void search_hugeEntryOfDuplicates_isRejectedWithoutQuery() {
+        // One entry that splits into 500,000 copies of the same value: before
+        // the bound, split() ran over all of it before any count check.
+        String entry = 'a,'.repeat(HUGE_ENTRY_PAIRS);
+        assertRejectedWithoutQuery(REFERENCE_MODE, new List<String>{ entry }, GENERIC_MESSAGE);
+    }
+
+    @IsTest
     static void search_modeName_isRejectedWithoutQuery() {
         assertRejectedWithoutQuery('Name', new List<String>{ setupShipments()[0].Name }, GENERIC_MESSAGE);
     }
@@ -214,6 +257,7 @@ private with sharing class PublicTrackingControllerTest {
         Test.startTest();
         PublicTrackingResult result = PublicTrackingController.search(REFERENCE_MODE, new List<String>{ REFERENCE });
         Test.stopTest();
+        Assert.areEqual(1, result.results.size(), 'PO-7781 must return exactly one result to inspect');
         Map<String, Object> serialized = (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(result.results[0]));
         Assert.areEqual(BR01_KEYS, serialized.keySet(), 'A result must have exactly the seven BR-01 keys');
     }
@@ -235,6 +279,7 @@ private with sharing class PublicTrackingControllerTest {
         Test.startTest();
         PublicTrackingResult result = PublicTrackingController.search(TRACKING, new List<String>{ first.Name, second.Name });
         Test.stopTest();
+        Assert.areEqual(2, result.results.size(), 'Both shipments must be returned before their dates are checked');
         Assert.areEqual('2026-11-20 10:00', result.results[0].lastUpdate, '16:00 UTC is 10:00 in Mexico City');
         Assert.areEqual('2026-11-20 21:00', result.results[1].lastUpdate,
             '03:00 UTC on the 21st is 21:00 on the 20th in Mexico City');
@@ -247,6 +292,7 @@ private with sharing class PublicTrackingControllerTest {
         Test.startTest();
         PublicTrackingResult result = PublicTrackingController.search(TRACKING, new List<String>{ first.Name, second.Name });
         Test.stopTest();
+        Assert.areEqual(2, result.results.size(), 'Both shipments must be returned before their estimates are checked');
         Assert.areEqual('2026-11-25', result.results[0].estimatedDelivery, 'First shipment estimate as ISO date');
         Assert.areEqual('2026-11-21', result.results[1].estimatedDelivery, 'Second shipment estimate as ISO date');
         Assert.areEqual(LAST_LOCATION, result.results[0].lastLocation, 'The last location is public (BR-01)');
