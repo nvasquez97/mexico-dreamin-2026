@@ -136,3 +136,9 @@
 - What: Gate @ d55cd2c 196/196 and re-run @ a6e305b 205/205, org 95.48% (PublicTracking* 100%), Jest 63/63. Reviews: test-reviewer (2 Medium + 5 Low fixed at 2dcff81), brand approved (C11 live region fixed), sf-security-auditor pass (SEC-001 fixed by guest-access-check 5c), access-auditor approved. No open blocking findings; Hardening items in the Close section (C1 rate limit, etc.).
 - Why / evidence: odd/tasks/archive/2026-11-17-req-001-public-tracking.md.
 - Next: REQ-002+003 T1 (recipient access with lockout, details, reschedule); REQ-005 and REQ-006+007 plans are reviewed and wait their order gates.
+
+## 2026-11-17 22:30 — REQ-002+003: T1 in fix round, T2 resumed with credential decision E11
+- Type: decision
+- What: T1 1d02283 reviewed (access approved, security approved with 2 Lows, task-reviewer Medium: 3 clauses never seen red on their own assertion) — fix round after T2 commits. T2 stopped: the guest's External Credential callout needs Read on UserExternalCredential (object permission forbidden for the guest). E11: use a password-authenticated (legacy) Named Credential, key in the org only; fallback = one guest Read on UserExternalCredential as an exception pending owner approval. T2 worker resumed (same agent) with E11.
+- Why / evidence: odd/tasks/req-002-003-recipient-delivery.md E11; T2 stop report.
+- Next: T2 commit and review; T1 fix round; T3 (LWC, layout history list, live history check); Close.
