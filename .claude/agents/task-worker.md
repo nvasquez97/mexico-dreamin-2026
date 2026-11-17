@@ -122,7 +122,12 @@ evidence.
 2. Write the code. Run until green.
 3. For each Mutation line: apply the change to the production code, run,
    keep the red output verbatim, and revert. Confirm that the tree is clean
-   and the test is green again.
+   and the test is green again. If the platform makes the mutation
+   equivalent, so it cannot turn red (for example removing `WITH USER_MODE`
+   at API 67), record `equivalent: <why>` and prove a stronger variant red
+   instead (for example `WITH SYSTEM_MODE`). If a mutation cannot show a red
+   with the acceptance line's own input, add a second input that can, and
+   say so in the evidence.
 4. Run the code analyzer over the files you changed.
 5. Commit once, with only the files of this task. The message is
    `T# (S#): <what changed>` and ends with

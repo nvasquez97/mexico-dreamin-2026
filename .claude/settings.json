@@ -47,9 +47,17 @@
             "type": "command",
             "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/odd_memory_check.py",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/odd_tick_check.py",
+            "timeout": 15
           }
         ]
       }
     ]
+  },
+  "env": {
+    "SF_PLUGIN_SKILLS_FIRST": "advisory"
   }
 }

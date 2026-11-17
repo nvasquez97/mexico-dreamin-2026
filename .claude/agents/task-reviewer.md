@@ -23,6 +23,8 @@ whether the task analysis marked it Security: yes or no.
   never approve by omission.
 - Only findings caused by this task block it. Problems that already existed
   go under Notes and do not block.
+- Uncommitted changes in odd/ and .mem/ are the main session's bookkeeping:
+  ignore them.
 - You do not re-review a fix. If you are resumed after a fix round, check
   only your own earlier findings at the fix sha (see "Closing check").
 
@@ -52,7 +54,9 @@ and write `Skills: not available - <skill>` in your return.
    - The red BEFORE the code is verbatim and fails for the right reason: an
      assertion that names the acceptance criterion. A compile error, a
      deploy failure or a missing class is not a valid red.
-   - There is a green after the code, and a red for each Mutation.
+   - There is a green after the code, and a red for each Mutation. A
+     mutation recorded as `equivalent: <why>` is accepted only when the why
+     is true and a stronger variant was seen red.
    - The task sha in the evidence matches the commit, and no mutation is left
      in the committed code.
    - The evidence names the org, the skills used and the code analyzer

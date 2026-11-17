@@ -19,9 +19,14 @@ Start or resume ODD for: $ARGUMENTS
      every feature it needs (for example Communities and the site settings
      for an Experience Cloud site). If one is missing, add it to the
      definition first as a tier 0 change, and record it as an assumption.
+     Before creating it, create every package directory listed in
+     sfdx-project.json (`mkdir -p force-app/main/default`): git keeps no
+     empty folders, and the create command fails without them.
      Record the new alias in project memory.
-   - Verify the org with `sf org display --target-org <alias> --json` and
-     confirm it is not a production org.
+   - Verify the org: `sf org display --target-org <alias> --json` for its
+     username and connection, and `sf org list --json` to read whether it is
+     a scratch org or a sandbox (`isScratch`, `isSandbox`). Confirm it is not
+     a production org.
    - Set it as the project's local default org:
      `sf config set target-org <alias>` (local and git-ignored). The plugin's
      deploy gate refuses deploys when there is no default org, even with

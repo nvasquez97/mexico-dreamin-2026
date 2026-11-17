@@ -170,6 +170,12 @@ Rules for the document:
 
 - Every acceptance criterion of the requirement appears in at least one
   Acceptance line, with its identifier. Every Acceptance line has a Mutation.
+- An equivalent mutation is one the platform makes harmless, so it cannot
+  turn red (for example removing `WITH USER_MODE` at API 67 and later, where
+  user mode is already the default). Record it as
+  `equivalent: <why>`, together with a stronger variant that does turn red
+  (for example `WITH SYSTEM_MODE`). An equivalent mutation without a red
+  variant does not count as proof.
 - Problems name what could go wrong, not only what is missing. Solutions name
   the alternative that was discarded and why.
 
@@ -303,7 +309,12 @@ Hardening task documents get the same plan review.
   and access-auditor over the same sha before ticking, and correct the
   Security mark in the Task analysis. That finding is never sent to a worker:
   launching the lens closes it.
-- A review runs over a committed sha, never over a dirty worktree.
+- A review runs over a committed sha, never over a dirty worktree. The main
+  session may have uncommitted changes in odd/ and .mem/ while reviewers
+  run; they are bookkeeping, and reviewers ignore them.
+- Edit the task document only with the Edit or Write tool, never with a
+  shell command (sed, python, a heredoc), so the tick hook checks every
+  change.
 - Blocking findings. Judge by the findings, not by the verdict word (clean,
   APPROVED, PASS, CHANGES REQUIRED, FAIL...). A finding is blocking when it
   is Critical, High or Medium, the reviewer lists it under Findings, and this
@@ -315,7 +326,7 @@ Hardening task documents get the same plan review.
 - Every reviewer launch returns an agent id. When a reviewer returns
   findings, write its id on the task line at once, so it survives a
   compaction:
-  `- [ ] T2 (S1): <task> — review: findings (task-reviewer <id>, security-reviewer <id>)`
+  `- [ ] T2 (S1): <task> — review: findings · reviewers: task-reviewer <id>, security-reviewer <id>`
 - One reviewer per role per task.
 
 ## Fix round
@@ -359,12 +370,13 @@ Hardening task documents get the same plan review.
 ## Tick (phase 9)
 
     - [x] T1 (S1): <task> — <sha> · evidence: odd/evidence/<slug>/T1.md · review: clean
-    - [x] T2 (S1): <task> — <sha> · evidence: odd/evidence/<slug>/T2.md · review: fixed in <sha>
+    - [x] T2 (S1): <task> — <sha> · evidence: odd/evidence/<slug>/T2.md · review: fixed in <sha> · reviewers: task-reviewer <id>, security-reviewer <id>
     - [x] T3 (S2): <task> — <sha> · evidence: odd/evidence/<slug>/T3.md · review: fixed in <sha>, open — <finding>
     - [x] T4 (S2): <task> — <sha> · evidence: odd/evidence/<slug>/T4.md · review: open — <finding> (not resolved in the fix round)
 
 A task is ticked only with its sha, its evidence path and its review result.
-When ticking, the main session also copies each Mutation's observed red from
+The reviewer ids, when a review had findings, go last, in an optional
+`· reviewers: <role id, ...>` field. When ticking, the main session also copies each Mutation's observed red from
 the evidence file into its Acceptance line (`observed:`); the task document
 is the main session's, so workers never write it.
 A hook (.claude/hooks/odd_tick_check.py) refuses a tick line without them,
