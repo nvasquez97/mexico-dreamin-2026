@@ -71,11 +71,11 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
   *Mutation:* remove the idempotency check of the seed script and run it twice — observed: second run exit 1 "the org already has 120 Shipment__c record(s) …" (the Auto Number guard stopped it before any DML; the stronger variant would consume RC000001121–1240, against A6)
 
 - AC-F.16 (D1, T6 outcome: the seeded clear codes were lost) — Given existing shipments, When `DeliveryAccessCode.reissueCodes(ids)` runs as a support agent (user mode), Then each shipment gets a new salted hash, the returned Map<Id,String> holds a new 12-character code per Id that verifies, and the previous code no longer verifies; a plain update still cannot change the hash (AC-F.13 stays green).
-  *Mutation:* return new codes without letting the trigger replace the hash — observed: <filled by the worker>
+  *Mutation:* return new codes without letting the trigger replace the hash — observed: 3 tests red, e.g. "The reissued code must verify on its shipment"; fix round extra: USER_MODE→SYSTEM_MODE in reissueCodes → "A user without Edit on Shipment__c must not reissue codes, even with an Edit share"
 - AC-F.17 (D1, needed by REQ-002) — Given shipments A and B, When `DeliveryAccessCode.verify(shipmentId, code)` is called, Then it returns true only for A's own code on A (also in lower case or XXXX-XXXX-XXXX), and false for B's code on A, a blank code, a malformed code or an unknown Id; it reads only the hash field (system mode, justified) and never returns or logs the hash.
-  *Mutation:* make verify compare the code against any shipment's hash instead of the given Id's — observed: <filled by the worker>
+  *Mutation:* make verify compare the code against any shipment's hash instead of the given Id's — observed: "B's code must not verify on A", "An unknown shipment Id must be rejected" (re-proved at the fix); fix round extra: remove the decoy hash on unknown Ids → "A code on an unknown Id must also compute one hash: Expected: 1, Actual: 0"
 - AC-F.18 (DoD test data, A12) — Given the seeded org without .seed-output/access-codes.csv, When `scripts/seed/seed.sh --reissue-codes` runs, Then the 120 seeded shipments get new codes, the file holds 120 lines (tracking number, code), and scripts/seed/verify.sh checks every code in the file with `DeliveryAccessCode.verify` (no "skip" when the file exists); a corrupted code in the file turns verify.sh red.
-  *Mutation:* make verify.sh skip the per-code check — observed: <filled by the worker>
+  *Mutation:* make verify.sh skip the per-code check — observed: with two codes swapped in the file verify.sh exits 0 instead of failing 118 of 120 (unmutated: 118 failures, exit 1)
 
 ## Task analysis
 | Task | Solves | Acceptance | Scope (files to touch) | Security | Executor | Skills | Reviewers |
@@ -113,4 +113,4 @@ Plan review: fixed (plan-reviewer ab97119c99e07ca0a)
 - A6: workers never insert Shipment__c records in the org outside Apex tests, except the T6 seed, so the Auto Number sequence stays reproducible.
 
 ## Close
-Stage: pending
+Stage: gate
