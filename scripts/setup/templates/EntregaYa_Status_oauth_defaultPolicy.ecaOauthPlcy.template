@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AC-004.6 (S4, P4, P5): OAuth policies of the External Client App
+     EntregaYa_Status. Metadata format, rendered and deployed by
+     scripts/setup/entregaya-integration.sh, which replaces the only placeholder,
+     INTEGRATION_USERNAME between double braces, with the org's integration user
+     (the username differs per org, so this file is not in force-app).
+     Client credentials only, running as that user; only users of the permission
+     set RutaCargo_EntregaYa_Integration are pre-authorized; IP restrictions
+     enforced (B6: no login IP ranges yet, owner step); no token exchange, no
+     guest code-credential flow. The name is the policy the platform creates with
+     the app, so the deploy updates it. -->
+<ExtlClntAppOauthConfigurablePolicies xmlns="http://soap.sforce.com/2006/04/metadata">
+    <clientCredentialsFlowUser>{{INTEGRATION_USERNAME}}</clientCredentialsFlowUser>
+    <commaSeparatedPermissionSet>RutaCargo_EntregaYa_Integration</commaSeparatedPermissionSet>
+    <externalClientApplication>EntregaYa_Status</externalClientApplication>
+    <ipRelaxationPolicyType>Enforce</ipRelaxationPolicyType>
+    <isClientCredentialsFlowEnabled>true</isClientCredentialsFlowEnabled>
+    <isGuestCodeCredFlowEnabled>false</isGuestCodeCredFlowEnabled>
+    <isTokenExchangeFlowEnabled>false</isTokenExchangeFlowEnabled>
+    <label>EntregaYa_Status_oauth_defaultPolicy</label>
+    <permittedUsersPolicyType>AdminApprovedPreAuthorized</permittedUsersPolicyType>
+    <refreshTokenPolicyType>Zero</refreshTokenPolicyType>
+    <requiredSessionLevel>STANDARD</requiredSessionLevel>
+    <sessionTimeoutInMinutes>15</sessionTimeoutInMinutes>
+</ExtlClntAppOauthConfigurablePolicies>

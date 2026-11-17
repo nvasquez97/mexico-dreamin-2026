@@ -27,6 +27,32 @@
 #   6. the public group RutaCargo_EntregaYa_Integration exists (no bosses) and the
 #      deployed sharing rules (retrieved, not the local file) share every
 #      shipment (Name notEqual '') with it, Read/Write (Edit).
+# And, for AC-004.6 (S4, D2, P4, P5):
+#   7. exactly one active user holds RutaCargo_EntregaYa_Integration; its profile
+#      is "Minimum Access - API Only Integrations", it holds the "Salesforce API
+#      Integration" permission set license, RutaCargo_EntregaYa_Integration is its
+#      only assigned permission set (no other set, no group), it is a member of
+#      the group RutaCargo_EntregaYa_Integration and nobody else is;
+#   8. the External Client App EntregaYa_Status exists; its OAuth scopes are
+#      exactly Api; its OAuth policies enable the client credentials flow with
+#      that user as the execution user, permitted users "Admin approved users are
+#      pre-authorized", IP restrictions enforced, no token exchange and no guest
+#      code-credential flow; the pre-authorized permission set is exactly
+#      RutaCargo_EntregaYa_Integration;
+#   8b. the versioned app settings in force-app (the deployed global OAuth
+#      settings are not exposed by any data or Tooling object, and a retrieve
+#      would bring the consumer credentials): EntregaYa_Status_glbloauth enables
+#      the client credentials flow and no device, token exchange, code-credential
+#      or JWT flow, requires PKCE and the secret, rotates nothing and carries no
+#      consumer key, secret or certificate; EntregaYa_Status_oauth has the scope
+#      Api only;
+#   9. no consumer key, consumer secret, access token or org-specific
+#      integration username is in the repository: the working tree (tracked and
+#      untracked, not ignored files) and the whole git history.
+# The consumer secret is never read: the configuration comes from the
+# ExternalClientApplication, ExtlClntAppOauthSettings and ExtlClntAppOauthPlcyCnfg
+# records, not from the ExtlClntAppGlobalOauthSettings metadata (which carries the
+# consumer credentials).
 # Any failed query, describe or retrieve stops the script with exit code 3.
 #
 # Usage: scripts/checks/entregaya-access-check.sh <org-alias>
@@ -48,6 +74,11 @@ CLASS_NAME='EntregaYaStatusResource'
 CUSTOM_PERMISSION='RutaCargo_EntregaYa_Sender'
 EXPECTED_USER_PERMS='PermissionsApexRestServices,PermissionsApiEnabled'
 STATUS_FIELDS='Shipment__c.Delivered_At__c,Shipment__c.Last_Location__c,Shipment__c.Last_Update__c,Shipment__c.Proof_Id__c,Shipment__c.Status__c'
+INTEGRATION_PROFILE='Minimum Access - API Only Integrations'
+API_INTEGRATION_PSL='SalesforceAPIIntegrationPsl'
+ECA_NAME='EntregaYa_Status'
+PERMITTED_USERS='AdminApprovedPreAuthorized'
+IP_ENFORCED='Enforce'
 
 violations=0
 fail() { echo "FAIL: $*"; violations=$((violations + 1)); }
@@ -120,13 +151,22 @@ done <<<"$(holders "$access")"
 
 # ─── 2b. Everything else the permission set grants ─────────────────────────
 # SetupEntityAccess covers Apex classes, Visualforce pages, custom permissions,
-# apps (TabSet), connected apps and the other setup entities: exactly the class
-# and the custom permission are allowed.
+# apps (TabSet), connected apps, External Client Apps and the other setup
+# entities: exactly the class, the custom permission and, once the External
+# Client App EntregaYa_Status is deployed, that app (its pre-authorization,
+# AC-004.6) are allowed.
+eca_rows="$(query "SELECT Id FROM ExternalClientApplication WHERE DeveloperName = '$ECA_NAME'")"
+eca_entity=''
+eca_label=''
+if [[ "$(jq 'length' <<<"$eca_rows")" == "1" ]]; then
+    eca_entity="ExternalClientApplication:$(jq -r '.[0].Id' <<<"$eca_rows")"
+    eca_label=" and ExternalClientApplication $ECA_NAME"
+fi
 entities="$(query "SELECT SetupEntityType, SetupEntityId FROM SetupEntityAccess WHERE ParentId = '$permset_id'")"
-expected_entities="$(printf '%s\n' "ApexClass:$class_id" "CustomPermission:$cp_id" | sort | paste -sd, -)"
+expected_entities="$(printf '%s\n' "ApexClass:$class_id" "CustomPermission:$cp_id" "$eca_entity" | sed '/^$/d' | sort | paste -sd, -)"
 actual_entities="$(jq -r '[.[] | "\(.SetupEntityType):\(.SetupEntityId)"] | sort | join(",")' <<<"$entities")"
 if [[ "$actual_entities" == "$expected_entities" ]]; then
-    pass "$PERMSET grants only ApexClass $CLASS_NAME and CustomPermission $CUSTOM_PERMISSION (setup entities)"
+    pass "$PERMSET grants only ApexClass $CLASS_NAME, CustomPermission $CUSTOM_PERMISSION$eca_label (setup entities)"
 else
     while IFS= read -r entity; do
         [[ -z "$entity" ]] && continue
@@ -269,6 +309,191 @@ while IFS= read -r line; do
         FAIL*) fail "${line#FAIL }" ;;
     esac
 done <<<"$rule_report"
+
+# ─── 7. The integration user ───────────────────────────────────────────────
+integration_username=''
+integration_id=''
+holders_rows="$(query "SELECT AssigneeId, Assignee.Username, Assignee.Profile.Name FROM PermissionSetAssignment WHERE PermissionSetId = '$permset_id' AND Assignee.IsActive = true")"
+holder_count="$(jq 'length' <<<"$holders_rows")"
+if [[ "$holder_count" != "1" ]]; then
+    fail "$PERMSET must be held by exactly 1 active user, is held by $holder_count"
+else
+    integration_id="$(jq -r '.[0].AssigneeId' <<<"$holders_rows")"
+    [[ "$integration_id" =~ ^005[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || abort "unexpected user Id '$integration_id'"
+    integration_username="$(jq -r '.[0].Assignee.Username' <<<"$holders_rows")"
+    pass "$PERMSET is held by exactly 1 active user (the integration user)"
+    profile="$(jq -r '.[0].Assignee.Profile.Name // empty' <<<"$holders_rows")"
+    if [[ "$profile" == "$INTEGRATION_PROFILE" ]]; then
+        pass "integration user profile is $INTEGRATION_PROFILE"
+    else
+        fail "integration user profile is '$profile', expected '$INTEGRATION_PROFILE'"
+    fi
+    licenses="$(query "SELECT PermissionSetLicense.DeveloperName FROM PermissionSetLicenseAssign WHERE AssigneeId = '$integration_id'")"
+    if jq -e --arg psl "$API_INTEGRATION_PSL" 'any(.[]; .PermissionSetLicense.DeveloperName == $psl)' <<<"$licenses" >/dev/null; then
+        pass "integration user holds the permission set license $API_INTEGRATION_PSL"
+    else
+        fail "integration user does not hold the permission set license $API_INTEGRATION_PSL"
+    fi
+    assigned="$(query "SELECT PermissionSet.Name, PermissionSetGroupId FROM PermissionSetAssignment WHERE AssigneeId = '$integration_id' AND PermissionSet.IsOwnedByProfile = false")"
+    assigned_list="$(jq -r '[.[] | if .PermissionSetGroupId then "group:" + .PermissionSetGroupId else .PermissionSet.Name end] | unique | join(",")' <<<"$assigned")"
+    if [[ "$assigned_list" == "$PERMSET" ]]; then
+        pass "integration user is assigned only $PERMSET"
+    else
+        fail "integration user must be assigned only $PERMSET, is assigned: ${assigned_list:-nothing}"
+    fi
+    members="$(query "SELECT UserOrGroupId FROM GroupMember WHERE Group.DeveloperName = '$GROUP_NAME' AND Group.Type = 'Regular'")"
+    member_list="$(jq -r '[.[].UserOrGroupId] | sort | join(",")' <<<"$members")"
+    if [[ "$member_list" == "$integration_id" ]]; then
+        pass "group $GROUP_NAME has exactly one member, the integration user"
+    elif [[ ",$member_list," == *",$integration_id,"* ]]; then
+        fail "group $GROUP_NAME has other members besides the integration user: $member_list"
+    else
+        fail "integration user is not a member of group $GROUP_NAME (members: ${member_list:-none})"
+    fi
+fi
+
+# ─── 8. External Client App configuration ──────────────────────────────────
+apps="$(query "SELECT Id FROM ExternalClientApplication WHERE DeveloperName = '$ECA_NAME'")"
+if [[ "$(jq 'length' <<<"$apps")" != "1" ]]; then
+    fail "External Client App $ECA_NAME not found"
+else
+    app_id="$(jq -r '.[0].Id' <<<"$apps")"
+    pass "External Client App $ECA_NAME exists"
+    scope_fields="$(sf sobject describe --sobject ExtlClntAppOauthSettings --target-org "$ORG" --json 2>/dev/null || true)"
+    [[ "$(jq -r '.status // 1' <<<"$scope_fields" 2>/dev/null)" == "0" ]] || abort "describe of ExtlClntAppOauthSettings failed"
+    scope_list="$(jq -r '[.result.fields[] | select(.type == "boolean" and (.name | startswith("OauthScopes"))) | .name] | join(",")' <<<"$scope_fields")"
+    [[ -n "$scope_list" ]] || abort "ExtlClntAppOauthSettings has no OauthScopes fields"
+    settings="$(query "SELECT $scope_list FROM ExtlClntAppOauthSettings WHERE ExternalClientApplicationId = '$app_id'")"
+    if [[ "$(jq 'length' <<<"$settings")" != "1" ]]; then
+        fail "$ECA_NAME has $(jq 'length' <<<"$settings") OAuth settings records, expected 1"
+    else
+        scopes="$(jq -r '[.[0] | to_entries[] | select(.value == true) | .key] | sort | join(",")' <<<"$settings")"
+        if [[ "$scopes" == "OauthScopesAPI" ]]; then
+            pass "$ECA_NAME OAuth scopes are exactly Api"
+        else
+            fail "$ECA_NAME OAuth scopes must be exactly Api, are: ${scopes:-none}"
+        fi
+    fi
+    policies="$(query "SELECT Id, IsClientCredentialsFlowEnabled, ClientCredentialsFlowUser, PermittedUsersPolicyType, IpRelaxationPolicyType, IsTokenExchangeFlowEnabled, IsGuestCodeCredFlowEnabled FROM ExtlClntAppOauthPlcyCnfg WHERE ExternalClientApplicationId = '$app_id'")"
+    if [[ "$(jq 'length' <<<"$policies")" != "1" ]]; then
+        fail "$ECA_NAME has $(jq 'length' <<<"$policies") OAuth policy records, expected 1"
+    else
+        policy="$(jq -c '.[0]' <<<"$policies")"
+        if [[ "$(jq -r '.IsClientCredentialsFlowEnabled' <<<"$policy")" == "true" ]]; then
+            pass "$ECA_NAME enables the client credentials flow"
+        else
+            fail "$ECA_NAME does not enable the client credentials flow"
+        fi
+        # The platform stores the execution user as a User Id (ClientCredentialsFlowUser).
+        run_as="$(jq -r '.ClientCredentialsFlowUser // empty' <<<"$policy")"
+        if [[ -n "$integration_id" && "${run_as:0:15}" == "${integration_id:0:15}" ]]; then
+            pass "$ECA_NAME client credentials flow runs as the integration user"
+        elif [[ -z "$run_as" ]]; then
+            fail "$ECA_NAME client credentials flow has no execution user"
+        else
+            fail "$ECA_NAME client credentials flow must run as the integration user, runs as $run_as"
+        fi
+        permitted="$(jq -r '.PermittedUsersPolicyType // empty' <<<"$policy")"
+        if [[ "$permitted" == "$PERMITTED_USERS" ]]; then
+            pass "$ECA_NAME permitted users: admin approved users are pre-authorized"
+        else
+            fail "$ECA_NAME permitted users is '$permitted', expected '$PERMITTED_USERS'"
+        fi
+        ip_policy="$(jq -r '.IpRelaxationPolicyType // empty' <<<"$policy")"
+        if [[ "$ip_policy" == "$IP_ENFORCED" ]]; then
+            pass "$ECA_NAME enforces IP restrictions ($ip_policy)"
+        else
+            fail "$ECA_NAME IP relaxation is '$ip_policy', expected '$IP_ENFORCED'"
+        fi
+        if [[ "$(jq -r '.IsTokenExchangeFlowEnabled' <<<"$policy")" == "false" && "$(jq -r '.IsGuestCodeCredFlowEnabled' <<<"$policy")" == "false" ]]; then
+            pass "$ECA_NAME enables no token exchange and no guest code-credential flow"
+        else
+            fail "$ECA_NAME enables token exchange or the guest code-credential flow"
+        fi
+        preauth="$(query "SELECT Parent.Name, Parent.IsOwnedByProfile, Parent.Profile.Name FROM SetupEntityAccess WHERE SetupEntityId = '$app_id'")"
+        preauth_list="$(holders "$preauth" | paste -sd, -)"
+        if [[ "$preauth_list" == "permset:$PERMSET" ]]; then
+            pass "$ECA_NAME is pre-authorized only through $PERMSET"
+        else
+            fail "$ECA_NAME must be pre-authorized only through $PERMSET, is through: ${preauth_list:-nothing}"
+        fi
+    fi
+fi
+
+# ─── 8b. Versioned app settings (force-app) ────────────────────────────────
+settings_report="$(python3 -I - "$ROOT/force-app/main/default" <<'PY2'
+import pathlib, sys
+import xml.etree.ElementTree as ET
+
+base = pathlib.Path(sys.argv[1])
+ns = "{http://soap.sforce.com/2006/04/metadata}"
+glbl = base / "extlClntAppGlobalOauthSets/EntregaYa_Status_glbloauth.ecaGlblOauth-meta.xml"
+oauth = base / "extlClntAppOauthSettings/EntregaYa_Status_oauth.ecaOauth-meta.xml"
+expected = {
+    "externalClientApplication": "EntregaYa_Status",
+    "isClientCredentialsFlowEnabled": "true",
+    "isDeviceFlowEnabled": "false",
+    "isTokenExchangeEnabled": "false",
+    "isCodeCredFlowEnabled": "false",
+    "isNamedUserJwtEnabled": "false",
+    "isConsumerSecretOptional": "false",
+    "isPkceRequired": "true",
+    "isIntrospectAllTokens": "false",
+    "shouldRotateConsumerKey": "false",
+    "shouldRotateConsumerSecret": "false",
+}
+forbidden = ("consumerKey", "consumerSecret", "certificate")
+for path in (glbl, oauth):
+    if not path.is_file():
+        print(f"FAIL {path.name} is missing")
+        sys.exit(0)
+root = ET.parse(glbl).getroot()
+values = {child.tag.replace(ns, ""): (child.text or "").strip() for child in root}
+problems = [f"{k}={values.get(k, 'absent')} (expected {v})" for k, v in expected.items() if values.get(k) != v]
+problems += [f"{k} is present" for k in forbidden if k in values]
+if problems:
+    print("FAIL " + glbl.name + ": " + "; ".join(problems))
+else:
+    print("OK " + glbl.name + ": client credentials only, PKCE and secret required, no rotation, no consumer credentials")
+scopes = (ET.parse(oauth).getroot().findtext(ns + "commaSeparatedOauthScopes") or "").strip()
+if scopes == "Api":
+    print("OK " + oauth.name + ": scope Api only")
+else:
+    print("FAIL " + oauth.name + ": scopes '" + scopes + "', expected 'Api'")
+PY2
+)"
+while IFS= read -r line; do
+    case "$line" in
+        OK*) pass "${line#OK }" ;;
+        FAIL*) fail "${line#FAIL }" ;;
+    esac
+done <<<"$settings_report"
+
+# ─── 9. No consumer credentials, tokens or org usernames in the repository ──
+# Consumer keys start with 3MVG; access tokens are "<org Id>!<opaque>"; the
+# consumer key and secret elements of ExtlClntAppGlobalOauthSettings must never
+# carry a value; integration usernames are derived from the org Id at run time.
+secret_patterns=(
+    '3MVG[0-9A-Za-z._]{20,}'
+    '00D[0-9A-Za-z]{12,15}![0-9A-Za-z._]{20,}'
+    '<consumer(Key|Secret)>[0-9A-Za-z.]{20,}<'
+    '"(consumer_?[Ss]ecret|client_secret|access_token)"[[:space:]]*:[[:space:]]*"[^"$<{]'
+    'ENTREGAYA_CLIENT_(ID|SECRET)=[A-Za-z0-9]'
+    'entregaya-integration@00[dD][0-9A-Za-z]{12,15}'
+)
+if [[ -n "$integration_username" ]]; then
+    secret_patterns+=("$(sed 's/[][\.*^$+?(){}|/]/\\&/g' <<<"$integration_username")")
+fi
+grep_args=()
+for pattern in "${secret_patterns[@]}"; do grep_args+=(-e "$pattern"); done
+tree_hits="$(git grep -I -l -E --untracked "${grep_args[@]}" -- . || true)"
+history_hits="$(git log --all -p --no-color | grep -c -E "${grep_args[@]}" || true)"
+if [[ -z "$tree_hits" && "${history_hits:-0}" == "0" ]]; then
+    pass "no consumer key, secret, token or org-specific integration username in the repository (tree and history)"
+else
+    [[ -z "$tree_hits" ]] || fail "possible credential or org-specific username in: $(paste -sd, - <<<"$tree_hits")"
+    [[ "${history_hits:-0}" == "0" ]] || fail "possible credential or org-specific username in the git history ($history_hits line(s))"
+fi
 
 if [[ "$violations" -gt 0 ]]; then
     echo "entregaya-access-check: $violations violation(s) in $ORG"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AC-004.6 (P4): the only OAuth scope is Api (no RefreshToken, Full, Web). -->
+<ExtlClntAppOauthSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <commaSeparatedOauthScopes>Api</commaSeparatedOauthScopes>
+    <externalClientApplication>EntregaYa_Status</externalClientApplication>
+    <label>EntregaYa Status OAuth</label>
+</ExtlClntAppOauthSettings>

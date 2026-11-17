@@ -55,6 +55,36 @@ Replace `<alias>` with the target org. Run each command on its own.
    scripts/checks/guest-access-check.sh <alias>
    ```
 
+6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
+   External Client App "EntregaYa Status", the permission set and the group
+   `RutaCargo_EntregaYa_Integration`. Idempotent; it refuses an org that is not
+   a sandbox or scratch org:
+
+   ```bash
+   scripts/setup/entregaya-integration.sh <alias>
+   ```
+
+   It creates the integration user `entregaya-integration@<org id>.rutacargo.dev`
+   (profile "Minimum Access - API Only Integrations") together with its
+   "Salesforce API Integration" permission set license, assigns
+   `RutaCargo_EntregaYa_Integration`, adds the user to the group, then renders
+   `scripts/setup/templates/EntregaYa_Status_oauth_defaultPolicy.ecaOauthPlcy.template`
+   with that username into a temporary folder and deploys it (client
+   credentials as that user, the permission set pre-authorized, IP restrictions
+   enforced), and reads the policy back. The policies are not in force-app
+   because the username differs per org. Do not deploy them from anywhere else:
+   a later step-2 deploy does not touch them.
+
+7. Check the EntregaYa access and that anonymous callers are refused:
+
+   ```bash
+   scripts/checks/entregaya-access-check.sh <alias>
+   scripts/entregaya/attack-check.sh <alias>
+   ```
+
+   The consumer key and secret are handed to EntregaYa by the owner from Setup
+   (README, "EntregaYa integration").
+
 ## Notes
 
 - Proxy cache: the CustomSite has `cachePublicVisualforcePagesInProxyServers`

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AC-004.6 (S4, D2): the External Client App EntregaYa uses to send shipment
+     status changes. OAuth 2.0 client credentials only; the policies (execution
+     user, pre-authorized permission set, IP enforcement) are deployed per org by
+     scripts/setup/entregaya-integration.sh. No consumer key or secret is versioned:
+     the platform generates them on the first deploy. -->
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>noreply@example.com</contactEmail>
+    <description>EntregaYa sends shipment status changes to RutaCargo (POST /services/apexrest/entregaya/v1/status) with the OAuth 2.0 client credentials flow.</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>EntregaYa Status</label>
+</ExternalClientApplication>

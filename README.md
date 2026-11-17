@@ -88,7 +88,76 @@ sandbox or scratch org, and nothing here is meant for production.
    scripts/checks/shipment-access-check.sh <alias>
    scripts/checks/guest-access-check.sh <alias>
    scripts/checks/brand-check.sh <alias>
+   scripts/checks/entregaya-access-check.sh <alias>
+   scripts/entregaya/attack-check.sh <alias>
    ```
+
+   `scripts/setup/DEPLOY-ORDER.md` includes the EntregaYa integration step
+   (`scripts/setup/entregaya-integration.sh <alias>`) after the force-app
+   deploy; see "EntregaYa integration" below.
+
+## EntregaYa integration
+
+EntregaYa (the carrier) sends every status change of a shipment to Salesforce
+(REQ-004, decision D2).
+
+- Endpoint: `POST https://<My Domain>/services/apexrest/entregaya/v1/status`
+  with a JSON body `{"trackingNumber":"RC000001002","status":"Out for delivery","location":"Monterrey, NL","timestamp":"2026-11-20T10:00:00-06:00","proofId":null}`
+  (`proofId` is required for `Delivered`). Answers: 200 `{"result":"updated"}`,
+  200 `{"result":"ignored"}` for an update that is not newer than the last one,
+  404 `TRACKING_NOT_FOUND`, 400 with a closed error code for an invalid body,
+  403 `FORBIDDEN` for a caller without the EntregaYa permission, 503
+  `TEMPORARILY_UNAVAILABLE` (retry) and 500 `INTERNAL_ERROR`.
+- Authentication: OAuth 2.0 client credentials through the External Client App
+  **EntregaYa Status** (`force-app/main/default/externalClientApps/`). Token
+  endpoint: `https://<My Domain>/services/oauth2/token` with
+  `grant_type=client_credentials` (the My Domain URL, not login.salesforce.com).
+  Scope `api` only; only users of the permission set
+  `RutaCargo_EntregaYa_Integration` are pre-authorized; IP restrictions are
+  enforced. The token runs as the dedicated integration user
+  `entregaya-integration@<org id>.rutacargo.dev` (profile "Minimum Access - API
+  Only Integrations", Salesforce Integration license, "Salesforce API
+  Integration" permission set license, permission set
+  `RutaCargo_EntregaYa_Integration`, group `RutaCargo_EntregaYa_Integration`),
+  created by `scripts/setup/entregaya-integration.sh <alias>`. Anonymous calls
+  are refused on the My Domain and on the site domain
+  (`scripts/entregaya/attack-check.sh <alias>`).
+- No consumer key, consumer secret, token or org-specific username is in this
+  repository: the platform generates the key and secret when the app is
+  deployed, and the OAuth policies that name the integration user are rendered
+  from `scripts/setup/templates/` at setup time.
+
+### Hand the consumer key and secret to EntregaYa (owner, B4)
+
+1. In Setup, open External Client App Manager, then **EntregaYa Status**,
+   Settings, OAuth Settings, and click Consumer Key and Secret. Salesforce asks
+   you to verify your identity.
+2. Send the key and the secret to EntregaYa through a secure channel (for
+   example a one-time secret link or a shared password-manager entry), never by
+   email, chat, a ticket or this repository. Send the token URL and the endpoint
+   above with them.
+3. If the secret is ever exposed, generate a new one on the same page and send
+   it again.
+
+### Try it with `simulate-status.sh`
+
+The script reads the key and secret only from the environment, never prints
+them or the token, and prints the HTTP status and body of the answer. Type them
+so they do not land in your shell history:
+
+```bash
+read -rs ENTREGAYA_CLIENT_ID && export ENTREGAYA_CLIENT_ID
+read -rs ENTREGAYA_CLIENT_SECRET && export ENTREGAYA_CLIENT_SECRET
+scripts/entregaya/simulate-status.sh <alias> <trackingNumber> "Out for delivery" "Monterrey, NL" <timestamp>
+unset ENTREGAYA_CLIENT_ID ENTREGAYA_CLIENT_SECRET
+```
+
+Use a seeded "In transit" shipment whose `Last_Update__c` is earlier than the
+timestamp, and a timestamp of now in `-06:00` (for example
+`2026-11-17T14:00:00-06:00`); a timestamp more than 10 minutes in the future is
+refused. The first post answers 200 `{"result":"updated"}`; the same post again
+answers 200 `{"result":"ignored"}`. Then run `scripts/seed/verify.sh <alias>`:
+every customer must still have all six statuses.
 
 ## Decisions of this run (D1–D5)
 
@@ -145,6 +214,19 @@ One line each; the full text is in the Assumptions section of
 
 ## Manual steps pending for the owner
 
+- EntregaYa (B4): read the consumer key and secret of the External Client App
+  EntregaYa Status in Setup and hand them to EntregaYa (see "EntregaYa
+  integration"). Then run `scripts/entregaya/simulate-status.sh` with them in
+  cargo-opus-t1 to prove the live update (200 updated, then 200 ignored) and
+  run `scripts/seed/verify.sh`: the agents could not run it because the org
+  does not let the API read consumer secrets (`enableClientSecretInRestApiAccess`
+  is off, and stays off).
+- EntregaYa (B6): the app enforces IP restrictions, but the integration user has
+  no login IP ranges yet because EntregaYa has not sent its IP addresses. When
+  it does, add them as login IP ranges of the "Minimum Access - API Only
+  Integrations" profile and test again. Do not use the app's trusted IP ranges
+  for this: they relax verification instead of restricting the caller.
+
 - Rotate the EntregaYa API key. It was redacted from the design in commit
   18a2aa5, but it remains in the git history.
 - Approve or reject every `// SECURITY-JUSTIFICATION:` comment (find them with
@@ -170,7 +252,10 @@ One line each; the full text is in the Assumptions section of
 
 - `force-app/main/default/` — metadata: objects, Apex, LWC, permission sets,
   sharing rules and the RutaCargo site.
-- `scripts/setup/` — deploy order and the guest user setup.
+- `scripts/setup/` — deploy order, the guest user setup and the EntregaYa
+  integration setup (`entregaya-integration.sh`, its template in `templates/`).
+- `scripts/entregaya/` — EntregaYa simulation (`simulate-status.sh`) and the
+  anonymous attack check (`attack-check.sh`).
 - `scripts/seed/` — test data load (`seed.sh`, `seed.apex`) and its check
   (`verify.sh`).
 - `scripts/checks/` — read-only org checks for access, guest exposure and
