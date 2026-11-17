@@ -377,4 +377,28 @@ public with sharing class TestDataFactory {
         request.proofId = proofId;
         return request;
     }
+
+    /**
+     * @description The JSON fields of an EntregaYa status POST body (the five keys
+     *              of the decided contract; a null proofId stays as JSON null, as
+     *              EntregaYa sends it). Tests serialize it with JSON.serialize and
+     *              may remove or retype keys first.
+     * @param trackingNumber the tracking number
+     * @param status the status
+     * @param location the location
+     * @param timestamp the ISO-8601 timestamp
+     * @param proofId the proof of delivery id, or null
+     * @return the body fields, in contract order
+     */
+    public static Map<String, Object> newStatusRequestFields(
+        String trackingNumber, String status, String location, String timestamp, String proofId
+    ) {
+        return new Map<String, Object>{
+            'trackingNumber' => trackingNumber,
+            'status' => status,
+            'location' => location,
+            'timestamp' => timestamp,
+            'proofId' => proofId
+        };
+    }
 }

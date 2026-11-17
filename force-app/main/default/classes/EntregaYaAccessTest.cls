@@ -323,19 +323,24 @@ private with sharing class EntregaYaAccessTest {
         Assert.isFalse(granted, 'A support agent must not hold ' + SENDER_PERMISSION);
     }
 
-    // ─── T1 stub of EntregaYaStatusResource ───────────────────────────────
+    // ─── EntregaYaStatusResource without the custom permission ─────────────
 
     @IsTest
-    static void statusResourceStub_answers501WithAGenericBody() {
-        // AC-004.5 (T1 stub, T3 replaces it): the stub changes nothing and answers 501
+    static void statusResource_answers403WithAGenericBody_withoutTheSenderPermission() {
+        // AC-004.5 (BR-04): a caller without RutaCargo_EntregaYa_Sender (here the running
+        // admin, with an empty request) gets 403 FORBIDDEN with the generic body; nothing changes
         RestContext.request = new RestRequest();
         RestContext.response = new RestResponse();
         Test.startTest();
         EntregaYaStatusResource.post();
         Test.stopTest();
-        Assert.areEqual(501, RestContext.response.statusCode, 'The stub must answer 501');
-        Assert.areEqual('{"error":{"code":"NOT_IMPLEMENTED","message":"This service is not available yet."}}',
-            RestContext.response.responseBody.toString(), 'The stub must answer the generic error body');
+        Assert.areEqual(403, RestContext.response.statusCode, 'A caller without the custom permission must get 403');
+        Assert.areEqual(new Map<String, Object>{ 'error' => new Map<String, Object>{
+                'code' => 'FORBIDDEN', 'message' => 'This user may not send EntregaYa status updates.' } },
+            JSON.deserializeUntyped(RestContext.response.responseBody.toString()),
+            'The 403 must carry exactly the generic FORBIDDEN body');
+        Assert.areEqual(0, [SELECT COUNT() FROM Shipment__c WHERE Last_Update__c != null WITH SYSTEM_MODE],
+            'No shipment may receive a status update');
     }
 
     // ─── Test data: the org's only Salesforce Integration license ─────────
