@@ -28,3 +28,15 @@
 - Type: environment
 - What: `sf ... --json | python` fails when the CLI prints its update warning first; read status with sf org list instead, or strip non-JSON lines.
 - Why / evidence: scratch create succeeded although the parse failed.
+
+## 2026-11-17 22:40 — Plugin skills not loadable in this session
+- Type: environment
+- What: The Skill tool returns "Unknown skill" for salesforce-development:*, experience-lwc:*, integration:*, salesforce-code-quality:* although the plugins are installed. Workaround in every handoff: read SKILL.md from ~/.claude/plugins/cache/salesforce/<plugin>/<version>/skills/<name>/ (or marketplaces/salesforce/skills/ for experience-lwr-site-generate). Record under "Skills not available" in each Close.
+- Why / evidence: Skill call failed 2026-11-17; tier 0 reviewer hit the same.
+
+## 2026-11-17 22:40 — Tier 0 reviewed; foundation plan in review
+- Type: review
+- What: Tier 0 range ca754cc..18a2aa5 reviewed clean (task-reviewer). Foundation plan d0a2432 reviewed with 4 High / 7 Medium findings; fixed in d1603d7 (hashed code kept per D1, internal Private + sharing rules, independent auto-number, T4 split into T4/T5, seed is T6). Closing check pending with the same plan-reviewer.
+- Why / evidence: odd/tasks/foundation.md
+- Next: record Plan review line, launch T1.
+- Open issue: the EntregaYa key stays in git history (commits 709c3cc..b85773a); owner must rotate it.
