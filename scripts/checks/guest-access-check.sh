@@ -18,6 +18,8 @@
 #   5. the Visualforce pages enabled for the guest (profile "RutaCargo Profile"
 #      and every permission set assigned to the guest user) are exactly the
 #      allow-list GUEST_PAGES below: no self-registration page;
+#   5b. the Apex classes enabled for the guest (same scope as 5) are exactly the
+#      allow-list GUEST_CLASSES below (req-001 AC-001.6);
 #   6. an anonymous GET (no session, no redirects followed) of the site home URL
 #      returns 200; the host comes from the site's own DomainSite row;
 #   7. an anonymous GET of the self-registration pages on the Visualforce site
@@ -43,6 +45,9 @@ GUEST_TIME_ZONE='America/Mexico_City'
 # (indexPage, authorizationRequiredPage and the four error pages). Must match
 # force-app/main/default/profiles/RutaCargo Profile.profile-meta.xml.
 GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,FileNotFound,InMaintenance'
+# Apex classes the guest may call: only the public tracking entry point
+# (req-001 S1, C8). Must match the classAccesses of the guest profile.
+GUEST_CLASSES='PublicTrackingController'
 # Self-registration pages that must not answer an anonymous visitor.
 SELF_REG_PAGES='SiteRegister CommunitiesSelfReg'
 
@@ -164,6 +169,36 @@ else
     extra="$(comm -23 <(tr ',' '\n' <<<"$enabled_pages" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_pages") | paste -sd ',' -)"
     missing="$(comm -13 <(tr ',' '\n' <<<"$enabled_pages" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_pages") | paste -sd ',' -)"
     fail "guest Visualforce pages differ from the allow-list: not allowed '$extra', missing '$missing'"
+fi
+
+# ─── 5b. Apex classes enabled for the guest ─────────────────────────────────
+# SetupEntityAccess rows of the guest profile and of every permission set
+# assigned to the guest user (the profile's own permission set included) must
+# name exactly the classes in GUEST_CLASSES (req-001 AC-001.6).
+class_ids="$( { query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND Parent.Profile.Name = 'RutaCargo Profile'"; \
+    query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId IN (SELECT PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId = '$guest_id')"; } \
+    | jq -s -r '[.[][].SetupEntityId] | unique | .[]')"
+enabled_classes=''
+if [[ -n "$class_ids" ]]; then
+    id_list=''
+    while IFS= read -r class_id; do
+        # Every Id is validated as an ApexClass Id before it enters the query.
+        if [[ ! "$class_id" =~ ^01p[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
+            fail "unexpected SetupEntityId '$class_id' for an ApexClass"
+            finish
+        fi
+        id_list="${id_list:+$id_list,}'$class_id'"
+    done <<<"$class_ids"
+    classes="$(query "SELECT Name, NamespacePrefix FROM ApexClass WHERE Id IN ($id_list)")"
+    enabled_classes="$(jq -r '[.[] | (if .NamespacePrefix then .NamespacePrefix + "__" else "" end) + .Name] | sort | join(",")' <<<"$classes")"
+fi
+expected_classes="$(tr ',' '\n' <<<"$GUEST_CLASSES" | sort | paste -sd ',' -)"
+if [[ "$enabled_classes" == "$expected_classes" ]]; then
+    pass "guest Apex classes are exactly the allow-list ($expected_classes)"
+else
+    extra="$(comm -23 <(tr ',' '\n' <<<"$enabled_classes" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_classes") | paste -sd ',' -)"
+    missing="$(comm -13 <(tr ',' '\n' <<<"$enabled_classes" | sed '/^$/d') <(tr ',' '\n' <<<"$expected_classes") | paste -sd ',' -)"
+    fail "guest Apex classes differ from the allow-list: not allowed '$extra', missing '$missing'"
 fi
 
 # ─── 6. Anonymous GET of the site home URL ──────────────────────────────────

@@ -15,6 +15,7 @@ public with sharing class TestDataFactory {
     public static final String AGENT_PERMISSION_SET = 'RutaCargo_Support_Agent';
     public static final String AGENT_GROUP = 'RutaCargo_Support_Agents';
     public static final String RULE_ACCESS = 'Edit';
+    public static final String SITE_GUEST_PROFILE_NAME = 'RutaCargo Profile';
 
     /**
      * @description When true, newOrExistingIntegrationUser must reuse an existing
@@ -152,6 +153,22 @@ public with sharing class TestDataFactory {
         }
         Id profileId = [SELECT Id FROM Profile WHERE Name = :INTEGRATION_PROFILE_NAME WITH USER_MODE LIMIT 1].Id;
         return newUser(profileId, uniqueKey);
+    }
+
+    /**
+     * @description The SAVED guest user of the RutaCargo site (profile
+     *              "RutaCargo Profile", 0 object permissions). The platform
+     *              creates it with the site; tests never insert it, they run as
+     *              it with System.runAs (req-001 AC-001.6).
+     * @return the active site guest user
+     */
+    public static User siteGuestUser() {
+        return [
+            SELECT Id, Profile.Name, UserType FROM User
+            WHERE Profile.Name = :SITE_GUEST_PROFILE_NAME AND IsActive = true AND UserType = 'Guest'
+            WITH USER_MODE
+            LIMIT 1
+        ];
     }
 
     /**
