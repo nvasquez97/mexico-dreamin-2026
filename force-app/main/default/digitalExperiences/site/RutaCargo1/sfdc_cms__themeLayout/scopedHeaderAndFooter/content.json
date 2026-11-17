@@ -24,6 +24,11 @@
             "sectionVerticalAlign" : "flex-start"
           },
           "children" : [ {
+            "children" : [ {
+              "definition" : "c:rcHeader",
+              "id" : "605e53b7-8ff0-4075-821e-c5d33821beec",
+              "type" : "component"
+            } ],
             "id" : "79388bc2-41d2-440a-a149-7022bcd49b6e",
             "name" : "headerSection",
             "title" : "Theme Header",

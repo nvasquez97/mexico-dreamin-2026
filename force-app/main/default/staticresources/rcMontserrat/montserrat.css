@@ -1,0 +1,13 @@
+/*
+ * Montserrat, self-hosted (SIL Open Font License 1.1, see OFL.txt): one
+ * variable font file covers every weight the brand manual uses, 300 Light to
+ * 900 Black. The URL is relative to this stylesheet, inside the same static
+ * resource; no external font host is requested. Loaded by c-rc-header.
+ */
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('Montserrat-wght.ttf') format('truetype');
+}

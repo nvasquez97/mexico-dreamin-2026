@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StaticResource xmlns="http://soap.sforce.com/2006/04/metadata">
+    <cacheControl>Public</cacheControl>
+    <contentType>application/zip</contentType>
+    <description>Montserrat variable font (weights 100-900) from github.com/google/fonts ofl/montserrat at commit 8b0a1d0f, with its SIL Open Font License (OFL.txt). Self-hosted: the site requests no external font host.</description>
+</StaticResource>

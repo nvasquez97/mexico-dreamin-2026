@@ -20,12 +20,8 @@
           },
           "children" : [ {
             "children" : [ {
-              "attributes" : {
-                "imageInfos" : "",
-                "richTextValue" : "<div style=\"display: flex; justify-content: center; align-items: center; margin: 50px 0; flex-direction: column; text-align: center;\"><div style=\"background-image: url(assets/img/desert.svg) !important; background-size: cover; background-position: center; height: 300px; width: 100%; max-width: 600px; min-width: 300px;\"></div><h1 class=\"slds-text-heading_medium slds-p-bottom_x-small\">Start Building Your Page</h1> <div>Drag and drop a component into the content slots.</div></div>"
-              },
-              "definition" : "community_builder:htmlEditor",
-              "id" : "bbfd2a37-7209-4672-ac02-bcc7eb702591",
+              "definition" : "c:rcHome",
+              "id" : "469ca6fa-0583-462d-9f21-c33ac60312de",
               "type" : "component"
             } ],
             "id" : "457802b5-1c22-417a-8dfc-9007a136df29",

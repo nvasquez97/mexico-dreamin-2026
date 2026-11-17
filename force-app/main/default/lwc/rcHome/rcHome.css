@@ -1,0 +1,63 @@
+/*
+ * Brand manual, pages 6-7. Mobile first: the base rules fit 320 px; the media
+ * query only adds room on wider screens.
+ * The hero uses the primary role of the branding set (electric blue #016BFA,
+ * white text 4.7:1, WCAG AA); the fallbacks are the same brand values. Cyan
+ * #07E9F6 is a small decorative detail, never a text color on white.
+ */
+:host {
+  display: block;
+}
+
+.rc-home {
+  padding-block: var(--slds-g-spacing-8, 3rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  background-color: var(--dxp-g-brand, #016bfa);
+  color: var(--dxp-g-brand-contrast, #ffffff);
+  text-align: center;
+}
+
+/* Montserrat Black, uppercase: the manual's voice for short headings. */
+.rc-home__title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-6, 2rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+.rc-home__title::after {
+  content: "";
+  display: block;
+  /* Decorative accent bar; no SLDS hook for its size. */
+  width: 3rem;
+  height: 0.25rem;
+  margin: var(--slds-g-spacing-4, 1rem) auto;
+  background-color: #07e9f6;
+}
+
+/* Montserrat Regular: paragraphs. */
+.rc-home__text {
+  max-width: 36rem;
+  margin: 0 auto;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+@media (min-width: 48em) {
+  .rc-home {
+    padding-block: var(--slds-g-spacing-12, 5rem);
+    padding-inline: var(--slds-g-spacing-8, 3rem);
+  }
+
+  .rc-home__title {
+    font-size: var(--slds-g-font-scale-8, 3rem);
+  }
+
+  .rc-home__text {
+    font-size: var(--slds-g-font-scale-3, 1.25rem);
+  }
+}

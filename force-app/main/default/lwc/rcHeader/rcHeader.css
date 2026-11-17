@@ -1,0 +1,87 @@
+/*
+ * Brand manual, pages 5-7. Mobile first: the base rules fit 320 px; the
+ * media query only adds room on wider screens.
+ * Palette values with no SLDS styling hook (brand colors): night blue #0D1F5F
+ * is the background logo-negative.png was cropped from; white text on it is
+ * 15.2:1 and cyan #07E9F6 (the "shine" of the brand) on it is 10.1:1 (WCAG AA).
+ */
+:host {
+  display: block;
+}
+
+.rc-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  padding-inline: var(--slds-g-spacing-3, 0.75rem);
+  background-color: #0d1f5f;
+  color: #ffffff;
+  /*
+   * The site's global link rules (dxp-styling-hooks, a:link:not(...)) outrank
+   * a class selector and read these DXP link hooks first: white links on
+   * night blue, cyan on hover, focus and active. Without them the links take
+   * the brand blue, 3.3:1 on night blue.
+   */
+  --dxp-c-link-text-color: #ffffff;
+  --dxp-c-link-text-color-hover: #07e9f6;
+  --dxp-c-link-text-color-focus: #07e9f6;
+  --dxp-c-link-text-color-active: #07e9f6;
+  --dxp-c-link-color-outline-focus: #07e9f6;
+}
+
+.rc-header__brand {
+  display: inline-flex;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+}
+
+.rc-header__logo {
+  display: block;
+  /* No SLDS hook for a logo height; intentional value (about 91 x 48 px). */
+  height: 3rem;
+  width: auto;
+}
+
+.rc-header__list {
+  display: flex;
+  gap: var(--slds-g-spacing-4, 1rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-header__link {
+  display: inline-block;
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  padding-inline: var(--slds-g-spacing-1, 0.25rem);
+  border-bottom: 3px solid #07e9f6;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.rc-header__link:hover {
+  color: #07e9f6;
+}
+
+.rc-header__brand:focus-visible,
+.rc-header__link:focus-visible {
+  outline: 2px solid #07e9f6;
+  outline-offset: 2px;
+}
+
+@media (min-width: 48em) {
+  .rc-header {
+    padding-block: var(--slds-g-spacing-3, 0.75rem);
+    padding-inline: var(--slds-g-spacing-6, 2rem);
+  }
+
+  .rc-header__logo {
+    height: 4rem;
+  }
+}
