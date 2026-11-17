@@ -147,7 +147,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         Test.stopTest();
 
         Assert.areEqual(2500000, body.length(), 'Fixture: the body is exactly at the cap');
-        Assert.isTrue(proof.pdfBase64.startsWith('JVBERi0x'), 'The proof is returned');
+        Assert.areEqual('JVBERi0x', proof.pdfBase64?.left(8), 'The proof is returned');
     }
 
     // ─── AC-002.4: the response is refused ───────────────────────────────
@@ -161,7 +161,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'Another shipment\'s proof is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.MISMATCH, failure.reason, 'Another shipment\'s proof is refused as a mismatch');
     }
 
     @IsTest
@@ -173,7 +173,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'A tracking number in another case is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.MISMATCH, failure.reason, 'A tracking number in another case is refused as a mismatch');
     }
 
     @IsTest
@@ -185,7 +185,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'A response without trackingNumber is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.MISMATCH, failure.reason, 'A response without trackingNumber is refused as a mismatch');
     }
 
     @IsTest
@@ -198,7 +198,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'Bytes that are not a PDF are refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.NOT_PDF, failure.reason, 'Bytes that are not a PDF are refused as not a PDF');
     }
 
     @IsTest
@@ -210,7 +210,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'A pdfBase64 that is not base64 is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.NOT_PDF, failure.reason, 'A pdfBase64 that is not base64 is refused as not a PDF');
     }
 
     @IsTest
@@ -222,7 +222,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'A response without pdfBase64 is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.NOT_PDF, failure.reason, 'A response without pdfBase64 is refused as not a PDF');
     }
 
     @IsTest
@@ -234,7 +234,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.ProofOfDeliveryException failure = fetchFailure(FIRST_PROOF, FIRST_TRACKING);
         Test.stopTest();
 
-        Assert.isNotNull(failure, 'A body that is not JSON is refused');
+        Assert.areEqual(ProofOfDeliveryService.Reason.MALFORMED, failure.reason, 'A body that is not JSON is refused as malformed');
     }
 
     @IsTest
@@ -402,6 +402,7 @@ private with sharing class ProofOfDeliveryServiceTest {
         ProofOfDeliveryService.fetch(proofId, FIRST_TRACKING);
         Test.stopTest();
 
+        Assert.areEqual(1, mock.requests.size(), 'One callout');
         Assert.areEqual(ENDPOINT_PREFIX + proofId, mock.requests[0].getEndpoint(), 'The 100-character id is requested');
     }
 

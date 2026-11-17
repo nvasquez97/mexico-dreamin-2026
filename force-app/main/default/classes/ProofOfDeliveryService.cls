@@ -33,6 +33,17 @@ public with sharing class ProofOfDeliveryService {
 
     private static final String ENDPOINT_PREFIX = 'callout:EntregaYa_API/proofs/';
     // A merge field of the Named Credential, resolved by the platform; never a key.
+    // SECURITY-JUSTIFICATION: E11 - the platform refuses the site guest's callout
+    // through an External Credential unless the guest gets Read on
+    // UserExternalCredential, an object permission the project rule forbids, so
+    // EntregaYa_API is a legacy password Named Credential (P2 prefers External
+    // Credentials) and this Authorization header is its password merge field.
+    // Scope: one header of GET callout:EntregaYa_API/proofs/{proofId} only; merge
+    // fields are allowed in headers, not in the body. Compensating control: the
+    // key lives only in the org's Named Credential, entered by hand by the owner;
+    // the header value is this constant, never user input; the proof id is
+    // validated against ^[A-Za-z0-9_-]{1,100}$ and URL-encoded; the request,
+    // response and key are never logged or returned. (pending owner approval, 2026-11-17)
     private static final String AUTHORIZATION_MERGE_FIELD = 'Bearer {!$Credential.Password}';
     private static final Integer HTTP_OK = 200;
     private static final Pattern PROOF_ID = Pattern.compile('^[A-Za-z0-9_-]{1,100}$');

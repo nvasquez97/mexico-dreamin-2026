@@ -755,7 +755,7 @@ private with sharing class RecipientDeliveryControllerTest {
         Test.stopTest();
 
         Assert.areEqual(0, mock.endpoints.size(), 'No callout');
-        Assert.isFalse(response.proofAvailable, 'proofAvailable is false');
+        Assert.areEqual(false, response.proofAvailable, 'proofAvailable is false');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_AVAILABLE, response.outcome, 'Not available');
         Assert.areEqual(RecipientDeliveryController.PROOF_NOT_AVAILABLE_MESSAGE, response.message, 'The not available message');
         Assert.isNull(response.pdfBase64, 'No PDF');
@@ -772,7 +772,7 @@ private with sharing class RecipientDeliveryControllerTest {
         Test.stopTest();
 
         Assert.areEqual(0, mock.endpoints.size(), 'No callout');
-        Assert.isFalse(response.proofAvailable, 'proofAvailable is false');
+        Assert.areEqual(false, response.proofAvailable, 'proofAvailable is false');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_AVAILABLE, response.outcome, 'Not available');
     }
 
@@ -990,7 +990,8 @@ private with sharing class RecipientDeliveryControllerTest {
 
     @IsTest
     static void shouldThrowGenericAuraHandledException_WhenDownloadProofFailsUnexpectedly() {
-        // S2/S3: an unexpected exception becomes a generic AuraHandledException.
+        // AC-002.5 (no exception text reaches the recipient), per the S2/S3 rule that an
+        // unexpected exception in downloadProof becomes a generic AuraHandledException.
         Fixture fixture = insertDelivered('PRF-88231');
         setProofMock();
         RecipientDeliveryController.simulateUnexpectedFailure = true;
