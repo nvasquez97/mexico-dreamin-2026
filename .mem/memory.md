@@ -215,3 +215,15 @@
 - What: Gate @ ee969a9 486/486 and re-run @ 56bac29 509/509, org 96.15% (Shipment* 96-99%), Jest 375/375. Reviews: test-reviewer (3 Medium + Lows fixed in 0c90270), brand (2 Low fixed), sf-security-auditor pass (SEC-001 Medium owner decision: sender holds the recipient's access code; SEC-002 → Hardening), access-auditor approved. Every requirement is now archived.
 - Why / evidence: odd/tasks/archive/2026-11-18-req-006-007-customer-shipments.md (date from `date`).
 - Next: Hardening round 1 — sf-security-audit --org cargo-opus-t1 over the whole project plus dx-code-analyzer-run (non-security rules, sev 1-2 = High CA-###); triage Critical/High into odd/tasks/hardening-1.md (Tier 2); at most 3 audits. Then End of run.
+
+## 2026-11-18 04:20 — Hardening round 1: audit 1 running
+- Type: hardening
+- What: Run dir .security-reports/20261118-035506-hardening-1 (org confirmed scratch). Scanner 0 Critical/15 High candidates; Code Analyzer Security+AppExchange 3 sev-3, sfge 2 sev-3; quality rules 137 sev-2 = 134 PMD GlobalVariable on LWC class fields (false positive: PMD's JS parser reads class fields as globals) + CA no-promise-executor-return ×2 (rcHeader tests) + CA SeeAllData=true (CustomerShipmentAccessTest:252). Org scan 1 Critical/424 High (mostly guest platform-default FLS). Three specialists running (code, access, exposure).
+- Why / evidence: the run directory.
+- Next: consolidate → security-audit.md, triage Critical/High (SEC and CA) into odd/tasks/hardening-1.md.
+
+## 2026-11-18 04:50 — Hardening round 1: audit 1 counts and plan
+- Type: hardening
+- What: Audit 1 (report .security-reports/20261118-035506-hardening-1/security-audit.md): Critical 1 (SEC-001 key in git history, owner rotation), High 2 (SEC-002 guest lockout oracle; SEC-003 MFA not enforced), Medium 7, Low 7, Info 6; CA High 2 (CA-001 rcHeader tests promise executor; CA-002 SeeAllData), 134 CA GlobalVariable dismissed (false positive). Plan odd/tasks/hardening-1.md (Base 2230597): T1 guard per (shipment, postal) pair, T2 MFA settings + org-security-check.sh, T3 secret scan + pre-commit hook + CA fixes. Assumptions H1-H4 (SEC-001 rotation/purge owner; MFA affects admins' next UI login).
+- Why / evidence: the report and the task document.
+- Next: plan-reviewer on the plan commit, then T1-T3, Close, audit 2.
