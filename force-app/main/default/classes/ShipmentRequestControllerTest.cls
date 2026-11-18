@@ -54,6 +54,12 @@ private with sharing class ShipmentRequestControllerTest {
                 Recipient_Email__c, Service_Type__c, Weight_Kg__c, Package_Description__c, Declared_Value__c,
                 Customer_Reference__c, Delivery_Instructions__c, Delivery_Access_Code_Hash__c
             FROM Shipment__c
+            // SECURITY-JUSTIFICATION: test assertion read as the test's administrator,
+            // outside System.runAs: it must see every stored field (the four
+            // recipient-owned ones and the hash included) to prove what the customer
+            // stored. Scope: this test class only; compensating control: every action
+            // under test runs inside System.runAs as the customer, in user mode.
+            // (pending owner approval, 2026-11-18)
             WITH SYSTEM_MODE
         ];
     }
@@ -131,18 +137,31 @@ private with sharing class ShipmentRequestControllerTest {
     }
 
     @IsTest
-    static void submitRequest_acceptsARequestWithoutTheOptionalFields() {
-        // AC-006.1: order reference and delivery instructions are optional
+    static void submitRequest_acceptsARequestWithoutTheReference_whenItIsNull() {
+        // AC-006.1: the order reference is optional (null)
         ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
         ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
         request.customerReference = null;
+        Test.startTest();
+        submitAs(ana(), request);
+        Test.stopTest();
+        Shipment__c stored = theOnlyStoredShipment();
+        Assert.areEqual('null|' + request.deliveryInstructions, stored.Customer_Reference__c + '|' + stored.Delivery_Instructions__c,
+            'An omitted reference must be stored blank, the instructions as entered');
+    }
+
+    @IsTest
+    static void submitRequest_acceptsARequestWithoutTheInstructions_whenTheyAreBlank() {
+        // AC-006.1: the delivery instructions are optional (whitespace only)
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
         request.deliveryInstructions = '  ';
         Test.startTest();
         submitAs(ana(), request);
         Test.stopTest();
         Shipment__c stored = theOnlyStoredShipment();
-        Assert.areEqual('null|null', stored.Customer_Reference__c + '|' + stored.Delivery_Instructions__c,
-            'Omitted optional fields must be stored blank');
+        Assert.areEqual(request.customerReference + '|null', stored.Customer_Reference__c + '|' + stored.Delivery_Instructions__c,
+            'Blank instructions must be stored blank, the reference as entered');
     }
 
     @IsTest
@@ -159,16 +178,171 @@ private with sharing class ShipmentRequestControllerTest {
     }
 
     @IsTest
-    static void submitRequest_refusesAndCreatesNothing_whenThePickupAddressAndCityAreMissing() {
-        // AC-006.1: missing required fields → one generic error naming each field, nothing created
+    static void submitRequest_refusesAndCreatesNothing_whenThePickupAddressIsMissing() {
+        // AC-006.1: a null pickup address → "Check these fields: pickupAddress", nothing created
         ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
         ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
         request.pickupAddress = null;
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: pickupAddress', message, 'A missing pickupAddress must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenThePickupCityIsMissing() {
+        // AC-006.1: a empty pickup city → "Check these fields: pickupCity", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
         request.pickupCity = '';
         Test.startTest();
         String message = refusalOf(ana(), request);
         Test.stopTest();
-        Assert.areEqual('Check these fields: pickupAddress, pickupCity', message, 'Missing pickup fields must be field errors');
+        Assert.areEqual('Check these fields: pickupCity', message, 'A missing pickupCity must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenThePickupPostalCodeIsMissing() {
+        // AC-006.1: a blank pickup postal code → "Check these fields: pickupPostalCode", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.pickupPostalCode = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: pickupPostalCode', message, 'A missing pickupPostalCode must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenThePickupDateIsMissing() {
+        // AC-006.1: a missing pickup date → "Check these fields: pickupDate", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.pickupDate = null;
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: pickupDate', message, 'A missing pickupDate must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheRecipientNameIsMissing() {
+        // AC-006.1: a blank recipient name → "Check these fields: recipientName", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientName = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: recipientName', message, 'A missing recipientName must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheRecipientAddressIsMissing() {
+        // AC-006.1: a blank recipient address → "Check these fields: recipientAddress", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientAddress = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: recipientAddress', message, 'A missing recipientAddress must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheRecipientCityIsMissing() {
+        // AC-006.1: a blank recipient city → "Check these fields: recipientCity", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientCity = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: recipientCity', message, 'A missing recipientCity must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheRecipientPostalCodeIsMissing() {
+        // AC-006.1: a blank recipient postal code → "Check these fields: recipientPostalCode", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientPostalCode = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: recipientPostalCode', message, 'A missing recipientPostalCode must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheRecipientPhoneIsMissing() {
+        // AC-006.1: a blank recipient phone → "Check these fields: recipientPhone", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientPhone = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: recipientPhone', message, 'A missing recipientPhone must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheServiceTypeIsMissing() {
+        // AC-006.1: a missing service type → "Check these fields: serviceType", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.serviceType = null;
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: serviceType', message, 'A missing serviceType must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheWeightIsMissing() {
+        // AC-006.1: a missing weight → "Check these fields: weightKg", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.weightKg = null;
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: weightKg', message, 'A missing weightKg must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenThePackageDescriptionIsMissing() {
+        // AC-006.1: a blank package description → "Check these fields: packageDescription", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.packageDescription = ' ';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: packageDescription', message, 'A missing packageDescription must be a field error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_refusesAndCreatesNothing_whenTheDeclaredValueIsMissing() {
+        // AC-006.1: a missing declared value → "Check these fields: declaredValue", nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.declaredValue = null;
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual('Check these fields: declaredValue', message, 'A missing declaredValue must be a field error');
         Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
     }
 
@@ -498,6 +672,37 @@ private with sharing class ShipmentRequestControllerTest {
         String message = refusalOf(new User(Id = UserInfo.getUserId()), TestDataFactory.newShipmentRequest());
         Test.stopTest();
         Assert.areEqual(ShipmentRequestController.NOT_AVAILABLE_MESSAGE, message, 'An internal user must get the generic refusal');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    // ─── submitRequest's catch paths (generic messages, no internal detail) ──
+
+    @IsTest
+    static void submitRequest_givesTheGenericSaveError_whenThePlatformRefusesTheInsert() {
+        // AC-006.1: an email that the AC-006.1 rule accepts but the platform's
+        // Email field refuses (a leading dot) makes the insert fail: the
+        // customer gets the generic "could not be saved" message, nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientEmail = '.laura@example.com';
+        Test.startTest();
+        String message = refusalOf(ana(), request);
+        Test.stopTest();
+        Assert.areEqual(ShipmentRequestController.SAVE_FAILED_MESSAGE, message, 'A refused insert must get the generic save error');
+        Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
+    }
+
+    @IsTest
+    static void submitRequest_givesTheGenericRefusal_whenTheCustomerCannotCreateShipments() {
+        // AC-006.5 (BR-07): a signed-in customer without RutaCargo_Customer (no
+        // Create on Shipment__c) gets the generic refusal, nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User customer = ana();
+        TestDataFactory.removePermissionSetAssignment(customer.Id, TestDataFactory.CUSTOMER_PERMISSION_SET);
+        Test.startTest();
+        String message = refusalOf(customer, TestDataFactory.newShipmentRequest());
+        Test.stopTest();
+        Assert.areEqual(ShipmentRequestController.NOT_AVAILABLE_MESSAGE, message, 'A customer without Create must get the generic refusal');
         Assert.areEqual(0, storedShipments().size(), 'Nothing must be created');
     }
 }

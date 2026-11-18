@@ -195,7 +195,7 @@
 
 .rc-shipments__fields dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 @media (min-width: 48em) {

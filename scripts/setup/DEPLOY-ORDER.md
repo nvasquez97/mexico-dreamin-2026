@@ -99,6 +99,13 @@ Replace `<alias>` with the target org. Run each command on its own.
    sf project deploy start --source-dir force-app --test-level RunLocalTests --target-org <alias> --wait 30
    ```
 
+   In a brand-new org some local tests cannot pass yet: they read the seeded
+   customer users (README, "Setup from zero", steps 3 and 3b) or, for
+   `CustomerShipmentAccessTest.anaReadsNoHistoryOfTheDeliveryInstructions`, a
+   field history row that only step 5c creates. There, in a scratch org or a
+   sandbox only, deploy step 2 with `--test-level NoTestRun` instead and run the
+   local tests in step 5d.
+
 3. Publish the site, then wait until the job is Complete
    (`SELECT Status FROM BackgroundOperation WHERE Id = '<jobId>'`):
 
@@ -159,6 +166,39 @@ Replace `<alias>` with the target org. Run each command on its own.
    (README, "Setup from zero", step 3b). The live part of the check needs them
    and at least one seeded shipment per seeded account, so run it after the
    seed.
+
+5c. The field history row of the SeeAllData test (req-006-007 AC-006.7, G9).
+   `CustomerShipmentAccessTest.anaReadsNoHistoryOfTheDeliveryInstructions` is
+   `@IsTest(SeeAllData=true)`: field history is not written inside a test, so
+   it reads a `Delivery_Instructions__c` history row of a seeded **Abarrotes
+   Acme** shipment that already exists in the org, and fails with "The org must
+   hold a Delivery_Instructions__c history row of an Abarrotes Acme shipment"
+   when there is none. In a new org, create that row once, after the seed and
+   the customer site users (README, "Setup from zero", steps 3 and 3b; it needs
+   `.seed-output/access-codes.csv` on this machine) and before any
+   `RunLocalTests` run:
+
+   ```bash
+   scripts/checks/reschedule-history-check.sh <alias>
+   ```
+
+   It writes data: it reschedules one seeded shipment once (one of that
+   shipment's two reschedules) and checks the history rows it leaves. It takes
+   the first qualifying seeded shipment of either seeded account, so confirm
+   that an Abarrotes Acme row exists (the count must be at least 1):
+
+   ```bash
+   sf data query --target-org <alias> --query "SELECT COUNT() FROM Shipment__History WHERE Field = 'Delivery_Instructions__c' AND Parent.Account__r.Name = 'Abarrotes Acme'"
+   ```
+
+   If the count is 0 (the row went to a Globex Farma shipment), run the script
+   again until it is at least 1.
+
+5d. Run the local tests once 5c is done (and after any later deploy):
+
+   ```bash
+   sf apex run test --test-level RunLocalTests --wait 60 --result-format human --target-org <alias>
+   ```
 
 6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
    External Client App "EntregaYa Status", the permission set and the group

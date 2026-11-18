@@ -172,7 +172,7 @@
 
 .rc-request__price {
   font-size: var(--slds-g-font-scale-4, 1.5rem);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .rc-request__summary {
@@ -195,7 +195,7 @@
 .rc-request__code-value {
   margin: 0;
   font-size: var(--slds-g-font-scale-4, 1.5rem);
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0.12em;
   overflow-wrap: anywhere;
 }

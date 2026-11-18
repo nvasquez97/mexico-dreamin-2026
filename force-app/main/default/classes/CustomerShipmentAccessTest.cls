@@ -285,13 +285,27 @@ private with sharing class CustomerShipmentAccessTest {
 
     private static Set<Id> shipmentIdsOfAccount(Id accountId) {
         return new Map<Id, Shipment__c>([
-            SELECT Id FROM Shipment__c WHERE Account__c = :accountId WITH SYSTEM_MODE
+            SELECT Id FROM Shipment__c WHERE Account__c = :accountId
+            // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
+            // System.runAs: the fixture's Ids, account or history row the customer cannot
+            // read. Scope: this test class only; compensating control: every check under
+            // test runs inside System.runAs as a customer, in user mode.
+            // (pending owner approval, 2026-11-18)
+            WITH SYSTEM_MODE
         ]).keySet();
     }
 
     private static Id accountIdOf(String email) {
         Id userId = TestDataFactory.seededCustomerUser(email).Id;
-        return [SELECT AccountId FROM User WHERE Id = :userId WITH SYSTEM_MODE].AccountId;
+        return [
+            SELECT AccountId FROM User WHERE Id = :userId
+            // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
+            // System.runAs: the fixture's Ids, account or history row the customer cannot
+            // read. Scope: this test class only; compensating control: every check under
+            // test runs inside System.runAs as a customer, in user mode.
+            // (pending owner approval, 2026-11-18)
+            WITH SYSTEM_MODE
+        ].AccountId;
     }
 
     // Each field whose user-mode query on the shipment succeeds, in the given
@@ -324,6 +338,11 @@ private with sharing class CustomerShipmentAccessTest {
         List<Shipment__History> rows = [
             SELECT ParentId FROM Shipment__History
             WHERE Field = :INSTRUCTIONS_HISTORY_FIELD AND Parent.Account__c = :accountId
+            // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
+            // System.runAs: the fixture's Ids, account or history row the customer cannot
+            // read. Scope: this test class only; compensating control: every check under
+            // test runs inside System.runAs as a customer, in user mode.
+            // (pending owner approval, 2026-11-18)
             WITH SYSTEM_MODE
             ORDER BY ParentId
             LIMIT 1

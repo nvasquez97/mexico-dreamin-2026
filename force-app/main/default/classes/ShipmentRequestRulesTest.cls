@@ -159,12 +159,21 @@ private with sharing class ShipmentRequestRulesTest {
     }
 
     @IsTest
-    static void weight_isRejected_whenZeroOrNegative() {
-        // AC-006.4: 0 and a negative weight are rejected
+    static void weight_isRejected_whenZero() {
+        // AC-006.4: a weight of 0 is rejected
         Test.startTest();
-        String actual = ShipmentRequestRules.isValidWeight(0) + ' ' + ShipmentRequestRules.isValidWeight(-1);
+        Boolean valid = ShipmentRequestRules.isValidWeight(0);
         Test.stopTest();
-        Assert.areEqual('false false', actual, 'Weights of 0 and -1 kg must be rejected');
+        Assert.isFalse(valid, 'A weight of 0 kg must be rejected');
+    }
+
+    @IsTest
+    static void weight_isRejected_whenNegative() {
+        // AC-006.4: a negative weight is rejected
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidWeight(-1);
+        Test.stopTest();
+        Assert.isFalse(valid, 'A weight of -1 kg must be rejected');
     }
 
     @IsTest
@@ -320,12 +329,16 @@ private with sharing class ShipmentRequestRulesTest {
 
     @IsTest
     static void today_isTheMexicoCityDate_withoutTheSeam() {
-        // AC-006.3 (BR-06): "today" is the current date in America/Mexico_City
-        Date expected = Date.valueOf(Datetime.now().format('yyyy-MM-dd', 'America/Mexico_City'));
+        // AC-006.3 (BR-06): "today" is the current date in America/Mexico_City.
+        // The expected date is computed independently of the rules' own
+        // Datetime.format: the zone's UTC offset at this instant added to the GMT time.
+        Datetime now = Datetime.now();
+        Integer offsetMillis = TimeZone.getTimeZone('America/Mexico_City').getOffset(now);
+        Date expected = now.addSeconds(offsetMillis / 1000).dateGmt();
         Test.startTest();
         Date actual = ShipmentRequestRules.today();
         Test.stopTest();
-        Assert.areEqual(expected, actual, 'Today must be the Mexico City date');
+        Assert.areEqual(expected, actual, 'Today must be the Mexico City date (GMT + the zone offset)');
     }
 
     // ─── AC-006.6 (BR-06): estimated delivery ────────────────────────────────

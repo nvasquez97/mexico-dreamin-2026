@@ -915,6 +915,38 @@ private with sharing class ShipmentTriggerHandlerTest {
             failure.getDmlFieldNames(0)[0] + '|' + failure.getDmlMessage(0), 'The pickup date must carry the generic field error');
     }
 
+    @IsTest
+    static void customerInsert_isRefusedWithAFieldError_whenTheServiceTypeIsMissing() {
+        // AC-006.5 / AC-006.1: a direct create without a service type is refused on Service_Type__c
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerShipments(1)[0];
+        shipment.Service_Type__c = null;
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.SYSTEM_MODE);
+        Test.stopTest();
+
+        Assert.areEqual('Service_Type__c=' + GENERIC, String.join(refused, '|'),
+            'A direct create without a service type must be refused on Service_Type__c only');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedWithAFieldError_whenTheDeclaredValueIsNegative() {
+        // AC-006.5 / AC-006.4: a direct create with a declared value of -1 is refused on Declared_Value__c
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerShipments(1)[0];
+        shipment.Declared_Value__c = -1;
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.SYSTEM_MODE);
+        Test.stopTest();
+
+        Assert.areEqual('Declared_Value__c=' + GENERIC, String.join(refused, '|'),
+            'A direct create with a negative declared value must be refused on Declared_Value__c only');
+    }
+
     // The validated recipient-owned values ShipmentRequestController stages
     // (BR-02, G7): a second set of values, other than the factory's.
     private static void stageOtherRecipientValues() {
