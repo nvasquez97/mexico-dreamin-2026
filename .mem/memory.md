@@ -180,4 +180,11 @@
 - What: New session (local clock 2026-11-17 22:56; entries stamped 2026-11-18 above are clock errors). Org cargo-opus-t1 verified Active scratch, default target-org. Mode: auto, unattended, whole run. T4 reviews launched over 9d27c05: task-reviewer, security-reviewer, access-auditor (ids go on the T4 line if findings).
 - Why / evidence: /work arguments of this session; sf org display.
 - Update 23:10: T4 ticked clean (task-reviewer, security-reviewer, access-auditor; notes in F14). Close Stage gate.
+- Update 23:30: REQ-005 gate @ df792b0 green 358/358, org 95.62%, Jest 232/232. Close reviews (ids on the Reviewers line): test-reviewer 2 Medium + 6 Low, brand 1 Low, sf-security-auditor pass (SEC-001 → Hardening, SEC-002 → fix), access-auditor approved. Close fix worker launched with 13 findings (Stage fix round, 29d6a48). Hardening items collected: SEC-001 reset flooding, F2, F11, guest default FieldPermissions, standard self-register while self-registration on, Health Check 67 (MFA, clickjack, HttpOnly), leftover RutaCargo_Guest_Proof_Download permset.
 - Next: REQ-005 Close (gate from a clean worktree, test/brand/sf-security-auditor/access-auditor, one fix round with every batched item, gate re-run, archive), then REQ-006+007 T1-T3, Hardening, End of run.
+
+## 2026-11-17 23:45 — REQ-005 closed and archived
+- Type: close
+- What: Gate @ df792b0 358/358 and re-run @ 7f2554d 373/373, org 95.64% (Customer* 88-100%), Jest 257/257. Reviews: test-reviewer (2 Medium + 6 Low fixed in 0bb3a33), brand (1 Low fixed), sf-security-auditor pass (SEC-002 fixed; SEC-001 → Hardening), access-auditor approved. Open: live sign-up mode not built, F11, justification approver. Hardening list and owner items in the Close section.
+- Why / evidence: odd/tasks/archive/2026-11-17-req-005-customer-signup.md.
+- Next: REQ-006+007 T1 (permission set Read + sharing set; CustomerShipmentAccessTest), then T2, T3, Close; Hardening; End of run.
