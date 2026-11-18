@@ -148,3 +148,9 @@
 - What: From REQ-002+003 T3 onward, per-task reviews still run, but Medium/Low findings that are test-quality or evidence issues (not security, not wrong behavior) do not start a per-task fix round: the task is ticked with `review: batched to Close — <finding>` and the finding goes to the requirement's Close fix round. Security findings and wrong-behavior findings keep the per-task fix round. Other speed-ups offered (lighter security lens, fewer tasks) were NOT chosen.
 - Why / evidence: owner answer in the session ("Batch fix rounds"), tasks were taking about 1 hour each.
 - Next: apply to T3 of REQ-002+003, REQ-005, REQ-006+007 and Hardening.
+
+## 2026-11-18 01:30 — REQ-002+003 closed and archived; REQ-005 T1 running
+- Type: close
+- What: Gate @ 3ae2ef1 296/296 and re-run @ 0d67085 303/303, org 95.86% (Recipient* 94-100%, ProofOfDeliveryService 95%), Jest 122/122. Reviews: test-reviewer (2 Medium + 6 Low fixed at 8e3db4f), brand approved, sf-security-auditor pass (SEC-001 Low + E1/C1 chain → Hardening), access-auditor approved. E11: password Named Credential (the guest's External Credential callout needs a forbidden object permission). Owner items in the Close section.
+- Why / evidence: odd/tasks/archive/2026-11-18-req-002-003-recipient-delivery.md (or the date `date +%Y-%m-%d` gave).
+- Next: REQ-005 T1 (customer profile, policy, permission set, owner role, network self-registration, seeded customer users) running; then T2, T3, Close; REQ-006+007; Hardening.
