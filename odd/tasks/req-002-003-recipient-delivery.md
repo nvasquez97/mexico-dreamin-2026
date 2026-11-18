@@ -99,6 +99,7 @@ Order gate: this document starts after REQ-001 is archived (T1 shares the guest 
 - E9 (range): REQ-001's commits may fall inside Base..HEAD if this plan is committed before REQ-001 closes; Close lists them and reviewers ignore them.
 
 ## Close
-Stage: reviews
+Stage: fix round
 Gate: sf project deploy start --source-dir force-app --test-level RunLocalTests @ 3ae2ef1 (clean worktree, --ignore-conflicts), Succeeded (0AfEk00000h5IRlKAM), 296 tests, 0 failures; the T3 fix 6eb3081 changed only LWC and a script (no Apex); Jest at HEAD 122/122 (8 suites) · Coverage: org 95.57%, new classes RecipientAccess 93.49%, RecipientDeliveryController 97.97%, RecipientDeliveryDetails 100%, ProofOfDeliveryService 95%
 Reviewers: test-reviewer a2f4a1d8db7f6aae7, brand-reviewer a9e14db8aa9760a9d, sf-security-auditor aabf391582f23bfc8, access-auditor a1d732d815c1bd44e
+Reviews: test-reviewer changes required (2 Medium: lock through rescheduleDelivery; another shipment's valid code; 6 Low, all test-only) · brand-reviewer approved (owner questions Q1-Q3) · sf-security-auditor pass with notes (SEC-001 Low parallel guesses beyond 5 → Hardening; E1+C1 chain rated Medium for Hardening) · access-auditor approved (org in sync apart from E12)
