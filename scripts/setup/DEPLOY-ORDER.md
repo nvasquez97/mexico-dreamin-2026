@@ -28,19 +28,32 @@ The customer self-registration (req-005 S1) adds a third reason:
   with the profile as a member and self-registration off, step 1), and
   force-app's Network turns self-registration on later (step 2).
 
+Customer access to shipments (req-006-007 S2) adds two constraints:
+
+- The permission set `RutaCargo_Customer` grants Read and field permissions
+  on `Shipment__c`, so it can only be deployed once `Shipment__c` and its
+  fields exist. It is no longer part of step 0; step 2 deploys it with the
+  object.
+- The sharing set `RutaCargo_Customer_Shipments`
+  (`force-app/main/default/sharingSets`) names the profile `RutaCargo Customer`
+  and maps `Shipment__c.Account__c` to the user's Account. It needs the
+  profile (step 0), the site and its Network (step 1, which enables the
+  customer profile as a site member) and `Shipment__c`. It is deployed in
+  step 2, after all three.
+
 ## Steps
 
 Replace `<alias>` with the target org. Run each command on its own.
 
 0. The customer access metadata (req-005 S1): the profile
-   `RutaCargo Customer`, its password policy, the permission set
-   `RutaCargo_Customer` and the role `RutaCargo_Customer_Owner`. None of them
-   needs the site. Check the password policy first with `--dry-run`, then
-   deploy:
+   `RutaCargo Customer`, its password policy and the role
+   `RutaCargo_Customer_Owner`. None of them needs the site. The permission set
+   `RutaCargo_Customer` waits for step 2 (it references `Shipment__c`). Check
+   the password policy first with `--dry-run`, then deploy:
 
    ```bash
-   sf project deploy start --dry-run --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/permissionsets/RutaCargo_Customer.permissionset-meta.xml --source-dir force-app/main/default/roles --target-org <alias> --wait 30
-   sf project deploy start --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/permissionsets/RutaCargo_Customer.permissionset-meta.xml --source-dir force-app/main/default/roles --target-org <alias> --wait 30
+   sf project deploy start --dry-run --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/roles --target-org <alias> --wait 30
+   sf project deploy start --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/roles --target-org <alias> --wait 30
    ```
 
 1. Site first: Network, CustomSite, DigitalExperienceConfig, the
@@ -78,7 +91,9 @@ Replace `<alias>` with the target org. Run each command on its own.
 
 2. Everything else, the guest profile included (it now exists, so the deploy
    updates it; `EntregaYa_API` now exists, so the deploy updates it without a
-   password):
+   password), and with it `Shipment__c`, the permission set
+   `RutaCargo_Customer` and the sharing set `RutaCargo_Customer_Shipments`
+   (after the profile of step 0 and the Network of step 1):
 
    ```bash
    sf project deploy start --source-dir force-app --test-level RunLocalTests --target-org <alias> --wait 30
@@ -128,16 +143,22 @@ Replace `<alias>` with the target org. Run each command on its own.
    ```
 
 5b. Check the customer access (req-005 AC-005.7 and AC-005.4: the profile's
-   license, no object or field permission on the profile or on
-   `RutaCargo_Customer`, the Network member and self-registration with no
-   default account, the owner's role, the retrieved password policy):
+   license, no object or field permission on the profile, the Network member
+   and self-registration with no default account, the owner's role, the
+   retrieved password policy; req-006-007 AC-006.7: `RutaCargo_Customer`
+   grants exactly the current S2 step, the sharing set
+   `RutaCargo_Customer_Shipments` with the profile, `Account__c` = User
+   Account and Read, and, live, each seeded customer reads a shipment of their
+   own account and not one of the other's):
 
    ```bash
    scripts/checks/customer-access-check.sh <alias>
    ```
 
    The site users of the two seeded customers are created after the seed
-   (README, "Setup from zero", step 3b).
+   (README, "Setup from zero", step 3b). The live part of the check needs them
+   and at least one seeded shipment per seeded account, so run it after the
+   seed.
 
 6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
    External Client App "EntregaYa Status", the permission set and the group
@@ -193,4 +214,7 @@ Replace `<alias>` with the target org. Run each command on its own.
   there only with `--dry-run --metadata-dir` (a redeploy of an existing site). Creating the
   site from zero in a second org has not been run, because deploys are allowed
   only to cargo-opus-t1 (A11). Run these steps in the next new org and record
-  the result.
+  the result. For req-006-007 T1, the permission set and the sharing set were
+  deployed to cargo-opus-t1, where the profile, the site and `Shipment__c`
+  already existed, and step 5b passed there; the new order (permission set
+  moved out of step 0, sharing set in step 2) has not been run from zero.

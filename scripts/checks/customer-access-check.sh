@@ -18,10 +18,17 @@
 #      on the internal Account fields Credit_Limit__c and Credit_Risk__c, and
 #      no field permission at all beyond LICENSE_DEFAULT_FIELDS (the profile
 #      file revokes every field the license would add);
-#   3. the permission set RutaCargo_Customer exists once and grants no object
-#      permission and no field permission (REQ-006/007 add Shipment__c access
-#      together with the sharing set), nor View All Data, Modify All Data or
-#      View All Users;
+#   3. the permission set RutaCargo_Customer exists once and grants exactly the
+#      current step of req-006-007 S2 (odd/tasks/req-006-007-customer-shipments.md,
+#      AC-006.7; T1, Read step): one object permission, Read on Shipment__c
+#      (CUSTOMER_OBJECT_GRANTS: no Create, Edit, Delete, View All or Modify
+#      All, nothing on Account or Contact), read-only FLS on exactly the
+#      Shipment__c fields of CUSTOMER_READ_FIELDS and no other field permission
+#      (never on CUSTOMER_FORBIDDEN_FIELDS: cost, margin, notes, hash,
+#      Proof_Id__c, the recipient's address, phone and email, the delivery
+#      instructions, the credit fields), Apex class access to exactly
+#      CUSTOMER_CLASSES (none in T1), nor View All Data, Modify All Data or View
+#      All Users;
 #   4. the Network "RutaCargo" has the profile as a member
 #      (NetworkMemberGroup), self-registration on, the profile as its
 #      self-registration profile, and no default self-registration account
@@ -43,7 +50,8 @@
 #      classes enabled in the org for the guest profile "RutaCargo Profile" and
 #      every permission set assigned to its users are exactly that list: the
 #      system-mode helper CustomerRegistration and the CustomerPermissionAssigner
-#      job are never guest entry points;
+#      job are never guest entry points, and neither are the customer
+#      controllers of req-006-007 (CUSTOMER_CONTROLLERS);
 #   8. (source, AC-005.7) in force-app/main/default/classes: the guest
 #      controllers CustomerSignUpController and CustomerLoginController are
 #      declared `with sharing` and never say `without sharing`; the system-mode
@@ -54,7 +62,16 @@
 #      req-005 classes declares a sharing keyword (P11); only the files in
 #      REGISTRATION_CALLERS name CustomerRegistration and only those in
 #      ASSIGNER_CALLERS name CustomerPermissionAssigner (Apex classes and
-#      triggers), and no LWC or Aura component imports either.
+#      triggers), and no LWC or Aura component imports either;
+#   9. (req-006-007 S2, AC-006.7) the sharing set RutaCargo_Customer_Shipments
+#      exists once (SOQL) and, retrieved with every other sharing set of the
+#      org, is the only one that names the profile; its profiles are exactly
+#      "RutaCargo Customer" and its only access mapping is Shipment__c,
+#      Account__c = User Account, Read (the source file says the same);
+#  10. (live, AC-006.7 and AC-007.1) for each seeded customer user (Ana López,
+#      Marta Ruiz), UserRecordAccess queried as the admin shows HasReadAccess
+#      true on a shipment of the user's own account and false on one of the
+#      other seeded customer's account.
 #
 # A failed query, retrieve or source scan stops the check with exit code 3;
 # violations exit 1.
@@ -98,10 +115,26 @@ LICENSE_DEFAULT_OBJECTS=''
 LICENSE_DEFAULT_USER_PERMISSIONS='EnableNotifications'
 LICENSE_DEFAULT_FIELDS='ContactPointTypeConsent Event.LocationId'
 LICENSE_DEFAULT_TABS=''
-# Objects and fields a customer must never reach through the profile or the
-# permission set in this requirement.
+# Objects and fields the profile itself never grants (section 2): customer
+# access lives only in the permission set and the sharing set.
 SENSITIVE_OBJECTS='Account Contact Shipment__c'
 SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
+# The exact grants of RutaCargo_Customer at the current step of req-006-007 S2
+# (section 3). T1, Read step: Read on Shipment__c and read-only FLS on the
+# AC-007 list and detail fields. Object grants are
+# "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll" as true/false.
+CUSTOMER_OBJECT_GRANTS='Shipment__c:true,false,false,false,false,false'
+CUSTOMER_READ_FIELDS='Shipment__c.Status__c Shipment__c.Service_Type__c Shipment__c.Price__c Shipment__c.Estimated_Delivery__c Shipment__c.Pickup_Address__c Shipment__c.Pickup_Date__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Origin_City__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Name__c Shipment__c.Package_Description__c Shipment__c.Weight_Kg__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Last_Location__c Shipment__c.Last_Update__c'
+CUSTOMER_EDIT_FIELDS=''
+CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Shipment__c.Recipient_Address__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Delivery_Instructions__c Account.Credit_Limit__c Account.Credit_Risk__c'
+CUSTOMER_CLASSES=''
+# The customer controllers of req-006-007 (T2): never guest entry points.
+CUSTOMER_CONTROLLERS='ShipmentRequestController MyShipmentsController'
+# The sharing set of req-006-007 S2 (section 9): "object|objectField|userField|accessLevel".
+SHARING_SET='RutaCargo_Customer_Shipments'
+SHARING_SET_MAPPINGS='Shipment__c|Account__c|Account|Read'
+# The seeded customer users (req-005, section 10).
+SEEDED_CUSTOMER_EMAILS='ana.lopez@example.com marta.ruiz@example.com'
 # Guest Apex classes (req-001 S1, req-002-003 S2, req-005 S2 and S3), sorted.
 GUEST_PROFILE='RutaCargo Profile'
 EXPECTED_GUEST_CLASSES='CustomerLoginController,CustomerSignUpController,PublicTrackingController,RecipientDeliveryController'
@@ -266,17 +299,77 @@ if [[ -n "$profile_id" ]]; then
     fi
 fi
 
-# ─── 3. The actor permission set grants nothing yet ────────────────────────
+# Prints the words of $1 (space- or comma-separated), sorted and one per line.
+words() {
+    tr ' ,' '\n\n' <<<"$1" | grep -v '^$' | sort -u || true
+}
+
+# ─── 3. The actor permission set grants exactly the current S2 step ────────
 query "SELECT Id, PermissionsViewAllData, PermissionsModifyAllData, PermissionsViewAllUsers FROM PermissionSet WHERE Name = '$CUSTOMER_PERMSET'"; permset="$ROWS"
 if [[ "$(jq 'length' <<<"$permset")" -ne 1 ]]; then
     fail "permission set $CUSTOMER_PERMSET not found"
 else
-    check_grants "permission set $CUSTOMER_PERMSET" "Parent.Name = '$CUSTOMER_PERMSET'" ''
-    query "SELECT Field FROM FieldPermissions WHERE Parent.Name = '$CUSTOMER_PERMSET'"; all_fields="$ROWS"
-    if [[ "$(jq 'length' <<<"$all_fields")" -eq 0 ]]; then
-        pass "permission set $CUSTOMER_PERMSET: no field permission at all"
+    permset_id="$(jq -r '.[0].Id' <<<"$permset")"
+    [[ "$permset_id" =~ ^0PS[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || { echo "ERROR: unexpected PermissionSet Id" >&2; exit 3; }
+    # Object permissions: exactly CUSTOMER_OBJECT_GRANTS, flag by flag.
+    query "SELECT SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords FROM ObjectPermissions WHERE ParentId = '$permset_id'"; object_rows="$ROWS"
+    actual_objects="$(jq -r '.[] | "\(.SobjectType):\(.PermissionsRead),\(.PermissionsCreate),\(.PermissionsEdit),\(.PermissionsDelete),\(.PermissionsViewAllRecords),\(.PermissionsModifyAllRecords)"' <<<"$object_rows" | sort -u)"
+    expected_objects="$(tr ' ' '\n' <<<"$CUSTOMER_OBJECT_GRANTS" | grep -v '^$' | sort -u || true)"
+    if [[ "$actual_objects" == "$expected_objects" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: object permissions are exactly $CUSTOMER_OBJECT_GRANTS (Read,Create,Edit,Delete,ViewAll,ModifyAll)"
     else
-        fail "permission set $CUSTOMER_PERMSET: field permissions on $(jq -r '[.[].Field] | join(" ")' <<<"$all_fields")"
+        fail "permission set $CUSTOMER_PERMSET: object permissions '$(paste -sd ' ' - <<<"$actual_objects")', expected '$CUSTOMER_OBJECT_GRANTS' (Read,Create,Edit,Delete,ViewAll,ModifyAll)"
+    fi
+    for obj in Account Contact; do
+        if jq -e --arg o "$obj" 'any(.[]; .SobjectType == $o)' <<<"$object_rows" >/dev/null; then
+            fail "permission set $CUSTOMER_PERMSET: has an object permission on $obj (G2)"
+        else
+            pass "permission set $CUSTOMER_PERMSET: no object permission on $obj"
+        fi
+    done
+    # Field permissions: readable fields exactly the read and edit lists,
+    # editable fields exactly the edit list, nothing on the forbidden list.
+    query "SELECT Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE ParentId = '$permset_id'"; field_rows="$ROWS"
+    actual_read="$(jq -r '.[] | select(.PermissionsRead) | .Field' <<<"$field_rows" | sort -u)"
+    actual_edit="$(jq -r '.[] | select(.PermissionsEdit) | .Field' <<<"$field_rows" | sort -u)"
+    actual_any="$(jq -r '.[].Field' <<<"$field_rows" | sort -u)"
+    expected_read="$(words "$CUSTOMER_READ_FIELDS $CUSTOMER_EDIT_FIELDS")"
+    expected_edit="$(words "$CUSTOMER_EDIT_FIELDS")"
+    if [[ "$actual_read" == "$expected_read" && "$actual_any" == "$expected_read" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: read FLS on exactly the $(grep -c . <<<"$expected_read" || true) S2 fields and no other field permission"
+    else
+        missing="$(comm -13 <(printf '%s\n' "$actual_read" | grep -v '^$' || true) <(printf '%s\n' "$expected_read" | grep -v '^$' || true) | paste -sd ' ' -)"
+        extra="$(comm -23 <(printf '%s\n' "$actual_any" | grep -v '^$' || true) <(printf '%s\n' "$expected_read" | grep -v '^$' || true) | paste -sd ' ' -)"
+        fail "permission set $CUSTOMER_PERMSET: field permissions differ from S2 (missing read: '${missing:-none}'; beyond the list: '${extra:-none}')"
+    fi
+    if [[ "$actual_edit" == "$expected_edit" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: edit FLS on exactly '${CUSTOMER_EDIT_FIELDS:-no field}'"
+    else
+        fail "permission set $CUSTOMER_PERMSET: edit FLS on '$(paste -sd ' ' - <<<"$actual_edit")', expected '${CUSTOMER_EDIT_FIELDS:-none}'"
+    fi
+    forbidden="$(comm -12 <(printf '%s\n' "$actual_any" | grep -v '^$' || true) <(words "$CUSTOMER_FORBIDDEN_FIELDS") | paste -sd ' ' -)"
+    if [[ -z "$forbidden" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: no field permission on cost, margin, notes, hash, Proof_Id__c, recipient contact, instructions or credit fields"
+    else
+        fail "permission set $CUSTOMER_PERMSET: field permissions on forbidden fields: $forbidden"
+    fi
+    # Apex class access: exactly CUSTOMER_CLASSES.
+    query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId = '$permset_id'"; permset_class_rows="$ROWS"
+    customer_classes=''
+    customer_class_ids="$(jq -r '.[].SetupEntityId' <<<"$permset_class_rows")"
+    if [[ -n "$customer_class_ids" ]]; then
+        id_list=''
+        while IFS= read -r class_id; do
+            [[ "$class_id" =~ ^01p[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || { echo "ERROR: unexpected ApexClass Id" >&2; exit 3; }
+            id_list="${id_list:+$id_list,}'$class_id'"
+        done <<<"$customer_class_ids"
+        query "SELECT Name FROM ApexClass WHERE Id IN ($id_list)"
+        customer_classes="$(jq -r '[.[].Name] | sort | join(" ")' <<<"$ROWS")"
+    fi
+    if [[ "$customer_classes" == "$(words "$CUSTOMER_CLASSES" | paste -sd ' ' -)" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: Apex class access to exactly '${CUSTOMER_CLASSES:-no class}'"
+    else
+        fail "permission set $CUSTOMER_PERMSET: Apex class access to '${customer_classes:-none}', expected '${CUSTOMER_CLASSES:-none}'"
     fi
     if jq -e '.[0] | .PermissionsViewAllData == false and .PermissionsModifyAllData == false and .PermissionsViewAllUsers == false' <<<"$permset" >/dev/null; then
         pass "permission set $CUSTOMER_PERMSET has no View All Data, Modify All Data or View All Users"
@@ -344,11 +437,12 @@ if [[ "$(jq 'length' <<<"$sites")" -gt 0 ]]; then
 fi
 
 # ─── 6. The profile's password policy (retrieved) ──────────────────────────
+# One retrieve brings the password policies and every sharing set (section 9).
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-retrieve="$(cd "$REPO_ROOT" && sf project retrieve start --metadata 'ProfilePasswordPolicy:*' --target-metadata-dir "$tmp/policies" --unzip --target-org "$ORG" --json 2>/dev/null || true)"
+retrieve="$(cd "$REPO_ROOT" && sf project retrieve start --metadata 'ProfilePasswordPolicy:*' --metadata 'SharingSet:*' --target-metadata-dir "$tmp/policies" --unzip --target-org "$ORG" --json 2>/dev/null || true)"
 if [[ "$(jq -r '.status // 1' <<<"$retrieve" 2>/dev/null)" != "0" ]]; then
-    echo "ERROR: retrieve of ProfilePasswordPolicy failed" >&2
+    echo "ERROR: retrieve of ProfilePasswordPolicy and SharingSet failed" >&2
     jq -r '.message // empty' <<<"$retrieve" >&2 2>/dev/null || true
     exit 3
 fi
@@ -402,6 +496,14 @@ if [[ "$org_classes" == "$EXPECTED_GUEST_CLASSES" ]]; then
 else
     fail "the guest profile $GUEST_PROFILE enables the Apex classes '${org_classes:-none}', expected $EXPECTED_GUEST_CLASSES"
 fi
+# ... and neither the script nor the org lets the guest call a customer controller.
+for controller in $CUSTOMER_CONTROLLERS; do
+    if [[ ",$script_classes,$org_classes," == *",$controller,"* ]]; then
+        fail "the guest can call the customer controller $controller (guest-access-check.sh '$script_classes', org '$org_classes')"
+    else
+        pass "the guest cannot call the customer controller $controller"
+    fi
+done
 
 # ─── 8. Sharing keywords and callers of the system-mode helpers (source) ───
 classes_dir="$SOURCE_ROOT/classes"
@@ -493,6 +595,121 @@ if [[ -z "$ui_imports" ]]; then
     pass "no LWC or Aura component imports CustomerRegistration or CustomerPermissionAssigner"
 else
     fail "LWC or Aura source imports a without-sharing helper: $(sed 's#.*/force-app/#force-app/#' <<<"$ui_imports" | paste -sd ',' -)"
+fi
+
+# ─── 9. The sharing set of the customer profile (SOQL, retrieve, source) ───
+query "SELECT Id FROM SharingSet WHERE DeveloperName = '$SHARING_SET'"
+if [[ "$(jq 'length' <<<"$ROWS")" -eq 1 ]]; then
+    pass "sharing set $SHARING_SET exists"
+else
+    fail "sharing set $SHARING_SET not found ($(jq 'length' <<<"$ROWS") row(s))"
+fi
+# The retrieved sharing sets (section 6) and the source file: the profile is
+# named only by SHARING_SET, whose profiles and access mappings are exactly the
+# expected ones. Profile names compare without case (the platform keeps them
+# unique without case).
+sharing_report="$(python3 -I - "$tmp/policies" "$SOURCE_ROOT/sharingSets" "$SHARING_SET" "$CUSTOMER_PROFILE" "$SHARING_SET_MAPPINGS" <<'PY'
+import pathlib, sys
+import xml.etree.ElementTree as ET
+
+retrieved, source_dir, name, profile, expected_raw = sys.argv[1:6]
+ns = {"m": "http://soap.sforce.com/2006/04/metadata"}
+expected = sorted(m for m in expected_raw.split() if m)
+
+def text(node, path):
+    found = node.find(path, ns)
+    return (found.text or "").strip() if found is not None else ""
+
+def describe(path):
+    root = ET.parse(path).getroot()
+    profiles = sorted(p.text.strip().lower() for p in root.findall("m:profiles", ns) if p.text)
+    mappings = sorted("|".join(text(m, "m:" + k) for k in ("object", "objectField", "userField", "accessLevel"))
+                      for m in root.findall("m:accessMappings", ns))
+    return profiles, mappings
+
+def judge(label, path):
+    profiles, mappings = describe(path)
+    problems = []
+    if profiles != [profile.lower()]:
+        problems.append("profiles " + (",".join(profiles) or "none") + ", expected " + profile.lower())
+    if mappings != expected:
+        problems.append("access mappings " + (",".join(mappings) or "none") + ", expected " + ",".join(expected))
+    if problems:
+        print(f"FAIL {label}: " + "; ".join(problems))
+    else:
+        print(f"OK {label}: profile {profile}, access mappings " + ",".join(expected))
+
+files = {p.stem: p for p in pathlib.Path(retrieved).rglob("*.sharingSet")}
+if name not in files:
+    print(f"FAIL sharing set {name}: not retrieved from the org")
+else:
+    judge(f"sharing set {name} (org)", files[name])
+others = [stem for stem, path in sorted(files.items()) if stem != name and profile.lower() in describe(path)[0]]
+if others:
+    print(f"FAIL sharing sets other than {name} name the profile {profile}: " + ",".join(others))
+else:
+    print(f"OK no sharing set other than {name} names the profile {profile} ({len(files)} retrieved)")
+source = pathlib.Path(source_dir) / f"{name}.sharingSet-meta.xml"
+if not source.is_file():
+    print(f"FAIL sharing set {name}: no source file {source.name}")
+else:
+    judge(f"sharing set {name} (source)", source)
+PY
+)" || { echo "ERROR: could not read the sharing sets" >&2; exit 3; }
+while IFS= read -r line; do
+    case "$line" in
+        OK*) pass "${line#OK }" ;;
+        FAIL*) fail "${line#FAIL }" ;;
+    esac
+done <<<"$sharing_report"
+
+# ─── 10. Live record access of the seeded customers (UserRecordAccess) ─────
+# For each seeded customer: one shipment of their own account (HasReadAccess
+# true) and one of the other seeded customer's account (false), as the admin.
+seeded_ids=()
+seeded_accounts=()
+for email in $SEEDED_CUSTOMER_EMAILS; do
+    [[ "$email" =~ ^[a-z0-9.]+@example\.com$ ]] || { echo "ERROR: unexpected seeded email" >&2; exit 3; }
+    query "SELECT Id, AccountId FROM User WHERE Email = '$email' AND Profile.Name = '$CUSTOMER_PROFILE' AND IsActive = true"
+    if [[ "$(jq 'length' <<<"$ROWS")" -ne 1 ]]; then
+        fail "seeded customer $email: expected one active $CUSTOMER_PROFILE user, found $(jq 'length' <<<"$ROWS")"
+        continue
+    fi
+    user_id="$(jq -r '.[0].Id' <<<"$ROWS")"
+    account_id="$(jq -r '.[0].AccountId // ""' <<<"$ROWS")"
+    [[ "$user_id" =~ ^005[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ && "$account_id" =~ ^001[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || { echo "ERROR: unexpected User or Account Id for $email" >&2; exit 3; }
+    seeded_ids+=("$user_id")
+    seeded_accounts+=("$account_id")
+done
+if [[ "${#seeded_ids[@]}" -eq 2 ]]; then
+    seeded_emails=($SEEDED_CUSTOMER_EMAILS)
+    shipment_of=()
+    for account_id in "${seeded_accounts[@]}"; do
+        query "SELECT Id FROM Shipment__c WHERE Account__c = '$account_id' ORDER BY Name LIMIT 1"
+        shipment_of+=("$(jq -r '.[0].Id // ""' <<<"$ROWS")")
+    done
+    if [[ -z "${shipment_of[0]}" || -z "${shipment_of[1]}" ]]; then
+        fail "the seeded customer accounts need at least one shipment each (scripts/seed); found '${shipment_of[0]}' and '${shipment_of[1]}'"
+    else
+        for i in 0 1; do
+            own="${shipment_of[$i]}"
+            other="${shipment_of[$((1 - i))]}"
+            [[ "$own" =~ ^[A-Za-z0-9]{15,18}$ && "$other" =~ ^[A-Za-z0-9]{15,18}$ ]] || { echo "ERROR: unexpected Shipment__c Id" >&2; exit 3; }
+            query "SELECT RecordId, HasReadAccess FROM UserRecordAccess WHERE UserId = '${seeded_ids[$i]}' AND RecordId IN ('$own','$other')"
+            own_read="$(jq -r --arg r "$own" '[.[] | select(.RecordId == $r) | .HasReadAccess | tostring][0] // "missing"' <<<"$ROWS")"
+            other_read="$(jq -r --arg r "$other" '[.[] | select(.RecordId == $r) | .HasReadAccess | tostring][0] // "missing"' <<<"$ROWS")"
+            if [[ "$own_read" == "true" ]]; then
+                pass "live: ${seeded_emails[$i]} can read a shipment of their own account ($own)"
+            else
+                fail "live: ${seeded_emails[$i]} cannot read a shipment of their own account ($own: HasReadAccess $own_read)"
+            fi
+            if [[ "$other_read" == "false" ]]; then
+                pass "live: ${seeded_emails[$i]} cannot read a shipment of the other customer ($other)"
+            else
+                fail "live: ${seeded_emails[$i]} can read a shipment of the other customer ($other: HasReadAccess $other_read)"
+            fi
+        done
+    fi
 fi
 
 finish
