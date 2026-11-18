@@ -30,19 +30,8 @@
               "id" : "d8e99b06-1016-4bc9-93cc-8191cba96201",
               "type" : "component"
             }, {
-              "attributes" : {
-                "cancelLinkLabel" : "Already have an account?",
-                "confirmPasswordLabel" : "Confirm Password",
-                "emailLabel" : "Email",
-                "firstnameLabel" : "First Name",
-                "includePasswordField" : true,
-                "lastnameLabel" : "Last Name",
-                "passwordLabel" : "Create Password",
-                "regConfirmUrl" : "./CheckPasswordResetEmail",
-                "submitButtonLabel" : "Sign Up"
-              },
-              "definition" : "community_login:selfRegister",
-              "id" : "a8f6aeda-a82f-4021-9fd2-37c49e145f43",
+              "definition" : "c:rcSignUp",
+              "id" : "6b0f3d2e-5a41-4c8e-9a57-2f1c0d9e7b31",
               "type" : "component"
             } ],
             "id" : "1e2e54a5-939d-4c9d-988d-432c0f0f667f",

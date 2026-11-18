@@ -58,6 +58,11 @@
   display: none;
 }
 
+/* The account links (Log in / Sign up, or Log out) sit at the inline end. */
+.rc-header__account {
+  margin-inline-start: auto;
+}
+
 .rc-header__list {
   display: flex;
   gap: var(--slds-g-spacing-4, 1rem);

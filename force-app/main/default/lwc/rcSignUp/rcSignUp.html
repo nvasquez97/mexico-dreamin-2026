@@ -1,0 +1,224 @@
+<template>
+  <section class="rc-auth" aria-labelledby="rc-sign-up-title">
+    <h2 id="rc-sign-up-title" class="rc-auth__title">Create your account</h2>
+
+    <template lwc:if={isCreated}>
+      <div class="rc-auth__success" role="status">
+        <p data-id="success-message" class="rc-auth__success-text">
+          {successMessage}
+        </p>
+        <a data-id="success-login" class="rc-auth__link" href={loginUrl}
+          >Log in</a
+        >
+      </div>
+    </template>
+    <template lwc:else>
+      <p class="rc-auth__hint">All fields are required.</p>
+      <form
+        data-id="form"
+        class="rc-auth__form"
+        novalidate
+        onsubmit={handleSubmit}
+      >
+        <fieldset
+          data-id="customerType"
+          class="rc-auth__fieldset"
+          aria-describedby="customerType-error"
+        >
+          <legend class="rc-auth__label">Customer type</legend>
+          <div class="rc-auth__choices">
+            <div class="rc-auth__choice">
+              <input
+                id="customerType-individual"
+                class="rc-auth__radio"
+                type="radio"
+                name="customerType"
+                value="Individual"
+              />
+              <label for="customerType-individual">Individual</label>
+            </div>
+            <div class="rc-auth__choice">
+              <input
+                id="customerType-business"
+                class="rc-auth__radio"
+                type="radio"
+                name="customerType"
+                value="Business"
+              />
+              <label for="customerType-business">Business</label>
+            </div>
+          </div>
+          <p
+            id="customerType-error"
+            data-error="customerType"
+            class="rc-auth__error"
+          >
+            {errors.customerType}
+          </p>
+        </fieldset>
+
+        <div class="rc-auth__field">
+          <label class="rc-auth__label" for="accountName"
+            >Name or legal name</label
+          >
+          <input
+            id="accountName"
+            data-field="accountName"
+            class="rc-auth__input"
+            type="text"
+            autocomplete="organization"
+            aria-invalid={invalid.accountName}
+            aria-describedby="accountName-error"
+          />
+          <p
+            id="accountName-error"
+            data-error="accountName"
+            class="rc-auth__error"
+          >
+            {errors.accountName}
+          </p>
+        </div>
+
+        <div class="rc-auth__pair">
+          <div class="rc-auth__field">
+            <label class="rc-auth__label" for="firstName"
+              >Contact first name</label
+            >
+            <input
+              id="firstName"
+              data-field="firstName"
+              class="rc-auth__input"
+              type="text"
+              autocomplete="given-name"
+              aria-invalid={invalid.firstName}
+              aria-describedby="firstName-error"
+            />
+            <p
+              id="firstName-error"
+              data-error="firstName"
+              class="rc-auth__error"
+            >
+              {errors.firstName}
+            </p>
+          </div>
+          <div class="rc-auth__field">
+            <label class="rc-auth__label" for="lastName"
+              >Contact last name</label
+            >
+            <input
+              id="lastName"
+              data-field="lastName"
+              class="rc-auth__input"
+              type="text"
+              autocomplete="family-name"
+              aria-invalid={invalid.lastName}
+              aria-describedby="lastName-error"
+            />
+            <p id="lastName-error" data-error="lastName" class="rc-auth__error">
+              {errors.lastName}
+            </p>
+          </div>
+        </div>
+
+        <div class="rc-auth__field">
+          <label class="rc-auth__label" for="email">Email</label>
+          <input
+            id="email"
+            data-field="email"
+            class="rc-auth__input"
+            type="email"
+            autocomplete="email"
+            aria-invalid={invalid.email}
+            aria-describedby="email-error"
+          />
+          <p id="email-error" data-error="email" class="rc-auth__error">
+            {errors.email}
+            <template lwc:if={isEmailRegistered}>
+              <a
+                data-id="registered-login"
+                class="rc-auth__link"
+                href={loginUrl}
+                >Log in</a
+              >
+            </template>
+          </p>
+        </div>
+
+        <div class="rc-auth__field">
+          <label class="rc-auth__label" for="phone">Phone</label>
+          <input
+            id="phone"
+            data-field="phone"
+            class="rc-auth__input"
+            type="tel"
+            autocomplete="tel"
+            aria-invalid={invalid.phone}
+            aria-describedby="phone-error"
+          />
+          <p id="phone-error" data-error="phone" class="rc-auth__error">
+            {errors.phone}
+          </p>
+        </div>
+
+        <div class="rc-auth__pair">
+          <div class="rc-auth__field">
+            <label class="rc-auth__label" for="password">Password</label>
+            <input
+              id="password"
+              data-field="password"
+              class="rc-auth__input"
+              type="password"
+              autocomplete="new-password"
+              aria-invalid={invalid.password}
+              aria-describedby="password-rule password-error"
+            />
+            <p id="password-rule" class="rc-auth__help">
+              At least 10 characters, with letters and numbers.
+            </p>
+            <p id="password-error" data-error="password" class="rc-auth__error">
+              {errors.password}
+            </p>
+          </div>
+          <div class="rc-auth__field">
+            <label class="rc-auth__label" for="confirmPassword"
+              >Confirm password</label
+            >
+            <input
+              id="confirmPassword"
+              data-field="confirmPassword"
+              class="rc-auth__input"
+              type="password"
+              autocomplete="new-password"
+              aria-invalid={invalid.confirmPassword}
+              aria-describedby="confirmPassword-error"
+            />
+            <p
+              id="confirmPassword-error"
+              data-error="confirmPassword"
+              class="rc-auth__error"
+            >
+              {errors.confirmPassword}
+            </p>
+          </div>
+        </div>
+
+        <p data-id="form-error" class="rc-auth__alert" role="alert">
+          {formError}
+        </p>
+
+        <button
+          data-id="submit"
+          class="rc-auth__submit"
+          type="submit"
+          disabled={isLoading}
+        >
+          {submitLabel}
+        </button>
+      </form>
+      <p class="rc-auth__footer">
+        Already have an account?
+        <a data-id="login-link" class="rc-auth__link" href={loginUrl}>Log in</a>
+      </p>
+    </template>
+  </section>
+</template>

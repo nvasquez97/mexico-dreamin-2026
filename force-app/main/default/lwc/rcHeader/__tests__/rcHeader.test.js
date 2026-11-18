@@ -3,6 +3,9 @@
 // and the full negative logo for wider ones, assumption A14), with alt text
 // naming what they show, and a navigation landmark, and loads the Montserrat
 // @font-face from the rcMontserrat static resource.
+// Covers AC-005.5 (odd/tasks/req-005-customer-signup.md, header part): guests
+// see "Log in" and "Sign up", logged-in users see only "Log out", which points
+// to the site base path + /secur/logout.jsp.
 import { createElement } from "lwc";
 import RcHeader from "c/rcHeader";
 import { loadStyle } from "lightning/platformResourceLoader";
@@ -33,6 +36,11 @@ jest.mock(
   () => ({ __esModule: true, default: "/rutacargo" }),
   { virtual: true }
 );
+jest.mock(
+  "@salesforce/user/isGuest",
+  () => ({ __esModule: true, default: true }),
+  { virtual: true }
+);
 
 function render(
   Component = RcHeader,
@@ -51,7 +59,8 @@ let isolatedRenders = 0;
 function renderWith({
   logosUrl = LOGOS_URL,
   fontUrl = FONT_URL,
-  basePath = BASE_PATH
+  basePath = BASE_PATH,
+  isGuest = true
 }) {
   let Component;
   let create;
@@ -70,6 +79,11 @@ function renderWith({
     jest.doMock(
       "@salesforce/community/basePath",
       () => ({ __esModule: true, default: basePath }),
+      { virtual: true }
+    );
+    jest.doMock(
+      "@salesforce/user/isGuest",
+      () => ({ __esModule: true, default: isGuest }),
       { virtual: true }
     );
     create = require("lwc").createElement;
@@ -156,9 +170,11 @@ describe("c-rc-header", () => {
   it("AC-F.10: builds the home links from the site base path the platform gives", () => {
     const { element } = renderWith({ basePath: "/shipping" });
 
-    const hrefs = Array.from(element.shadowRoot.querySelectorAll("a")).map(
-      (a) => a.getAttribute("href")
-    );
+    const hrefs = Array.from(
+      element.shadowRoot.querySelectorAll(
+        'a.rc-header__brand, nav[aria-label="Main"] a'
+      )
+    ).map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual(["/shipping/", "/shipping/"]);
   });
 
@@ -211,8 +227,68 @@ describe("c-rc-header", () => {
       "fallback"
     );
     expect(
-      element.shadowRoot.querySelector("img.rc-header__logo").getAttribute("alt")
+      element.shadowRoot
+        .querySelector("img.rc-header__logo")
+        .getAttribute("alt")
     ).toBe(LOGO_ALT);
     expect(element.shadowRoot.querySelector("nav")).not.toBeNull();
+  });
+
+  describe("AC-005.5: account links", () => {
+    function accountLinks(element) {
+      const nav = element.shadowRoot.querySelector('nav[aria-label="Account"]');
+      expect(nav).not.toBeNull();
+      return Array.from(nav.querySelectorAll("a")).map((a) => ({
+        text: a.textContent.trim(),
+        href: a.getAttribute("href")
+      }));
+    }
+
+    it('AC-005.5: a guest sees "Log in" and "Sign up" and no "Log out"', () => {
+      const element = render();
+
+      expect(accountLinks(element)).toEqual([
+        { text: "Log in", href: `${BASE_PATH}/login` },
+        { text: "Sign up", href: `${BASE_PATH}/SelfRegister` }
+      ]);
+      expect(element.shadowRoot.textContent).not.toContain("Log out");
+    });
+
+    it('AC-005.5: a logged-in user sees only "Log out", to the site base path + /secur/logout.jsp', () => {
+      const { element } = renderWith({ isGuest: false });
+
+      expect(accountLinks(element)).toEqual([
+        { text: "Log out", href: `${BASE_PATH}/secur/logout.jsp` }
+      ]);
+      expect(element.shadowRoot.textContent).not.toContain("Log in");
+      expect(element.shadowRoot.textContent).not.toContain("Sign up");
+    });
+
+    it("AC-005.5: builds the account links from the site base path the platform gives", () => {
+      const guest = renderWith({ basePath: "/shipping" }).element;
+      const customer = renderWith({
+        basePath: "/shipping",
+        isGuest: false
+      }).element;
+
+      expect(accountLinks(guest).map((link) => link.href)).toEqual([
+        "/shipping/login",
+        "/shipping/SelfRegister"
+      ]);
+      expect(accountLinks(customer).map((link) => link.href)).toEqual([
+        "/shipping/secur/logout.jsp"
+      ]);
+    });
+
+    it("AC-005.5: keeps the Main navigation with its one Track link for logged-in users", () => {
+      const { element } = renderWith({ isGuest: false });
+
+      const links = element.shadowRoot.querySelectorAll(
+        'nav[aria-label="Main"] a'
+      );
+      expect(Array.from(links).map((a) => a.textContent.trim())).toEqual([
+        "Track"
+      ]);
+    });
   });
 });
