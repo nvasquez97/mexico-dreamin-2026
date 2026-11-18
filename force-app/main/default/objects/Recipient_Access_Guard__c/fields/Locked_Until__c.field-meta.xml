@@ -2,8 +2,8 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Locked_Until__c</fullName>
     <label>Locked Until</label>
-    <description>Until this time every recipient verification of the shipment is refused without checking the code (5 failures lock it for 15 minutes).</description>
-    <inlineHelpText>Recipient access to the shipment is refused until this time.</inlineHelpText>
+    <description>Until this time every verification of the shipment with this typed postal code is refused without checking the code (5 failures lock the pair for 15 minutes); other postal codes are not affected.</description>
+    <inlineHelpText>Access with this shipment and postal code is refused until this time.</inlineHelpText>
     <type>DateTime</type>
     <required>false</required>
 </CustomField>

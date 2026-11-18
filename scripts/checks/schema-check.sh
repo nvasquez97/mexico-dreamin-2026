@@ -10,9 +10,11 @@
 #      Apex, sees every field whatever the running user's field permissions);
 #   2. Shipment__c, Account and Recipient_Access_Guard__c have
 #      InternalSharingModel and ExternalSharingModel Private (EntityDefinition);
-#   2b. Recipient_Access_Guard__c (req-002-003 S1): its four fields exist,
-#      Shipment_Key__c is Text(18), External ID, unique and case-sensitive (one
-#      guard per shipment, written by upsert on it), and the object has no tab;
+#   2b. Recipient_Access_Guard__c (req-002-003 S1, hardening-1 S1): its four
+#      fields exist, Shipment_Key__c is Text(100), External ID, unique and
+#      case-sensitive (one guard per pair: shipment Id + ":" + hex SHA-256 of the
+#      normalized typed postal code, 83 characters, written by upsert on it), and
+#      the object has no tab;
 #   3. the deployed Apex settings (Settings:Apex, retrieved from the org, not
 #      taken from the local file) have enableGaplessTestAutoNum true: tests use
 #      an independent Auto Number sequence, so they never consume tracking
@@ -95,10 +97,10 @@ else
     fi
     key="$(query "SELECT Metadata FROM CustomField WHERE TableEnumOrId = '$guard_entity' AND DeveloperName = 'Shipment_Key'" tooling \
         | jq -r '.[0].Metadata // {} | "\(.type) \(.length) externalId=\(.externalId) unique=\(.unique) caseSensitive=\(.caseSensitive)"')"
-    if [[ "$key" == "Text 18 externalId=true unique=true caseSensitive=true" ]]; then
+    if [[ "$key" == "Text 100 externalId=true unique=true caseSensitive=true" ]]; then
         pass "Recipient_Access_Guard__c.Shipment_Key__c is $key"
     else
-        fail "Recipient_Access_Guard__c.Shipment_Key__c is '$key', expected Text 18, External ID, unique, case-sensitive"
+        fail "Recipient_Access_Guard__c.Shipment_Key__c is '$key', expected Text 100, External ID, unique, case-sensitive"
     fi
 fi
 guard_tabs="$(query "SELECT Name FROM TabDefinition WHERE SobjectName = 'Recipient_Access_Guard__c'")"

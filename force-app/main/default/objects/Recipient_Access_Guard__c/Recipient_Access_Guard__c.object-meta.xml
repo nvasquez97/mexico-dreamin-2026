@@ -2,7 +2,7 @@
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>Recipient Access Guard</label>
     <pluralLabel>Recipient Access Guards</pluralLabel>
-    <description>The Recipient Access Guard object counts failed recipient verifications of a shipment on the public site, kept off the shipment. It captures Shipment, Shipment Key (unique, external ID), Failed Attempts and Locked Until; five failures lock the shipment for 15 minutes. Admin-only; used for rate limiting.</description>
+    <description>The Recipient Access Guard object counts failed recipient verifications per shipment and typed postal code on the public site. It captures Shipment, Shipment Key (pair hash, unique, external ID), Failed Attempts and Locked Until; five failures lock that pair for 15 minutes. Admin-only; used for rate limiting.</description>
     <nameField>
         <label>Guard Number</label>
         <type>AutoNumber</type>

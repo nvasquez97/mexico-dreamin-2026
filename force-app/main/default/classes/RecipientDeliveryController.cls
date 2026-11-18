@@ -10,11 +10,18 @@
  *              only an unexpected error is thrown, as a generic
  *              AuraHandledException. Not cacheable: every call is verified and
  *              may write the attempt counter.
+ *              The attempt limit is kept per pair (shipment, typed postal code)
+ *              by RecipientAccess (hardening-1 S1, SEC-002): every failure for
+ *              an existing shipment is counted on the pair of the postal code
+ *              that was typed, so every postal code answers the same way and a
+ *              caller who does not know the recipient's postal code cannot lock
+ *              the recipient's pair.
  *              downloadProof (T2, S3) verifies with RecipientAccess
  *              .verifyBeforeCallout: a failed check is counted (guard DML) and
- *              returned with no callout; a successful check holds no lock and
- *              makes no DML before the callout, and RecipientAccess.resetAttempts
- *              resets a non-zero counter after it. Only a Delivered shipment
+ *              returned with no callout; a successful check makes no DML before
+ *              the callout (it only reads an existing guard row of the pair FOR
+ *              UPDATE, which is not DML), and RecipientAccess.resetAttempts
+ *              resets a non-zero counter of the pair after it. Only a Delivered shipment
  *              with a Proof_Id__c calls ProofOfDeliveryService; every EntregaYa
  *              failure returns PROOF_UNAVAILABLE_MESSAGE and nothing else.
  */

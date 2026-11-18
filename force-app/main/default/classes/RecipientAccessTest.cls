@@ -12,12 +12,23 @@
  *              resetAttempts) are called on RecipientAccess directly. Each test
  *              inserts its own shipment because the clear access code exists only
  *              in the transaction that inserts it.
+ *              hardening-1 T1 (S1) keys the guard on the pair (shipment, typed
+ *              postal code normalized): AC-H1.1 (the recipient's postal code and
+ *              another one answer the same, NOT_MATCHED five times then LOCKED,
+ *              with the same hash work), AC-H1.2 (failures with other postal
+ *              codes never lock the recipient's pair) and AC-H1.3 (space and case
+ *              variants share one pair and its 5-attempt limit; the lock expires
+ *              on the clock seam; an existing pair row is read FOR UPDATE before
+ *              the code comparison; a success makes no DML). The guard tests of
+ *              AC-002.1b now read the pair of the typed postal code.
  */
 @IsTest
 private with sharing class RecipientAccessTest {
 
     private static final String POSTAL_CODE = '64000';
     private static final String OTHER_POSTAL_CODE = '64001';
+    private static final String MADRID_POSTAL_CODE = '28001';
+    private static final String LETTER_POSTAL_CODE = 'K1A0B1';
     private static final String UNKNOWN_TRACKING_NUMBER = 'RC000000000';
     private static final String MALFORMED_CODE = 'abc';
     private static final String ACCOUNT_NAME = 'Recipient Access Customer';
@@ -62,18 +73,64 @@ private with sharing class RecipientAccessTest {
         return code.substring(0, 4) + '-' + code.substring(4, 8) + '-' + code.substring(8);
     }
 
-    private static List<Recipient_Access_Guard__c> guardsOf(Id shipmentId) {
+    // The guard rows of one (shipment, typed postal code) pair.
+    private static List<Recipient_Access_Guard__c> guardsOf(Id shipmentId, String typedPostalCode) {
         return [
             SELECT Id, Shipment__c, Shipment_Key__c, Failed_Attempts__c, Locked_Until__c
             FROM Recipient_Access_Guard__c
-            WHERE Shipment_Key__c = :String.valueOf(shipmentId)
+            WHERE Shipment_Key__c = :TestDataFactory.recipientAccessGuardKey(shipmentId, typedPostalCode)
             WITH SYSTEM_MODE
         ];
     }
 
+    // Every guard row of a shipment, whatever its key.
+    private static List<Recipient_Access_Guard__c> allGuardsOf(Id shipmentId) {
+        return [
+            SELECT Id, Shipment_Key__c, Failed_Attempts__c, Locked_Until__c
+            FROM Recipient_Access_Guard__c
+            WHERE Shipment__c = :shipmentId
+            WITH SYSTEM_MODE
+        ];
+    }
+
+    // The counter of the recipient's pair (POSTAL_CODE), or null without a row.
     private static Decimal failedAttemptsOf(Id shipmentId) {
-        List<Recipient_Access_Guard__c> guards = guardsOf(shipmentId);
+        List<Recipient_Access_Guard__c> guards = guardsOf(shipmentId, POSTAL_CODE);
         return guards.isEmpty() ? null : guards[0].Failed_Attempts__c;
+    }
+
+    // One getDeliveryDetails call, as "outcome|message|hash work".
+    private static String answerOf(String trackingNumber, String postalCode, String code) {
+        Integer before = DeliveryAccessCode.hashesComputed;
+        RecipientDeliveryController.DeliveryResponse response =
+            RecipientDeliveryController.getDeliveryDetails(trackingNumber, postalCode, code);
+        return response.outcome + '|' + response.message + '|' + (DeliveryAccessCode.hashesComputed - before);
+    }
+
+    // Six requests with a wrong code and the given postal code.
+    private static List<String> sixWrongCodeAnswers(Fixture fixture, String postalCode) {
+        List<String> answers = new List<String>();
+        for (Integer attempt = 0; attempt < MAX_FAILURES + 1; attempt++) {
+            answers.add(answerOf(fixture.trackingNumber, postalCode, wrongCode(fixture.code)));
+        }
+        return answers;
+    }
+
+    // AC-H1.1: NOT_MATCHED with one hash five times, then LOCKED with no hash work.
+    private static List<String> fiveNotMatchedThenLocked() {
+        List<String> expected = new List<String>();
+        for (Integer attempt = 0; attempt < MAX_FAILURES; attempt++) {
+            expected.add(RecipientDeliveryController.OUTCOME_NOT_MATCHED + '|' + RecipientAccess.NOT_MATCHED_MESSAGE + '|1');
+        }
+        expected.add(RecipientDeliveryController.OUTCOME_LOCKED + '|' + RecipientAccess.LOCKED_MESSAGE + '|0');
+        return expected;
+    }
+
+    // Five failures, each with one of the variants of the postal code and a wrong code.
+    private static void failWithVariants(Fixture fixture, List<String> variants) {
+        for (String variant : variants) {
+            details(fixture, variant, wrongCode(fixture.code));
+        }
     }
 
     // One getDeliveryDetails call that must return, never throw (AC-002.1b).
@@ -295,7 +352,7 @@ private with sharing class RecipientAccessTest {
 
         Assert.areEqual(new List<Decimal>{ 1, 2, 3, 4 }, counts, 'Each counted failure must add one to the guard');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, fifth.outcome, 'The fifth failure itself is a plain failure');
-        Recipient_Access_Guard__c guard = guardsOf(fixture.shipmentId)[0];
+        Recipient_Access_Guard__c guard = guardsOf(fixture.shipmentId, POSTAL_CODE)[0];
         Assert.areEqual(MAX_FAILURES, guard.Failed_Attempts__c, 'The counter stays at 5 while locked (CODE-001)');
         Assert.isTrue(guard.Locked_Until__c >= before.addMinutes(LOCK_MINUTES).addSeconds(-1)
             && guard.Locked_Until__c <= after.addMinutes(LOCK_MINUTES).addSeconds(1),
@@ -309,15 +366,15 @@ private with sharing class RecipientAccessTest {
         // counted again: the counter stays at 5 and the running lock is not moved.
         Fixture fixture = insertShipment(POSTAL_CODE);
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, MAX_FAILURES, Datetime.now().addMinutes(10))
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, MAX_FAILURES, Datetime.now().addMinutes(10))
         });
-        Recipient_Access_Guard__c before = guardsOf(fixture.shipmentId)[0];
+        Recipient_Access_Guard__c before = guardsOf(fixture.shipmentId, POSTAL_CODE)[0];
 
         Test.startTest();
-        RecipientAccess.countFailure(fixture.shipmentId);
+        RecipientAccess.countFailure(fixture.shipmentId, TestDataFactory.recipientAccessGuardKey(fixture.shipmentId, POSTAL_CODE));
         Test.stopTest();
 
-        Recipient_Access_Guard__c after = guardsOf(fixture.shipmentId)[0];
+        Recipient_Access_Guard__c after = guardsOf(fixture.shipmentId, POSTAL_CODE)[0];
         Assert.areEqual(MAX_FAILURES, after.Failed_Attempts__c, 'A locked guard is not counted further');
         Assert.areEqual(before.Locked_Until__c, after.Locked_Until__c, 'The running lock is not moved');
     }
@@ -343,9 +400,9 @@ private with sharing class RecipientAccessTest {
     }
 
     @IsTest
-    static void shouldLockTheSameShipment_WhenFailuresComeThroughDetailsAndReschedule() {
-        // AC-002.1b: failures through getDeliveryDetails and rescheduleDelivery count toward one lock
-        // (downloadProof joins in T2).
+    static void shouldLockTheSamePair_WhenFailuresComeThroughDetailsAndReschedule() {
+        // AC-002.1b: failures through getDeliveryDetails and rescheduleDelivery count toward the
+        // lock of one pair (downloadProof joins in T2).
         Fixture fixture = insertShipment(POSTAL_CODE);
 
         Test.startTest();
@@ -358,9 +415,9 @@ private with sharing class RecipientAccessTest {
         RecipientDeliveryController.DeliveryResponse sixth = details(fixture, POSTAL_CODE, fixture.code);
         Test.stopTest();
 
-        Assert.areEqual(4, afterFour, 'Both methods must count toward the same guard');
+        Assert.areEqual(4, afterFour, 'Both methods must count toward the same pair');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, fifth.outcome, 'A failed reschedule is returned as not matched');
-        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'The fifth failure must lock the shipment');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'The fifth failure must lock the pair');
     }
 
     @IsTest
@@ -398,7 +455,7 @@ private with sharing class RecipientAccessTest {
         // AC-002.1b: Locked_Until__c in the past, the right values open the details, counter reset.
         Fixture fixture = insertShipment(POSTAL_CODE);
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 3, Datetime.now().addMinutes(-1))
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, 3, Datetime.now().addMinutes(-1))
         });
 
         Test.startTest();
@@ -414,7 +471,7 @@ private with sharing class RecipientAccessTest {
         // AC-002.1b: a lock in the future refuses the right values.
         Fixture fixture = insertShipment(POSTAL_CODE);
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 0, Datetime.now().addMinutes(1))
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, 0, Datetime.now().addMinutes(1))
         });
 
         Test.startTest();
@@ -439,30 +496,15 @@ private with sharing class RecipientAccessTest {
         Test.stopTest();
 
         Assert.areEqual(0, afterSuccess, 'A success must reset the counter to 0');
-        Recipient_Access_Guard__c guard = guardsOf(fixture.shipmentId)[0];
+        Recipient_Access_Guard__c guard = guardsOf(fixture.shipmentId, POSTAL_CODE)[0];
         Assert.areEqual(1, guard.Failed_Attempts__c, 'The next failure starts again from 1');
         Assert.isNull(guard.Locked_Until__c, 'The shipment must not be locked');
     }
 
     @IsTest
-    static void shouldNotCount_WhenPostalCodeIsWrong() {
-        // AC-002.1b: failures with a wrong postal code are not counted.
-        Fixture fixture = insertShipment(POSTAL_CODE);
-
-        Test.startTest();
-        for (Integer attempt = 0; attempt <= MAX_FAILURES; attempt++) {
-            details(fixture, OTHER_POSTAL_CODE, wrongCode(fixture.code));
-        }
-        RecipientDeliveryController.DeliveryResponse response = details(fixture, POSTAL_CODE, fixture.code);
-        Test.stopTest();
-
-        Assert.areEqual(0, guardsOf(fixture.shipmentId).size(), 'A wrong postal code must not create or change a guard');
-        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The shipment must not be locked');
-    }
-
-    @IsTest
     static void shouldKeepOneGuardRow_WhenTwoFirstFailuresArrive() {
-        // AC-002.1b: two first failures never create two guard rows (upsert on Shipment_Key__c).
+        // AC-002.1b: two first failures never create two guard rows (upsert on Shipment_Key__c);
+        // AC-H1.3: the key is the pair's (shipment Id + ":" + SHA-256 of the normalized postal code).
         Fixture fixture = insertShipment(POSTAL_CODE);
 
         Test.startTest();
@@ -470,11 +512,14 @@ private with sharing class RecipientAccessTest {
         details(fixture, POSTAL_CODE, wrongCode(fixture.code));
         Test.stopTest();
 
-        List<Recipient_Access_Guard__c> guards = guardsOf(fixture.shipmentId);
-        Assert.areEqual(1, guards.size(), 'One guard row per shipment');
+        List<Recipient_Access_Guard__c> guards = allGuardsOf(fixture.shipmentId);
+        String expectedKey = String.valueOf(fixture.shipmentId) + ':'
+            + EncodingUtil.convertToHex(Crypto.generateDigest('SHA-256', Blob.valueOf('64000')));
+        Assert.areEqual(1, guards.size(), 'One guard row per pair');
         Assert.areEqual(2, guards[0].Failed_Attempts__c, 'Both failures counted on the same row');
-        Assert.areEqual(fixture.shipmentId, guards[0].Shipment__c, 'The guard looks up its shipment');
-        Assert.areEqual(String.valueOf(fixture.shipmentId), guards[0].Shipment_Key__c, 'The key is the 18-character shipment Id');
+        Assert.areEqual(expectedKey, guards[0].Shipment_Key__c,
+            'The key is the 18-character shipment Id, ":" and the hex SHA-256 of the normalized postal code');
+        Assert.areEqual(83, guards[0].Shipment_Key__c.length(), 'The key is 18 + 1 + 64 characters');
     }
 
     @IsTest
@@ -501,7 +546,228 @@ private with sharing class RecipientAccessTest {
         Assert.areEqual(before.LastModifiedDate, after.LastModifiedDate, 'LastModifiedDate must not change');
         Assert.areEqual(before.LastModifiedById, after.LastModifiedById, 'LastModifiedById must not change');
         Assert.areEqual(before.SystemModstamp, after.SystemModstamp, 'SystemModstamp must not change');
-        Assert.isNotNull(guardsOf(fixture.shipmentId)[0].Locked_Until__c, 'The guest failures are counted on the guard');
+        Assert.isNotNull(guardsOf(fixture.shipmentId, POSTAL_CODE)[0].Locked_Until__c, 'The guest failures are counted on the guard');
+    }
+
+    // ─── AC-H1.1: the right postal code cannot be told apart ─────────────
+
+    @IsTest
+    static void shouldAnswerTheSame_WhenSixWrongCodesComeWithRightAndWithOtherPostalCode() {
+        // AC-H1.1 (SEC-002, X16): 6 wrong codes with the recipient's "28001", then 6 with "64000".
+        Fixture fixture = insertShipment(MADRID_POSTAL_CODE);
+
+        Test.startTest();
+        List<String> withRight = sixWrongCodeAnswers(fixture, MADRID_POSTAL_CODE);
+        List<String> withOther = sixWrongCodeAnswers(fixture, POSTAL_CODE);
+        Test.stopTest();
+
+        Assert.areEqual(fiveNotMatchedThenLocked(), withRight, 'The right postal code: NOT_MATCHED five times, then LOCKED');
+        Assert.areEqual(withRight, withOther, 'Another postal code answers exactly like the right one');
+    }
+
+    @IsTest
+    static void shouldAnswerTheSame_WhenGuestSendsOtherPostalCodeFirstThenTheRightOne() {
+        // AC-H1.1 (SEC-002, X16), a second input as the site guest: 6 wrong codes with "C101"
+        // first, then 6 with the recipient's "C100" typed as "c 100".
+        Fixture fixture = insertShipment('C100', 'Maria Lopez');
+        List<String> withOther;
+        List<String> withRight;
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            withOther = sixWrongCodeAnswers(fixture, 'C101');
+            withRight = sixWrongCodeAnswers(fixture, 'c 100');
+        }
+        Test.stopTest();
+
+        Assert.areEqual(fiveNotMatchedThenLocked(), withOther, 'Another postal code: NOT_MATCHED five times, then LOCKED');
+        Assert.areEqual(withOther, withRight, 'The right postal code answers exactly like another one');
+    }
+
+    // ─── AC-H1.2: a guest without the postal code cannot lock the recipient ─
+
+    @IsTest
+    static void shouldOpenDetails_WhenGuestFailedSixTimesWithTwoOtherPostalCodes() {
+        // AC-H1.2 (SEC-002): the guest fails 6 times with "11111" and 6 with " 99 999"; the
+        // recipient then sends "64000" and the right code.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        RecipientDeliveryController.DeliveryResponse response;
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            sixWrongCodeAnswers(fixture, '11111');
+            sixWrongCodeAnswers(fixture, ' 99 999');
+        }
+        response = details(fixture, POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual(DEFAULT_RECIPIENT, response.details.recipientName, 'The details are returned');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, POSTAL_CODE).size(), 'The recipient\'s pair has no failure recorded');
+        Assert.isNotNull(guardsOf(fixture.shipmentId, '11111')[0].Locked_Until__c, 'The guest\'s "11111" pair is locked');
+        Assert.isNotNull(guardsOf(fixture.shipmentId, '99999')[0].Locked_Until__c, 'The guest\'s "99999" pair is locked');
+    }
+
+    @IsTest
+    static void shouldOpenDetails_WhenGuestFailedFiveTimesWithBlankPostalCode() {
+        // AC-H1.2 (SEC-002), a second input: 5 failures with a blank postal code (the fixed
+        // token's pair) and the right code; the recipient then sends "k1a 0b1" and the right code.
+        Fixture fixture = insertShipment(LETTER_POSTAL_CODE, 'Maria Lopez');
+
+        Test.startTest();
+        for (Integer attempt = 0; attempt < MAX_FAILURES; attempt++) {
+            details(fixture, '   ', fixture.code);
+        }
+        RecipientDeliveryController.DeliveryResponse response = details(fixture, 'k1a 0b1', fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual('Maria Lopez', response.details.recipientName, 'The details are returned');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, LETTER_POSTAL_CODE).size(), 'The recipient\'s pair has no failure recorded');
+        Assert.areEqual(MAX_FAILURES, guardsOf(fixture.shipmentId, '')[0].Failed_Attempts__c, 'The blank pair counted the five');
+    }
+
+    @IsTest
+    static void shouldNotCreateGuard_WhenTrackingNumberIsUnknown() {
+        // S1 (decided): tracking numbers are public; an unknown one never creates a guard row.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+
+        Test.startTest();
+        for (Integer attempt = 0; attempt <= MAX_FAILURES; attempt++) {
+            RecipientDeliveryController.getDeliveryDetails(UNKNOWN_TRACKING_NUMBER, POSTAL_CODE, fixture.code);
+        }
+        Test.stopTest();
+
+        Assert.areEqual(0, [SELECT COUNT() FROM Recipient_Access_Guard__c WITH SYSTEM_MODE], 'No guard row for an unknown tracking number');
+    }
+
+    @IsTest
+    static void shouldIgnoreLegacyShipmentKeyedGuard_WhenRecipientVerifies() {
+        // S1: a guard row keyed on the shipment Id alone (written before hardening-1) matches no
+        // pair key, so even a running lock on it does not refuse the recipient.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        Recipient_Access_Guard__c legacy = TestDataFactory.newRecipientAccessGuard(
+            fixture.shipmentId, POSTAL_CODE, MAX_FAILURES, Datetime.now().addMinutes(10));
+        legacy.Shipment_Key__c = String.valueOf(fixture.shipmentId);
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{ legacy });
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = details(fixture, POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'A per-shipment legacy row no longer locks');
+    }
+
+    // ─── AC-H1.3: the 5-attempt limit per pair ───────────────────────────
+
+    @IsTest
+    static void shouldLock_WhenFiveFailuresUseSpaceVariantsOfTheRightPostalCode() {
+        // AC-H1.3 (SEC-011): " 28001", "28 001", "28001 ", "28001" and " 2 8 0 0 1" with wrong
+        // codes, then the right code within 15 minutes.
+        Fixture fixture = insertShipment(MADRID_POSTAL_CODE);
+
+        Test.startTest();
+        failWithVariants(fixture, new List<String>{ ' 28001', '28 001', '28001 ', '28001', ' 2 8 0 0 1' });
+        RecipientDeliveryController.DeliveryResponse sixth = details(fixture, MADRID_POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'The variants share one pair: locked');
+        Assert.areEqual(RecipientAccess.LOCKED_MESSAGE, sixth.message, 'The lock message');
+        Assert.areEqual(1, allGuardsOf(fixture.shipmentId).size(), 'One guard row for all the variants');
+    }
+
+    @IsTest
+    static void shouldLock_WhenFiveFailuresUseCaseAndSpaceVariantsOfTheRightPostalCode() {
+        // AC-H1.3 (SEC-011), a second input: "k1a0b1", "K1A 0B1", " k1A0b1 ", "K1A0B1 " and
+        // "k 1 a 0 b 1" with wrong codes, then the right code within 15 minutes.
+        Fixture fixture = insertShipment(LETTER_POSTAL_CODE);
+
+        Test.startTest();
+        failWithVariants(fixture, new List<String>{ 'k1a0b1', 'K1A 0B1', ' k1A0b1 ', 'K1A0B1 ', 'k 1 a 0 b 1' });
+        RecipientDeliveryController.DeliveryResponse sixth = details(fixture, LETTER_POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'The variants share one pair: locked');
+        Assert.areEqual(1, allGuardsOf(fixture.shipmentId).size(), 'One guard row for all the variants');
+    }
+
+    @IsTest
+    static void shouldOpenDetailsAndResetPair_WhenTheLockExpiresOnTheClock() {
+        // AC-H1.3: 5 variant failures lock the pair; at +14 minutes the right code is still
+        // LOCKED, at +16 minutes (clock seam) it works and resets the pair.
+        Fixture fixture = insertShipment(MADRID_POSTAL_CODE);
+
+        Test.startTest();
+        failWithVariants(fixture, new List<String>{ ' 28001', '28 001', '28001 ', '28001', ' 2 8 0 0 1' });
+        RecipientAccess.nowOverride = Datetime.now().addMinutes(LOCK_MINUTES - 1);
+        RecipientDeliveryController.DeliveryResponse beforeExpiry = details(fixture, MADRID_POSTAL_CODE, fixture.code);
+        RecipientAccess.nowOverride = Datetime.now().addMinutes(LOCK_MINUTES + 1);
+        RecipientDeliveryController.DeliveryResponse afterExpiry = details(fixture, MADRID_POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, beforeExpiry.outcome, 'Still locked at 14 minutes');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, afterExpiry.outcome, 'The right code works after the lock');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, MADRID_POSTAL_CODE)[0].Failed_Attempts__c, 'The success resets the pair');
+    }
+
+    @IsTest
+    static void shouldReadThePairForUpdateBeforeTheCodeAndMakeNoDml_WhenVerifiedWithAnExistingRow() {
+        // AC-H1.3 (SEC-011): with an existing pair row (2 failures), the row is read FOR UPDATE
+        // before the code comparison and the successful verification makes no DML.
+        Fixture fixture = insertShipment(MADRID_POSTAL_CODE);
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, MADRID_POSTAL_CODE, 2, null)
+        });
+        RecipientAccess.trace = new List<String>();
+
+        Test.startTest();
+        Integer dmlBefore = Limits.getDmlStatements();
+        RecipientAccess.Verification verification =
+            RecipientAccess.verifyBeforeCallout(fixture.trackingNumber, ' 28 001', fixture.code);
+        Integer dmlUsed = Limits.getDmlStatements() - dmlBefore;
+        Test.stopTest();
+
+        Assert.isTrue(verification.isVerified(), 'The right values verify');
+        Assert.areEqual(new List<String>{ 'pairReadForUpdate:row', 'codeCompared' }, RecipientAccess.trace,
+            'The existing pair row is read FOR UPDATE before the code comparison');
+        Assert.areEqual(0, dmlUsed, 'A successful verification makes no DML');
+        Assert.areEqual(2, guardsOf(fixture.shipmentId, MADRID_POSTAL_CODE)[0].Failed_Attempts__c, 'The counter is untouched');
+    }
+
+    @IsTest
+    static void shouldReadThePairForUpdateBeforeTheCode_WhenTheCodeIsWrong() {
+        // AC-H1.3 (SEC-011), a second input: a wrong code with "k1a 0b1" and an existing pair row;
+        // the row is read FOR UPDATE before the comparison, then the failure is counted.
+        Fixture fixture = insertShipment(LETTER_POSTAL_CODE);
+        TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, LETTER_POSTAL_CODE, 1, null)
+        });
+        RecipientAccess.trace = new List<String>();
+
+        Test.startTest();
+        RecipientAccess.Verification verification =
+            RecipientAccess.verifyBeforeCallout(fixture.trackingNumber, 'k1a 0b1', wrongCode(fixture.code));
+        Test.stopTest();
+
+        Assert.areEqual(RecipientAccess.Outcome.NOT_MATCHED, verification.outcome, 'A wrong code is not matched');
+        Assert.areEqual(new List<String>{ 'pairReadForUpdate:row', 'codeCompared', 'failureCounted' }, RecipientAccess.trace,
+            'The existing pair row is read FOR UPDATE before the code comparison');
+        Assert.areEqual(2, guardsOf(fixture.shipmentId, LETTER_POSTAL_CODE)[0].Failed_Attempts__c, 'The failure is counted on the pair');
+    }
+
+    @IsTest
+    static void shouldNeverReturnThePairKey_WhenAnsweringTheRecipient() {
+        // S1 (hard rule): the pair key and its hash are never returned, on failure or success.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        String hash = TestDataFactory.recipientAccessGuardKey(fixture.shipmentId, POSTAL_CODE).substringAfter(':');
+
+        Test.startTest();
+        String failed = JSON.serialize(details(fixture, POSTAL_CODE, wrongCode(fixture.code)));
+        String verified = JSON.serialize(details(fixture, POSTAL_CODE, fixture.code));
+        Test.stopTest();
+
+        Assert.isFalse(failed.containsIgnoreCase(hash), 'A failure never carries the postal-code hash');
+        Assert.isFalse(verified.containsIgnoreCase(hash), 'A success never carries the postal-code hash');
     }
 
     // ─── Seam for T2 (downloadProof): no DML before a callout ────────────
@@ -511,7 +777,7 @@ private with sharing class RecipientAccessTest {
         // AC-002.1b / S3 seam: a successful check before a callout is DML-free; resetAttempts resets after.
         Fixture fixture = insertShipment(POSTAL_CODE);
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 2, null)
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, 2, null)
         });
 
         Test.startTest();

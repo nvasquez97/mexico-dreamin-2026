@@ -423,18 +423,35 @@ public with sharing class TestDataFactory {
     }
 
     /**
-     * @description Unsaved attempt guard of one shipment (keyed by its Id).
+     * @description The guard key of a (shipment, typed postal code) pair, computed
+     *              here independently of RecipientAccess (hardening-1 S1): the
+     *              18-character shipment Id, ":", and the lower-case hex SHA-256 of
+     *              the typed postal code with every whitespace removed and in upper
+     *              case; a blank value hashes the empty string.
      * @param shipmentId the guarded shipment
+     * @param typedPostalCode the postal code as a recipient or a guest typed it
+     * @return the pair's Shipment_Key__c
+     */
+    public static String recipientAccessGuardKey(Id shipmentId, String typedPostalCode) {
+        String normalized = String.isBlank(typedPostalCode) ? '' : typedPostalCode.replaceAll('\\s', '').toUpperCase();
+        return String.valueOf(shipmentId) + ':'
+            + EncodingUtil.convertToHex(Crypto.generateDigest('SHA-256', Blob.valueOf(normalized)));
+    }
+
+    /**
+     * @description Unsaved attempt guard of one (shipment, typed postal code) pair.
+     * @param shipmentId the guarded shipment
+     * @param typedPostalCode the postal code of the pair, as typed
      * @param failedAttempts the consecutive counted failures
      * @param lockedUntil the end of a lock, or null
      * @return the unsaved guard
      */
     public static Recipient_Access_Guard__c newRecipientAccessGuard(
-        Id shipmentId, Integer failedAttempts, Datetime lockedUntil
+        Id shipmentId, String typedPostalCode, Integer failedAttempts, Datetime lockedUntil
     ) {
         return new Recipient_Access_Guard__c(
             Shipment__c = shipmentId,
-            Shipment_Key__c = String.valueOf(shipmentId),
+            Shipment_Key__c = recipientAccessGuardKey(shipmentId, typedPostalCode),
             Failed_Attempts__c = failedAttempts,
             Locked_Until__c = lockedUntil
         );

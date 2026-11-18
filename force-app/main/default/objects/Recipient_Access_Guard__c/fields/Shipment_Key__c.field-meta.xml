@@ -2,10 +2,10 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Shipment_Key__c</fullName>
     <label>Shipment Key</label>
-    <description>The 18-character Id of the shipment, unique, so the guard is written by upsert on it and a shipment never has two guard rows (a Lookup cannot be unique).</description>
-    <inlineHelpText>18-character Id of the shipment; one guard per shipment.</inlineHelpText>
+    <description>The pair key: the 18-character shipment Id, a colon and the hex SHA-256 of the typed postal code normalized (83 characters), unique, so the guard is written by upsert on it and a pair never has two guard rows (hardening-1 S1, SEC-002).</description>
+    <inlineHelpText>Shipment Id and a hash of the typed postal code; one guard per pair.</inlineHelpText>
     <type>Text</type>
-    <length>18</length>
+    <length>100</length>
     <externalId>true</externalId>
     <unique>true</unique>
     <caseSensitive>true</caseSensitive>

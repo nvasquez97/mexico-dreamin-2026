@@ -22,6 +22,10 @@
  *              with getDeliveryDetails) and AC-002.7 (the real site guest user
  *              downloads although it cannot read Shipment__c). Every callout is
  *              answered by an HttpCalloutMock.
+ *              hardening-1 T1 (S1): AC-H1.2 (after a guest's failures with
+ *              postal codes that are not the recipient's, the recipient still
+ *              reschedules and downloads the proof, and the recipient's pair has
+ *              no failure recorded).
  */
 @IsTest
 private with sharing class RecipientDeliveryControllerTest {
@@ -730,6 +734,16 @@ private with sharing class RecipientDeliveryControllerTest {
         return guards.isEmpty() ? null : guards[0];
     }
 
+    // The guard row of one (shipment, typed postal code) pair, or null.
+    private static Recipient_Access_Guard__c guardOfPair(Id shipmentId, String typedPostalCode) {
+        List<Recipient_Access_Guard__c> guards = [
+            SELECT Failed_Attempts__c, Locked_Until__c FROM Recipient_Access_Guard__c
+            WHERE Shipment_Key__c = :TestDataFactory.recipientAccessGuardKey(shipmentId, typedPostalCode)
+            WITH SYSTEM_MODE
+        ];
+        return guards.isEmpty() ? null : guards[0];
+    }
+
     // The response is the AC-002.5 failure, with no proof and no response text.
     private static void assertUnavailable(RecipientDeliveryController.ProofResponse response) {
         Assert.areEqual(RecipientDeliveryController.OUTCOME_UNAVAILABLE, response.outcome, 'The proof is unavailable');
@@ -922,7 +936,7 @@ private with sharing class RecipientDeliveryControllerTest {
         // non-zero counter is reset after it.
         Fixture fixture = insertDelivered('PRF-88231');
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 3, null)
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, 3, null)
         });
         ProofMock mock = setProofMock();
         mock.trackingByProofId.put('PRF-88231', fixture.trackingNumber);
@@ -941,7 +955,7 @@ private with sharing class RecipientDeliveryControllerTest {
         // AC-002.5 (S3): the recipient was verified, so the counter is reset even when EntregaYa fails.
         Fixture fixture = insertDelivered('PRF-90417');
         TestDataFactory.insertRecipientAccessGuards(new List<Recipient_Access_Guard__c>{
-            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, 2, null)
+            TestDataFactory.newRecipientAccessGuard(fixture.shipmentId, POSTAL_CODE, 2, null)
         });
         ProofMock mock = setProofMock();
         mock.statusCode = 500;
@@ -999,6 +1013,67 @@ private with sharing class RecipientDeliveryControllerTest {
         Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'Locked');
         Assert.areEqual(RecipientAccess.LOCKED_MESSAGE, sixth.message, 'The lock message');
         Assert.areEqual(0, mock.endpoints.size(), 'No callout while locked or failing');
+    }
+
+    // ─── AC-H1.2: a guest without the postal code cannot lock the recipient ─
+
+    @IsTest
+    static void shouldReschedule_WhenGuestFailedSixTimesWithOtherPostalCodes() {
+        // AC-H1.2 (SEC-002): the guest sends the tracking number with "11111" and "99 999"
+        // and wrong codes, 6 times each; the recipient then reschedules with the right values.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
+        RecipientDeliveryController.DeliveryResponse response;
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            for (Integer attempt = 0; attempt < 6; attempt++) {
+                RecipientDeliveryController.rescheduleDelivery(
+                    fixture.trackingNumber, '11111', wrongCodeOf(fixture), '2026-12-12', DOORMAN);
+                RecipientDeliveryController.getDeliveryDetails(fixture.trackingNumber, '99 999', wrongCodeOf(fixture));
+            }
+            response = reschedule(fixture, '2026-12-12', DOORMAN);
+        }
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient still reschedules');
+        Assert.areEqual(Date.newInstance(2026, 12, 12), reload(fixture.shipmentId).Estimated_Delivery__c, 'The new date is saved');
+        Assert.isNull(guardOfPair(fixture.shipmentId, POSTAL_CODE), 'The recipient\'s pair has no failure recorded');
+        Assert.isNotNull(guardOfPair(fixture.shipmentId, '11111').Locked_Until__c, 'The guest\'s own pair is locked');
+    }
+
+    @IsTest
+    static void shouldDownloadProof_WhenGuestFailedFiveTimesWithOtherPostalCode() {
+        // AC-H1.2 (SEC-002), a second input: 5 failed downloadProof calls with "64001";
+        // the recipient then downloads the proof with the right values. The guest's
+        // failures (guard DML, each its own request on the site) run before
+        // Test.startTest(), so the recipient's callout is not mixed with them.
+        Fixture fixture = insertDelivered('PRF-88231');
+        ProofMock mock = setProofMock();
+        mock.trackingByProofId.put('PRF-88231', fixture.trackingNumber);
+        List<String> failures = new List<String>();
+        RecipientDeliveryController.ProofResponse response;
+        User guest = TestDataFactory.siteGuestUser();
+        System.runAs(guest) {
+            for (Integer attempt = 0; attempt < 5; attempt++) {
+                failures.add(RecipientDeliveryController.downloadProof(
+                    fixture.trackingNumber, '64001', fixture.code).outcome);
+            }
+        }
+
+        Test.startTest();
+        System.runAs(guest) {
+            response = download(fixture);
+        }
+        Test.stopTest();
+
+        Assert.areEqual(new List<String>{ 'NOT_MATCHED', 'NOT_MATCHED', 'NOT_MATCHED', 'NOT_MATCHED', 'NOT_MATCHED' },
+            failures, 'The guest\'s five attempts fail');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient still gets the proof');
+        Assert.areEqual(PDF_BASE64, response.pdfBase64, 'The recipient gets the PDF');
+        Assert.areEqual(new List<String>{ 'callout:EntregaYa_API/proofs/PRF-88231' }, mock.endpoints, 'One callout, the recipient\'s');
+        Assert.isNull(guardOfPair(fixture.shipmentId, POSTAL_CODE), 'The recipient\'s pair has no failure recorded');
+        Assert.areEqual(5, guardOfPair(fixture.shipmentId, '64001').Failed_Attempts__c, 'The guest\'s failures are on its own pair');
     }
 
     // ─── AC-002.7: the real site guest user ──────────────────────────────
