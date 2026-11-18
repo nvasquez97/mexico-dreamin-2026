@@ -87,5 +87,7 @@ Order gate: this document starts after REQ-005 is archived (it needs the custome
 - G8: T2, right after adding Create, probes as a seeded customer user whether a user-mode Shipment__c insert with the Account__c lookup needs Account Read; the result decides the Account grant in S2.
 
 ## Close
-Stage: reviews
+Stage: fix round
 Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ ee969a9 (deploy 0AfEk00000h6178KAA, --ignore-conflicts), Succeeded, 486/486 · Jest 375/375 · Coverage: org 95.6%, new classes ShipmentRequestRules 97.59%, MyShipmentsController 95.14%, ShipmentRequestController 94.54%, ShipmentTriggerHandler 95.53%
+Reviewers: test-reviewer a09402c39fa4073ca, brand-reviewer a47cdd50e68ab3f62, sf-security-auditor acc1e69dff31061bb, access-auditor a3fbb7ecf54cb5ccb
+Reviews: test-reviewer changes required (3 Medium: F1 11 of 14 required-field checks untested, F2 getShipment asserts 13 of 19 values, F3 non-customer signed-in user refusal untested; batched known items confirmed; 5 Low) · brand-reviewer changes required (2 Low: price and access code at weight 900; card/detail values at 700) · sf-security-auditor pass with notes (SEC-001 Medium: the sender is shown the recipient's access code and can use the guest recipient flow — follows D1/A1/G5 and AC-006.5, owner decision, not fixed; SEC-002 Low no cap on requests → Hardening) · access-auditor approved (note: DEPLOY-ORDER.md lacks the G9 history-row step)

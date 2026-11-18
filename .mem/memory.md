@@ -207,3 +207,4 @@
 - What: Org residue cleaned (21 rows, then 17 after the T2 fix). T1 ticked (fixed in 8d70377). T2 ticked (fixed in b8d954d): customers have no FLS on the 4 recipient fields; the controller stages them for the trigger (G9 in the task document); direct customer creates need valid recipient data; a SeeAllData history test needs reschedule-history-check.sh run once in a new org (DEPLOY-ORDER at Close). T3 worker af7bcda2fb03ad1fb running (LWCs, login-only routes).
 - Why / evidence: task lines and G9 in odd/tasks/req-006-007-customer-shipments.md.
 - Next: T3 review, then Close (gate, test, brand, sf-security-auditor, access-auditor; Close fix round with the batched Lows), archive, Hardening.
+- Update 03:20: T3 83b5a2e ticked clean. Close gate @ ee969a9 green 486/486, org 95.6%, Jest 375/375. Four Close reviewers running (ids on the Reviewers line).
