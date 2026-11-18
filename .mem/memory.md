@@ -142,3 +142,9 @@
 - What: T1 1d02283 reviewed (access approved, security approved with 2 Lows, task-reviewer Medium: 3 clauses never seen red on their own assertion) — fix round after T2 commits. T2 stopped: the guest's External Credential callout needs Read on UserExternalCredential (object permission forbidden for the guest). E11: use a password-authenticated (legacy) Named Credential, key in the org only; fallback = one guest Read on UserExternalCredential as an exception pending owner approval. T2 worker resumed (same agent) with E11.
 - Why / evidence: odd/tasks/req-002-003-recipient-delivery.md E11; T2 stop report.
 - Next: T2 commit and review; T1 fix round; T3 (LWC, layout history list, live history check); Close.
+
+## 2026-11-17 23:40 — Owner decision: batch fix rounds
+- Type: decision
+- What: From REQ-002+003 T3 onward, per-task reviews still run, but Medium/Low findings that are test-quality or evidence issues (not security, not wrong behavior) do not start a per-task fix round: the task is ticked with `review: batched to Close — <finding>` and the finding goes to the requirement's Close fix round. Security findings and wrong-behavior findings keep the per-task fix round. Other speed-ups offered (lighter security lens, fewer tasks) were NOT chosen.
+- Why / evidence: owner answer in the session ("Batch fix rounds"), tasks were taking about 1 hour each.
+- Next: apply to T3 of REQ-002+003, REQ-005, REQ-006+007 and Hardening.
