@@ -87,4 +87,5 @@ Order gate: this document starts after REQ-005 is archived (it needs the custome
 - G8: T2, right after adding Create, probes as a seeded customer user whether a user-mode Shipment__c insert with the Account__c lookup needs Account Read; the result decides the Account grant in S2.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ ee969a9 (deploy 0AfEk00000h6178KAA, --ignore-conflicts), Succeeded, 486/486 · Jest 375/375 · Coverage: org 95.6%, new classes ShipmentRequestRules 97.59%, MyShipmentsController 95.14%, ShipmentRequestController 94.54%, ShipmentTriggerHandler 95.53%
