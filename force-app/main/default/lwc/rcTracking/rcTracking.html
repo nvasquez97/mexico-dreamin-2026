@@ -99,6 +99,24 @@
                 </dd>
               </div>
             </dl>
+            <template lwc:if={card.hasDetails}>
+              <div class="rc-tracking__actions">
+                <lightning-button
+                  data-id="delivery-details"
+                  data-key={card.key}
+                  variant="brand-outline"
+                  label="Delivery details"
+                  aria-label={card.detailsLabel}
+                  aria-expanded={card.detailsExpanded}
+                  onclick={handleToggleDetails}
+                ></lightning-button>
+              </div>
+              <template lwc:if={card.isOpen}>
+                <c-rc-delivery-details
+                  tracking-number={card.trackingNumber}
+                ></c-rc-delivery-details>
+              </template>
+            </template>
           </li>
         </template>
       </ul>

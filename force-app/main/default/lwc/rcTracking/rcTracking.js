@@ -94,7 +94,10 @@ function toCard(result, index) {
     lastLocation: textOf(source.lastLocation),
     lastUpdate: textOf(source.lastUpdate),
     estimatedDelivery,
-    estimatedDeliveryText: textOf(estimatedDelivery)
+    estimatedDeliveryText: textOf(estimatedDelivery),
+    // A card without a tracking number offers no delivery details (S4).
+    hasDetails:
+      typeof source.trackingNumber === "string" && source.trackingNumber !== ""
   };
 }
 
@@ -156,13 +159,23 @@ export default class RcTracking extends LightningElement {
   errorMessage;
   isLoading = false;
   hasSearched = false;
+  // The key of the card whose delivery details are open (one at a time).
+  openCardKey;
 
   get sortedCards() {
     const comparator =
       this.sortBy === SORT_ESTIMATED_DELIVERY
         ? compareEstimatedDelivery
         : compareStatus;
-    return [...this.cards].sort(comparator);
+    return [...this.cards].sort(comparator).map((card) => {
+      const isOpen = card.key === this.openCardKey;
+      return {
+        ...card,
+        isOpen,
+        detailsExpanded: String(isOpen),
+        detailsLabel: `Delivery details for ${card.trackingNumber}`
+      };
+    });
   }
 
   get hasCards() {
@@ -202,6 +215,14 @@ export default class RcTracking extends LightningElement {
 
   handleSortChange(event) {
     this.sortBy = event.detail.value;
+  }
+
+  // Opens rcDeliveryDetails inside the chosen card, on the same page (the
+  // access code never goes to a URL); choosing it again closes it, and opening
+  // another card closes the first, so its component and code are discarded.
+  handleToggleDetails(event) {
+    const key = event.currentTarget.dataset.key;
+    this.openCardKey = this.openCardKey === key ? undefined : key;
   }
 
   handleSearch() {
@@ -258,5 +279,6 @@ export default class RcTracking extends LightningElement {
     this.truncated = false;
     this.errorMessage = undefined;
     this.hasSearched = false;
+    this.openCardKey = undefined;
   }
 }

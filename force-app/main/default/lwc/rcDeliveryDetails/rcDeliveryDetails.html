@@ -1,0 +1,151 @@
+<template>
+  <section class="rc-delivery" aria-labelledby="rc-delivery-title">
+    <h4 id="rc-delivery-title" class="rc-delivery__title">{headingText}</h4>
+    <p class="rc-delivery__hint">
+      Enter the destination postal code and the 12-character access code of this
+      shipment.
+    </p>
+    <div class="rc-delivery__form">
+      <lightning-input
+        data-id="postal-code"
+        name="postalCode"
+        label="Destination postal code"
+        type="text"
+        autocomplete="postal-code"
+        max-length="10"
+        value={postalCode}
+        onchange={handlePostalCodeChange}
+      ></lightning-input>
+      <lightning-input
+        data-id="access-code"
+        lwc:ref="accessCode"
+        name="accessCode"
+        label="Access code"
+        type="text"
+        autocomplete="off"
+        max-length="14"
+        placeholder="XXXX-XXXX-XXXX"
+        field-level-help="12 letters and digits, in any case, grouped as XXXX-XXXX-XXXX."
+        value={accessCode}
+        onchange={handleAccessCodeChange}
+      ></lightning-input>
+      <lightning-button
+        data-id="verify"
+        class="rc-delivery__submit"
+        variant="brand"
+        label={verifyLabel}
+        disabled={isVerifying}
+        onclick={handleVerify}
+      ></lightning-button>
+    </div>
+
+    <template lwc:if={errorMessage}>
+      <p data-id="error" class="rc-delivery__error" role="alert">
+        {errorMessage}
+      </p>
+    </template>
+
+    <template lwc:if={hasDetails}>
+      <dl data-id="details" class="rc-delivery__details">
+        <div class="rc-delivery__field">
+          <dt>Recipient name</dt>
+          <dd data-field="recipientName">{details.recipientName}</dd>
+        </div>
+        <div class="rc-delivery__field">
+          <dt>Delivery address</dt>
+          <dd data-field="deliveryAddress">{details.deliveryAddress}</dd>
+        </div>
+        <div class="rc-delivery__field">
+          <dt>Contact phone</dt>
+          <dd data-field="contactPhone">{details.contactPhone}</dd>
+        </div>
+        <div class="rc-delivery__field">
+          <dt>Estimated delivery</dt>
+          <dd data-field="estimatedDelivery">{details.estimatedDelivery}</dd>
+        </div>
+        <div class="rc-delivery__field">
+          <dt>Delivery instructions</dt>
+          <dd data-field="deliveryInstructions">
+            {details.deliveryInstructions}
+          </dd>
+        </div>
+      </dl>
+
+      <template lwc:if={savedDate}>
+        <p
+          data-id="reschedule-success"
+          class="rc-delivery__notice"
+          role="status"
+        >
+          {savedDateText}
+        </p>
+      </template>
+
+      <template lwc:if={showProof}>
+        <div class="rc-delivery__proof">
+          <lightning-button
+            data-id="download-proof"
+            variant="brand-outline"
+            label={proofLabel}
+            disabled={isDownloading}
+            onclick={handleDownloadProof}
+          ></lightning-button>
+          <template lwc:if={signedBy}>
+            <p data-id="signed-by" class="rc-delivery__text" role="status">
+              {signedByText}
+            </p>
+          </template>
+          <template lwc:if={proofError}>
+            <p data-id="proof-error" class="rc-delivery__error" role="alert">
+              {proofError}
+            </p>
+          </template>
+        </div>
+      </template>
+
+      <template lwc:if={showReschedule}>
+        <fieldset data-id="reschedule-form" class="rc-delivery__reschedule">
+          <legend class="rc-delivery__legend">Reschedule delivery</legend>
+          <p data-id="reschedules-left" class="rc-delivery__text">
+            {reschedulesLeftText}
+          </p>
+          <lightning-input
+            data-id="new-date"
+            name="newDate"
+            label="New delivery date"
+            type="date"
+            min={details.rescheduleFrom}
+            max={details.rescheduleTo}
+            value={newDate}
+            onchange={handleNewDateChange}
+          ></lightning-input>
+          <lightning-textarea
+            data-id="instructions"
+            name="instructions"
+            label="Delivery instructions"
+            max-length={instructionsMaxLength}
+            value={instructions}
+            onchange={handleInstructionsChange}
+          ></lightning-textarea>
+          <template lwc:if={rescheduleError}>
+            <p
+              data-id="reschedule-error"
+              class="rc-delivery__error"
+              role="alert"
+            >
+              {rescheduleError}
+            </p>
+          </template>
+          <lightning-button
+            data-id="reschedule"
+            class="rc-delivery__submit"
+            variant="brand"
+            label={rescheduleLabel}
+            disabled={isRescheduling}
+            onclick={handleReschedule}
+          ></lightning-button>
+        </fieldset>
+      </template>
+    </template>
+  </section>
+</template>

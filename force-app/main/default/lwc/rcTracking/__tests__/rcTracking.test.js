@@ -706,3 +706,118 @@ describe("c-rc-tracking", () => {
     });
   });
 });
+
+// Covers odd/tasks/req-002-003-recipient-delivery.md, AC-002.8: each result
+// card offers "Delivery details", which opens rcDeliveryDetails for that
+// tracking number on the same page (a child component, never a URL).
+describe("c-rc-tracking delivery details", () => {
+  beforeEach(() => {
+    search.mockReset();
+    search.mockResolvedValue(
+      response([
+        shipment({ trackingNumber: "RC000001001" }),
+        shipment({ trackingNumber: "RC000001002", status: "Delivered" })
+      ])
+    );
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  function detailsButtons(element) {
+    return queryAll(element, '[data-id="delivery-details"]');
+  }
+
+  function openPanels(element) {
+    return queryAll(element, "c-rc-delivery-details");
+  }
+
+  it("AC-002.8: every card has a Delivery details button naming its tracking number, closed", async () => {
+    const element = render();
+
+    await searchFor(element, "RC000001001, RC000001002");
+
+    const buttons = detailsButtons(element);
+    expect(buttons.map((button) => button.label)).toEqual([
+      "Delivery details",
+      "Delivery details"
+    ]);
+    expect(
+      buttons.map((button) => button.getAttribute("aria-label")).sort()
+    ).toEqual([
+      "Delivery details for RC000001001",
+      "Delivery details for RC000001002"
+    ]);
+    expect(
+      buttons.map((button) => button.getAttribute("aria-expanded"))
+    ).toEqual(["false", "false"]);
+    expect(openPanels(element)).toEqual([]);
+  });
+
+  it.each([["RC000001001"], ["RC000001002"]])(
+    "AC-002.8: choosing Delivery details on %s opens rcDeliveryDetails for that number in its card",
+    async (trackingNumber) => {
+      const element = render();
+      await searchFor(element, "RC000001001, RC000001002");
+
+      const card = queryAll(element, '[data-id="card"]').find(
+        (node) => cardField(node, "trackingNumber") === trackingNumber
+      );
+      card.querySelector('[data-id="delivery-details"]').click();
+      await Promise.resolve();
+
+      const panels = openPanels(element);
+      expect(panels.length).toBe(1);
+      expect(panels[0].trackingNumber).toBe(trackingNumber);
+      expect(card.contains(panels[0])).toBe(true);
+      expect(
+        card
+          .querySelector('[data-id="delivery-details"]')
+          .getAttribute("aria-expanded")
+      ).toBe("true");
+    }
+  );
+
+  it("AC-002.8: choosing it again closes the panel; opening another card closes the first", async () => {
+    const element = render();
+    await searchFor(element, "RC000001001, RC000001002");
+    const [first, second] = detailsButtons(element);
+
+    first.click();
+    await Promise.resolve();
+    second.click();
+    await Promise.resolve();
+    expect(openPanels(element).map((panel) => panel.trackingNumber)).toEqual([
+      "RC000001002"
+    ]);
+
+    second.click();
+    await Promise.resolve();
+    expect(openPanels(element)).toEqual([]);
+  });
+
+  it("AC-002.8: a new search closes an open panel", async () => {
+    const element = render();
+    await searchFor(element, "RC000001001, RC000001002");
+    detailsButtons(element)[0].click();
+    await Promise.resolve();
+
+    await clickSearch(element);
+
+    expect(openPanels(element)).toEqual([]);
+  });
+
+  it("AC-002.8: opening the details does not change the page URL", async () => {
+    const hrefBefore = window.location.href;
+    const element = render();
+    await searchFor(element, "RC000001001");
+
+    detailsButtons(element)[0].click();
+    await Promise.resolve();
+
+    expect(window.location.href).toBe(hrefBefore);
+  });
+});

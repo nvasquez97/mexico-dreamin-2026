@@ -1,0 +1,99 @@
+/*
+ * Brand manual, pages 6-7, as rcTracking. Mobile first: one column at every
+ * width below 48em (768 px); from 48em the two verification inputs sit side
+ * by side. Palette only: night blue #0D1F5F (text, 15.2:1 on white), electric
+ * blue #016BFA (accents, 4.7:1 on white), enamel gray #D6E0EA (borders and
+ * the message background; night blue on it is 11.6:1), white #FFFFFF. The
+ * tricolor red and yellow are never a state color (manual p.6): errors are
+ * night blue text with an electric-blue bar.
+ */
+:host {
+  display: block;
+}
+
+.rc-delivery {
+  display: grid;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  margin-block-start: var(--slds-g-spacing-4, 1rem);
+  padding-block-start: var(--slds-g-spacing-4, 1rem);
+  border-block-start: 1px solid #d6e0ea;
+  color: #0d1f5f;
+  overflow-wrap: anywhere;
+}
+
+.rc-delivery__title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: 700;
+}
+
+.rc-delivery__hint,
+.rc-delivery__text {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rc-delivery__form,
+.rc-delivery__proof {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.rc-delivery__error,
+.rc-delivery__notice {
+  margin: 0;
+  padding-block: var(--slds-g-spacing-3, 0.75rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  border-inline-start: 0.25rem solid #016bfa;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #d6e0ea;
+  color: #0d1f5f;
+  font-weight: 500;
+}
+
+.rc-delivery__details {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin: 0;
+}
+
+.rc-delivery__details dt {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-delivery__details dd {
+  margin: 0;
+  font-weight: 400;
+}
+
+.rc-delivery__reschedule {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  margin: 0;
+  padding: var(--slds-g-spacing-4, 1rem);
+  border: 1px solid #d6e0ea;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #ffffff;
+}
+
+.rc-delivery__legend {
+  padding-inline: var(--slds-g-spacing-1, 0.25rem);
+  font-weight: 700;
+}
+
+@media (min-width: 48em) {
+  .rc-delivery__form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .rc-delivery__submit {
+    grid-column: 1 / -1;
+  }
+}

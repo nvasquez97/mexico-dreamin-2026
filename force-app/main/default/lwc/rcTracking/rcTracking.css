@@ -128,6 +128,10 @@
   font-weight: 400;
 }
 
+.rc-tracking__actions {
+  margin-block-start: var(--slds-g-spacing-3, 0.75rem);
+}
+
 .rc-tracking__subtitle {
   margin: 0 0 var(--slds-g-spacing-2, 0.5rem);
   font-size: var(--slds-g-font-scale-3, 1.25rem);

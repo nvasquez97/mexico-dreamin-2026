@@ -96,3 +96,44 @@ describe("c-rc-tracking accessibility", () => {
     await expect(element).toBeAccessible();
   });
 });
+
+describe("c-rc-tracking delivery details accessibility", () => {
+  beforeAll(() => {
+    setup();
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  // Covers AC-002.8 (odd/tasks/req-002-003-recipient-delivery.md): a card with
+  // its Delivery details panel open passes Sa11y.
+  it("AC-002.8: a card with its Delivery details panel open has no Sa11y violations", async () => {
+    search.mockReset();
+    search.mockResolvedValue({
+      results: [
+        {
+          trackingNumber: "RC000001001",
+          status: "In transit",
+          originCity: "Monterrey",
+          destinationCity: "Guadalajara",
+          lastLocation: "Saltillo hub",
+          lastUpdate: "2026-11-20 10:00",
+          estimatedDelivery: "2026-11-22"
+        }
+      ],
+      notFound: [],
+      truncated: false
+    });
+    const element = await renderAndSearch("RC000001001");
+    element.shadowRoot.querySelector('[data-id="delivery-details"]').click();
+    await flushPromises();
+
+    expect(
+      element.shadowRoot.querySelector("c-rc-delivery-details")
+    ).not.toBeNull();
+    await expect(element).toBeAccessible();
+  });
+});
