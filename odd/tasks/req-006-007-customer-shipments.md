@@ -71,7 +71,7 @@ Plan review: fixed (plan-reviewer a19761fcb734749a5) — closing check closed 10
 Order gate: this document starts after REQ-005 is archived (it needs the customer profile, RutaCargo_Customer, the seeded customer users and the login).
 
 ## Tasks
-- [ ] T1 (S2): Customer access to their shipments: permission set grants and the sharing set — check first
+- [ ] T1 (S2): Customer access to their shipments: permission set grants and the sharing set — check first — 3c2a0ee, evidence f39406a — review: findings (task-reviewer Medium: customer-access-check.sh omits PermissionsViewAllFields at :126/:315 → fix round after T2 commits; batched to Close: Apex reds taken on an earlier test layout, negative tests never seen red; security-reviewer Low CODE-001 missing SECURITY-JUSTIFICATION on two test WITH SYSTEM_MODE queries) · reviewers: task-reviewer a17b1c6b429a0af91, security-reviewer a4806eee61e1a8113, access-auditor a4ea6a3056837fa40
 - [ ] T2 (S1, S3, S4): Pricing and dates rules, request and my-shipments Apex, trigger enforcement for customer inserts — test first
 - [ ] T3 (S5): Request, my-shipments and detail LWCs on login-only routes — test first
 

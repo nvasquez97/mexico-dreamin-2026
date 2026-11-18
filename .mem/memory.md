@@ -194,3 +194,4 @@
 - What: T1 committed 3c2a0ee (evidence f39406a): sharing set works inside Apex tests (no A10 mirror); customers read 17 fields, not Account__c; M2 done by dropping the sharing set's profile (deletion forbidden). T1 reviewers (task, security, access) running in parallel with the T2 worker (only committing worker). T2 told: grant Account__c read FLS only if the user-mode filter needs it; G8 probe decides Account Read.
 - Why / evidence: odd/evidence/req-006-007-customer-shipments/T1.md.
 - Next: tick T1 (fix round waits for T2's commit if needed), review T2, then T3, Close.
+- Update 00:40: T2 stopped once (scope: CustomerShipmentAccessTest asserts T1's exact grants) → scope widened (d385a0a), same worker resumed. T1 reviews: security approved (Low CODE-001), access approved, task-reviewer Medium (customer-access-check.sh omits PermissionsViewAllFields) → T1 fix round after T2 commits (same files); Lows batched to Close. Reviewer ids on the T1 line.
