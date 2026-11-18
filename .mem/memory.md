@@ -228,3 +228,4 @@
 - Why / evidence: the report and the task document.
 - Next: plan-reviewer on the plan commit, then T1-T3, Close, audit 2.
 - Update 05:30: plan review fixed (4 High: normalized key, unbounded rows → T2 purge + malformed key > 10 chars, schema-check, Husky not core.hooksPath); plan now T1-T5 (f5c0161). T1 worker a64d0b6317ea49b5c launched (guard per pair).
+- Update 07:10: T1 e89a7a6 ticked clean (Lows: Kelvin fold → T2; test Lows → Close; H7 unsalted hash). T3 d1481d8 committed: MFA setting deployed true (org left true); AC-H3.1 amended — "MFA Enabled" row meets standard, "Require MFA for all direct UI logins" stays Not Enforced (Salesforce-side, owner item); H2 decided in auto (customers unaffected; owner confirms with one customer login; revert = deploy false). T3 reviewers ab92794001eb23427 (task), a50b0a5e914796af3 (security), a44550d5af2cdb2c9 (access) running; T2 worker a608612858afeb08f running. Next: T4 secret scan, T5 CA fixes, Close, audit 2.
