@@ -284,7 +284,8 @@ public with sharing class TestDataFactory {
     // manual shares that mirror the criteria sharing rules (A10) in system mode,
     // because at API 67 DML defaults to user mode and the admin has no field
     // permissions on the RutaCargo fields. Scope: these TestDataFactory setup
-    // helpers (updateAsSystem included). Compensating control: every action under test runs inside
+    // helpers (updateAsSystem, deactivateUser and removePermissionSetAssignment
+    // included; every change is rolled back with the test). Compensating control: every action under test runs inside
     // System.runAs as the actor, in user mode. (pending owner approval, 2026-11-17)
     private static void insertAsSystem(List<SObject> records) {
         Database.insert(records, AccessLevel.SYSTEM_MODE);
@@ -446,6 +447,79 @@ public with sharing class TestDataFactory {
      */
     public static void insertRecipientAccessGuards(List<Recipient_Access_Guard__c> guards) {
         insertAsSystem(guards);
+    }
+
+    // ─── Registered customers (req-005) ───────────────────────────────────
+
+    public static final String CUSTOMER_PROFILE_NAME = 'RutaCargo Customer';
+    public static final String CUSTOMER_PERMISSION_SET = 'RutaCargo_Customer';
+    /** @description Email of the seeded customer Ana López (scripts/seed, req-005 T1). */
+    public static final String SEEDED_CUSTOMER_EMAIL = 'ana.lopez@example.com';
+    /** @description Email of the seeded customer Marta Ruiz (scripts/seed, req-005 T1). */
+    public static final String SECOND_SEEDED_CUSTOMER_EMAIL = 'marta.ruiz@example.com';
+
+    /**
+     * @description The SAVED site user of a seeded customer (profile "RutaCargo
+     *              Customer", created by scripts/setup/seed-customer-users.sh).
+     *              Tests never insert portal users: the org has 3 free Customer
+     *              Community seats (req-005 F7), so tests that need a real
+     *              customer user query one of the two seeded users.
+     * @param email the seeded customer's email
+     * @return the seeded customer user
+     */
+    public static User seededCustomerUser(String email) {
+        List<User> users = [
+            SELECT Id, Username, Email, IsActive, ContactId FROM User
+            WHERE Email = :email AND Profile.Name = :CUSTOMER_PROFILE_NAME
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (users.isEmpty()) {
+            throw new TestDataException('No ' + CUSTOMER_PROFILE_NAME + ' user has the seeded email; run scripts/setup/seed-customer-users.sh');
+        }
+        return users[0];
+    }
+
+    /**
+     * @description A SAVED contact with the given email on the given account,
+     *              written in system mode.
+     * @param accountId the contact's account
+     * @param email the contact's email
+     * @return the saved contact
+     */
+    public static Contact insertCustomerContact(Id accountId, String email) {
+        Contact person = new Contact(AccountId = accountId, FirstName = 'Test', LastName = 'Customer', Email = email);
+        insertAsSystem(new List<Contact>{ person });
+        return person;
+    }
+
+    /**
+     * @description Deactivates a user inside the test (rolled back with it). Runs
+     *              in its own System.runAs block, so it never mixes with DML on
+     *              non-setup objects.
+     * @param userId the user to deactivate
+     */
+    public static void deactivateUser(Id userId) {
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            updateAsSystem(new List<User>{ new User(Id = userId, IsActive = false) });
+        }
+    }
+
+    /**
+     * @description Removes a user's assignment of one permission set inside the
+     *              test (rolled back with it), so a test can prove that code
+     *              assigns it again.
+     * @param userId the assignee
+     * @param permissionSetName the API name of the permission set
+     */
+    public static void removePermissionSetAssignment(Id userId, String permissionSetName) {
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            Database.delete([
+                SELECT Id FROM PermissionSetAssignment
+                WHERE AssigneeId = :userId AND PermissionSet.Name = :permissionSetName
+                WITH SYSTEM_MODE
+            ], AccessLevel.SYSTEM_MODE);
+        }
     }
 
     // ─── EntregaYa status requests ────────────────────────────────────────

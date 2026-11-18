@@ -29,7 +29,14 @@
 #   6. the profile's password policy (ProfilePasswordPolicy, retrieved: SOQL
 #      cannot read it) exists once and has minimum length 10, complexity 1
 #      (letters and numbers), lockout after 5 invalid attempts for 15 minutes,
-#      expiration 90 days, history 3 and no password question restriction.
+#      expiration 90 days, history 3 and no password question restriction;
+#   7. (T2 part) the guest Apex class allow-list GUEST_CLASSES of
+#      scripts/checks/guest-access-check.sh is exactly the guest classes of
+#      REQ-001, REQ-002+003 and REQ-005 (EXPECTED_GUEST_CLASSES), and the Apex
+#      classes enabled in the org for the guest profile "RutaCargo Profile" and
+#      every permission set assigned to its users are exactly that list: the
+#      system-mode helper CustomerRegistration and the CustomerPermissionAssigner
+#      job are never guest entry points.
 #
 # A failed query or retrieve stops the check with exit code 3; violations exit 1.
 #
@@ -57,6 +64,10 @@ LICENSE_DEFAULT_OBJECTS=''
 # permission set in this requirement.
 SENSITIVE_OBJECTS='Account Contact Shipment__c'
 SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
+# Guest Apex classes (req-001 S1, req-002-003 S2, req-005 S2 and S3), sorted.
+GUEST_PROFILE='RutaCargo Profile'
+EXPECTED_GUEST_CLASSES='CustomerLoginController,CustomerSignUpController,PublicTrackingController,RecipientDeliveryController'
+GUEST_CHECK="$REPO_ROOT/scripts/checks/guest-access-check.sh"
 # Expected password policy (S1).
 EXPECTED_POLICY='minimumPasswordLength=10
 passwordComplexity=1
@@ -256,6 +267,36 @@ else
     if [[ "$violations" -eq "$before" ]]; then
         pass "password policy of $CUSTOMER_PROFILE matches S1: $actual"
     fi
+fi
+
+# ─── 7. Guest Apex classes (T2 part) ───────────────────────────────────────
+# The allow-list in guest-access-check.sh (source) ...
+script_classes="$(grep -E "^GUEST_CLASSES=" "$GUEST_CHECK" 2>/dev/null | head -1 | sed -E "s/^GUEST_CLASSES='([^']*)'.*/\1/" | tr ',' '\n' | sed '/^$/d' | sort | paste -sd ',' -)"
+if [[ "$script_classes" == "$EXPECTED_GUEST_CLASSES" ]]; then
+    pass "guest-access-check.sh allows exactly the guest classes $EXPECTED_GUEST_CLASSES"
+else
+    fail "guest-access-check.sh allows '${script_classes:-nothing}', expected $EXPECTED_GUEST_CLASSES"
+fi
+# ... and the classes the org enables for the guest profile and every permission
+# set assigned to its users (the profile's own permission set included).
+query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND Parent.Profile.Name = '$GUEST_PROFILE'"; profile_classes="$ROWS"
+query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId IN (SELECT PermissionSetId FROM PermissionSetAssignment WHERE Assignee.Profile.Name = '$GUEST_PROFILE')"; permset_classes="$ROWS"
+class_ids="$(jq -s -r '[.[][].SetupEntityId] | unique | .[]' <<<"$profile_classes $permset_classes")"
+org_classes=''
+if [[ -n "$class_ids" ]]; then
+    id_list=''
+    while IFS= read -r class_id; do
+        # Every Id is validated as an ApexClass Id before it enters the query.
+        [[ "$class_id" =~ ^01p[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || { echo "ERROR: unexpected ApexClass Id" >&2; exit 3; }
+        id_list="${id_list:+$id_list,}'$class_id'"
+    done <<<"$class_ids"
+    query "SELECT Name, NamespacePrefix FROM ApexClass WHERE Id IN ($id_list)"; classes="$ROWS"
+    org_classes="$(jq -r '[.[] | (if .NamespacePrefix then .NamespacePrefix + "__" else "" end) + .Name] | sort | join(",")' <<<"$classes")"
+fi
+if [[ "$org_classes" == "$EXPECTED_GUEST_CLASSES" ]]; then
+    pass "the guest profile $GUEST_PROFILE enables exactly the Apex classes $EXPECTED_GUEST_CLASSES"
+else
+    fail "the guest profile $GUEST_PROFILE enables the Apex classes '${org_classes:-none}', expected $EXPECTED_GUEST_CLASSES"
 fi
 
 finish

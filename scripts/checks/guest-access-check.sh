@@ -27,7 +27,8 @@
 #      and every permission set assigned to the guest user) are exactly the
 #      allow-list GUEST_PAGES below: no self-registration page;
 #   5b. the Apex classes enabled for the guest (same scope as 5) are exactly the
-#      allow-list GUEST_CLASSES below (req-001 AC-001.6, req-002-003 AC-002.6);
+#      allow-list GUEST_CLASSES below (req-001 AC-001.6, req-002-003 AC-002.6,
+#      req-005 AC-005.7);
 #   5c. source check: no Apex class or trigger under force-app/main/default
 #      other than SELECTOR_FILES below names the without-sharing
 #      PublicTrackingSelector (case-insensitive, as Apex), so its
@@ -68,9 +69,12 @@ GUEST_TIME_ZONE='America/Mexico_City'
 # force-app/main/default/profiles/RutaCargo Profile.profile-meta.xml.
 GUEST_PAGES='BandwidthExceeded,CommunitiesLanding,CommunitiesLogin,Exception,FileNotFound,InMaintenance'
 # Apex classes the guest may call: only the entry points of the public
-# tracking (req-001 S1, C8) and of the recipient's delivery details and
-# reschedule (req-002-003 S2). Must match the classAccesses of the guest profile.
-GUEST_CLASSES='PublicTrackingController,RecipientDeliveryController'
+# tracking (req-001 S1, C8), of the recipient's delivery details and
+# reschedule (req-002-003 S2), and of the customer sign-up, login and password
+# reset (req-005 S2, S3; their system-mode helper CustomerRegistration and the
+# CustomerPermissionAssigner job are not entry points and get no access).
+# Must match the classAccesses of the guest profile.
+GUEST_CLASSES='CustomerLoginController,CustomerSignUpController,PublicTrackingController,RecipientDeliveryController'
 # The proof of delivery Named Credential (req-002-003 S3, E11): its URL in
 # source is the placeholder; the owner sets the real one and the key in Setup.
 PROOF_NAMED_CREDENTIAL='EntregaYa_API'

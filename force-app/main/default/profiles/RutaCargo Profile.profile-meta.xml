@@ -6,12 +6,23 @@
         <visible>false</visible>
     </applicationVisibilities>
     <!-- Guest Apex class access: only the entry points PublicTrackingController,
-         the public tracking search (req-001 S1, C8), and
+         the public tracking search (req-001 S1, C8),
          RecipientDeliveryController, the recipient's delivery details and
-         reschedule (req-002-003 S2). Their selectors, helpers and DTOs
-         (PublicTrackingSelector, RecipientAccess, ...) are not entry points and
-         get no access. The allow-list in scripts/checks/guest-access-check.sh
-         (GUEST_CLASSES) must match. -->
+         reschedule (req-002-003 S2), and CustomerSignUpController and
+         CustomerLoginController, the customer sign-up, login and password reset
+         (req-005 S2, S3). Their selectors, helpers, jobs and DTOs
+         (PublicTrackingSelector, RecipientAccess, CustomerRegistration,
+         CustomerPermissionAssigner, ...) are not entry points and get no access.
+         The allow-list in scripts/checks/guest-access-check.sh (GUEST_CLASSES)
+         must match. -->
+    <classAccesses>
+        <apexClass>CustomerLoginController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>CustomerSignUpController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <classAccesses>
         <apexClass>PublicTrackingController</apexClass>
         <enabled>true</enabled>
