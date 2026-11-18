@@ -24,6 +24,16 @@
         <li class="rc-header__item">
           <a class="rc-header__link" href={homeUrl}>Track</a>
         </li>
+        <template lwc:if={isCustomer}>
+          <li class="rc-header__item">
+            <a class="rc-header__link" href={myShipmentsUrl}>My shipments</a>
+          </li>
+          <li class="rc-header__item">
+            <a class="rc-header__link" href={requestShipmentUrl}
+              >Request a shipment</a
+            >
+          </li>
+        </template>
       </ul>
     </nav>
     <nav class="rc-header__account" aria-label="Account">

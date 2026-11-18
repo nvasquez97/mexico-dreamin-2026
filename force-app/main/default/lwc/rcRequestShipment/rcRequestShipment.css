@@ -1,0 +1,260 @@
+/*
+ * Brand manual, pages 6-7. Mobile first: the base rules are one column and
+ * fit 320 px; from 48em (768 px) the paired fields take two columns.
+ * Palette only: night blue #0D1F5F (text and field borders, 15.2:1 on
+ * white), electric blue #016BFA (the buttons, links, focus and the error bar,
+ * 4.7:1 on white), cyan #07E9F6 (a decorative bar, never text on white),
+ * enamel gray #D6E0EA (the quote, the code and message backgrounds; night
+ * blue on it is 11.6:1). The tricolor red and yellow are never a state color
+ * (manual p.6), so an error is night blue text with an electric-blue bar.
+ */
+:host {
+  display: block;
+}
+
+.rc-request {
+  /* The site's link rule (a:link:not(.slds-button, …)) reads these hooks and
+     beats .rc-request__link: links stay underlined. */
+  --dxp-c-link-text-decoration: underline;
+  --dxp-s-link-text-decoration-hover: underline;
+  display: grid;
+  gap: var(--slds-g-spacing-4, 1rem);
+  padding-block: var(--slds-g-spacing-6, 2rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  color: #0d1f5f;
+}
+
+/* Montserrat Black, uppercase: the manual's voice for short headings. */
+.rc-request__title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-4, 1.5rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.rc-request__title::after {
+  content: "";
+  display: block;
+  /* Decorative accent bar; no SLDS hook for its size. */
+  width: 3rem;
+  height: 0.25rem;
+  margin-block-start: var(--slds-g-spacing-2, 0.5rem);
+  background-color: #07e9f6;
+}
+
+.rc-request__subtitle {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-3, 1.25rem);
+  font-weight: 700;
+}
+
+.rc-request__hint,
+.rc-request__note,
+.rc-request__help,
+.rc-request__quote-line {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rc-request__help {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+}
+
+.rc-request__form,
+.rc-request__group,
+.rc-request__columns,
+.rc-request__confirmation,
+.rc-request__summary {
+  display: grid;
+  gap: var(--slds-g-spacing-4, 1rem);
+}
+
+.rc-request__group {
+  min-width: 0;
+  margin: 0;
+  padding: var(--slds-g-spacing-4, 1rem);
+  border: 1px solid #d6e0ea;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+}
+
+.rc-request__legend {
+  padding-inline: var(--slds-g-spacing-1, 0.25rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-request__field,
+.rc-request__pair {
+  display: grid;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  align-content: start;
+  min-width: 0;
+}
+
+/* Montserrat Medium: the manual's weight for labels (p.7). */
+.rc-request__label {
+  padding: 0;
+  font-weight: 500;
+}
+
+.rc-request__required {
+  margin-inline-start: var(--slds-g-spacing-1, 0.25rem);
+  color: #016bfa;
+  font-weight: 700;
+}
+
+.rc-request__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  padding-inline: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid #0d1f5f;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #ffffff;
+  color: #0d1f5f;
+  font: inherit;
+}
+
+.rc-request__textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.rc-request__input[aria-invalid="true"] {
+  border-width: 2px;
+  border-color: #016bfa;
+}
+
+.rc-request__input:focus-visible,
+.rc-request__submit:focus-visible,
+.rc-request__secondary:focus-visible,
+.rc-request__link:focus-visible,
+.rc-request__subtitle:focus-visible {
+  outline: 2px solid #016bfa;
+  outline-offset: 2px;
+}
+
+.rc-request__error {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: 700;
+}
+
+.rc-request__error:empty,
+.rc-request__alert:empty {
+  display: none;
+}
+
+.rc-request__alert,
+.rc-request__quote:not(:empty) {
+  margin: 0;
+  padding-block: var(--slds-g-spacing-3, 0.75rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  border-inline-start: 0.25rem solid #016bfa;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #d6e0ea;
+  color: #0d1f5f;
+  font-weight: 500;
+}
+
+.rc-request__quote {
+  display: grid;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.rc-request__quote-line {
+  display: grid;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.rc-request__price {
+  font-size: var(--slds-g-font-scale-4, 1.5rem);
+  font-weight: 900;
+}
+
+.rc-request__summary {
+  margin: 0;
+}
+
+.rc-request__value {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.rc-request__code {
+  padding: var(--slds-g-spacing-4, 1rem);
+  border-block-start: 0.25rem solid #07e9f6;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #d6e0ea;
+}
+
+.rc-request__code-value {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-4, 1.5rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+}
+
+.rc-request__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-4, 1rem);
+}
+
+.rc-request__link {
+  color: #016bfa;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.rc-request__submit,
+.rc-request__secondary {
+  min-height: 2.75rem;
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  padding-inline: var(--slds-g-spacing-6, 2rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font: inherit;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.rc-request__submit {
+  border: 0;
+  background-color: #016bfa;
+  color: #ffffff;
+}
+
+.rc-request__secondary {
+  border: 2px solid #016bfa;
+  background-color: #ffffff;
+  color: #0d1f5f;
+}
+
+.rc-request__submit:disabled,
+.rc-request__secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+@media (min-width: 48em) {
+  .rc-request {
+    max-width: 48rem;
+    padding-inline: var(--slds-g-spacing-8, 3rem);
+  }
+
+  .rc-request__columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rc-request__submit,
+  .rc-request__secondary {
+    justify-self: start;
+  }
+}

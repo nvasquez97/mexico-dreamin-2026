@@ -1,0 +1,77 @@
+{
+  "type" : "sfdc_cms__view",
+  "title" : "My Shipments",
+  "contentBody" : {
+    "component" : {
+      "children" : [
+        {
+          "children" : [
+            {
+              "attributes" : {
+                "backgroundImageConfig" : "",
+                "backgroundImageOverlay" : "rgba(0,0,0,0)",
+                "componentSpacerSize" : "",
+                "layoutDirectionDesktop" : "row",
+                "layoutDirectionMobile" : "column",
+                "layoutDirectionTablet" : "column",
+                "maxContentWidth" : "",
+                "sectionColumnGutterWidth" : "",
+                "sectionConfig" : "{\"UUID\":\"2483c5f5-a81e-42cc-90b3-60e9cec8a009\",\"columns\":[{\"UUID\":\"adc5df1c-40e0-4df4-8ea9-39bfa3c04f1d\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight" : "",
+                "sectionVerticalAlign" : "flex-start"
+              },
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "definition" : "c:rcMyShipments",
+                      "id" : "f4ba58bc-7470-426d-a56a-be1629d4d3b1",
+                      "type" : "component"
+                    }
+                  ],
+                  "id" : "adc5df1c-40e0-4df4-8ea9-39bfa3c04f1d",
+                  "name" : "col1",
+                  "title" : "Column 1",
+                  "type" : "region"
+                }
+              ],
+              "definition" : "community_layout:section",
+              "id" : "2483c5f5-a81e-42cc-90b3-60e9cec8a009",
+              "type" : "component"
+            }
+          ],
+          "id" : "9eb5c8fe-0c15-4d1f-b7be-5216f2bedc4b",
+          "name" : "content",
+          "title" : "Content",
+          "type" : "region"
+        },
+        {
+          "children" : [
+            {
+              "attributes" : {
+                "customHeadTags" : "",
+                "description" : "",
+                "pageTitle" : "My Shipments",
+                "recordId" : "{!recordId}"
+              },
+              "definition" : "community_builder:seoAssistant",
+              "id" : "dc6ca20c-175b-4bc1-b63c-973395744924",
+              "type" : "component"
+            }
+          ],
+          "id" : "2384fddb-63de-44c5-8945-2028e9f5febe",
+          "name" : "sfdcHiddenRegion",
+          "title" : "sfdcHiddenRegion",
+          "type" : "region"
+        }
+      ],
+      "definition" : "community_layout:sldsFlexibleLayout",
+      "id" : "7eb99fa2-f367-4e70-8d63-79fb6e6c8cbe",
+      "type" : "component"
+    },
+    "dataProviders" : [],
+    "themeLayoutType" : "Inner",
+    "viewType" : "custom-my-shipments"
+  },
+  "urlName" : "my-shipments"
+}

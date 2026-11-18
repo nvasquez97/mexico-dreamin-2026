@@ -1,0 +1,129 @@
+/*
+ * Brand manual, pages 6-7. Mobile first: the base rules are one column and
+ * fit 320 px; from 48em (768 px) the four groups take two columns.
+ * Palette only: night blue #0D1F5F (text, 15.2:1 on white), electric blue
+ * #016BFA (links, focus and the group accent, 4.7:1 on white), cyan #07E9F6
+ * (a decorative bar, never text on white), enamel gray #D6E0EA (group
+ * borders and the message background; night blue on it is 11.6:1). The
+ * tricolor red and yellow are never a state color (manual p.6).
+ */
+:host {
+  display: block;
+}
+
+.rc-detail {
+  /* The site's link rule (a:link:not(.slds-button, …)) reads these hooks and
+     beats .rc-detail__link: links stay underlined. */
+  --dxp-c-link-text-decoration: underline;
+  --dxp-s-link-text-decoration-hover: underline;
+  display: grid;
+  gap: var(--slds-g-spacing-4, 1rem);
+  padding-block: var(--slds-g-spacing-6, 2rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  color: #0d1f5f;
+}
+
+/* Montserrat Black, uppercase: the manual's voice for short headings. */
+.rc-detail__title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-4, 1.5rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.rc-detail__title::after {
+  content: "";
+  display: block;
+  /* Decorative accent bar; no SLDS hook for its size. */
+  width: 3rem;
+  height: 0.25rem;
+  margin-block-start: var(--slds-g-spacing-2, 0.5rem);
+  background-color: #07e9f6;
+}
+
+.rc-detail__link {
+  justify-self: start;
+  color: #016bfa;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.rc-detail__link:focus-visible {
+  outline: 2px solid #016bfa;
+  outline-offset: 2px;
+}
+
+.rc-detail__status {
+  margin: 0;
+}
+
+.rc-detail__alert {
+  margin: 0;
+  padding-block: var(--slds-g-spacing-3, 0.75rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  border-inline-start: 0.25rem solid #016bfa;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: #d6e0ea;
+  color: #0d1f5f;
+  font-weight: 500;
+}
+
+.rc-detail__groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--slds-g-spacing-4, 1rem);
+}
+
+.rc-detail__group {
+  padding: var(--slds-g-spacing-4, 1rem);
+  border: 1px solid #d6e0ea;
+  border-block-start: 0.25rem solid #016bfa;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  background-color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.rc-detail__subtitle {
+  margin: 0 0 var(--slds-g-spacing-3, 0.75rem);
+  font-size: var(--slds-g-font-scale-3, 1.25rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-detail__fields {
+  display: grid;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin: 0;
+}
+
+.rc-detail__pair {
+  display: grid;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  min-width: 0;
+}
+
+/* Montserrat Medium: the manual's weight for labels (p.7). */
+.rc-detail__label {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-detail__fields dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+@media (min-width: 48em) {
+  .rc-detail {
+    padding-inline: var(--slds-g-spacing-8, 3rem);
+  }
+
+  .rc-detail__groups {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

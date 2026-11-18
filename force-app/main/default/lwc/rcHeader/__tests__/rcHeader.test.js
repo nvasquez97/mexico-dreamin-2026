@@ -280,15 +280,69 @@ describe("c-rc-header", () => {
       ]);
     });
 
-    it("AC-005.5: keeps the Main navigation with its one Track link for logged-in users", () => {
+    it("AC-005.5: keeps the Track link first in the Main navigation for logged-in users", () => {
       const { element } = renderWith({ isGuest: false });
 
       const links = element.shadowRoot.querySelectorAll(
         'nav[aria-label="Main"] a'
       );
-      expect(Array.from(links).map((a) => a.textContent.trim())).toEqual([
-        "Track"
+      expect(links[0].textContent.trim()).toBe("Track");
+      expect(links[0].getAttribute("href")).toBe(`${BASE_PATH}/`);
+    });
+  });
+
+  // Covers AC-007.4 (odd/tasks/req-006-007-customer-shipments.md, header
+  // part): "My shipments" and "Request a shipment" are shown only to
+  // logged-in customers, and point to the two login-only routes.
+  describe("AC-007.4: customer links", () => {
+    function mainLinks(element) {
+      return Array.from(
+        element.shadowRoot.querySelectorAll('nav[aria-label="Main"] a')
+      ).map((a) => ({
+        text: a.textContent.trim(),
+        href: a.getAttribute("href")
+      }));
+    }
+
+    it('AC-007.4: a logged-in customer sees "My shipments" and "Request a shipment" in the Main navigation', () => {
+      const { element } = renderWith({ isGuest: false });
+
+      expect(mainLinks(element)).toEqual([
+        { text: "Track", href: `${BASE_PATH}/` },
+        { text: "My shipments", href: `${BASE_PATH}/my-shipments` },
+        { text: "Request a shipment", href: `${BASE_PATH}/request-shipment` }
       ]);
+    });
+
+    it('AC-007.4: a guest sees neither "My shipments" nor "Request a shipment"', () => {
+      const element = render();
+
+      expect(mainLinks(element)).toEqual([
+        { text: "Track", href: `${BASE_PATH}/` }
+      ]);
+      expect(element.shadowRoot.textContent).not.toContain("My shipments");
+      expect(element.shadowRoot.textContent).not.toContain(
+        "Request a shipment"
+      );
+    });
+
+    it("AC-007.4: builds the customer links from the site base path the platform gives", () => {
+      const { element } = renderWith({ basePath: "/shipping", isGuest: false });
+
+      expect(mainLinks(element).map((link) => link.href)).toEqual([
+        "/shipping/",
+        "/shipping/my-shipments",
+        "/shipping/request-shipment"
+      ]);
+    });
+
+    it("AC-007.4: the header lists wrap instead of overflowing a narrow screen", () => {
+      const css = require("fs").readFileSync(
+        require("path").join(__dirname, "..", "rcHeader.css"),
+        "utf8"
+      );
+
+      expect(css).toMatch(/\.rc-header__list\s*\{[^}]*flex-wrap:\s*wrap/);
     });
   });
 });

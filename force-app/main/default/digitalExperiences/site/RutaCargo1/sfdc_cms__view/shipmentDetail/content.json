@@ -1,0 +1,77 @@
+{
+  "type" : "sfdc_cms__view",
+  "title" : "Shipment Detail",
+  "contentBody" : {
+    "component" : {
+      "children" : [
+        {
+          "children" : [
+            {
+              "attributes" : {
+                "backgroundImageConfig" : "",
+                "backgroundImageOverlay" : "rgba(0,0,0,0)",
+                "componentSpacerSize" : "",
+                "layoutDirectionDesktop" : "row",
+                "layoutDirectionMobile" : "column",
+                "layoutDirectionTablet" : "column",
+                "maxContentWidth" : "",
+                "sectionColumnGutterWidth" : "",
+                "sectionConfig" : "{\"UUID\":\"daac2986-aa58-497d-adc9-ae3f0dcd2351\",\"columns\":[{\"UUID\":\"65390445-f6da-4aa2-944a-917f8daff890\",\"columnName\":\"Column 1\",\"columnKey\":\"col1\",\"columnWidth\":\"12\",\"seedComponents\":null}]}",
+                "sectionMinHeight" : "",
+                "sectionVerticalAlign" : "flex-start"
+              },
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "definition" : "c:rcShipmentDetail",
+                      "id" : "d7388a3f-7ebc-4e11-9789-e68ae3750734",
+                      "type" : "component"
+                    }
+                  ],
+                  "id" : "65390445-f6da-4aa2-944a-917f8daff890",
+                  "name" : "col1",
+                  "title" : "Column 1",
+                  "type" : "region"
+                }
+              ],
+              "definition" : "community_layout:section",
+              "id" : "daac2986-aa58-497d-adc9-ae3f0dcd2351",
+              "type" : "component"
+            }
+          ],
+          "id" : "893f61c6-d80d-45e9-a7a4-6bc62b01fa75",
+          "name" : "content",
+          "title" : "Content",
+          "type" : "region"
+        },
+        {
+          "children" : [
+            {
+              "attributes" : {
+                "customHeadTags" : "",
+                "description" : "",
+                "pageTitle" : "Shipment Detail",
+                "recordId" : "{!recordId}"
+              },
+              "definition" : "community_builder:seoAssistant",
+              "id" : "4dd46b57-324c-40cb-9b78-8bc302607f28",
+              "type" : "component"
+            }
+          ],
+          "id" : "b4ec6f13-83e1-4344-ad56-0b68e6ff1c42",
+          "name" : "sfdcHiddenRegion",
+          "title" : "sfdcHiddenRegion",
+          "type" : "region"
+        }
+      ],
+      "definition" : "community_layout:sldsFlexibleLayout",
+      "id" : "9947d5d7-be6d-4e85-9e5f-38e575988a09",
+      "type" : "component"
+    },
+    "dataProviders" : [],
+    "themeLayoutType" : "Inner",
+    "viewType" : "custom-shipment-detail"
+  },
+  "urlName" : "shipment-detail"
+}

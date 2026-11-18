@@ -1,0 +1,128 @@
+<template>
+  <section class="rc-detail" aria-labelledby="rc-detail-title">
+    <h2 id="rc-detail-title" class="rc-detail__title">{title}</h2>
+    <a data-id="back-link" class="rc-detail__link" href={myShipmentsUrl}
+      >Back to My shipments</a
+    >
+
+    <template lwc:if={isLoading}>
+      <p data-id="loading" class="rc-detail__status" role="status">
+        Loading the shipment...
+      </p>
+    </template>
+
+    <template lwc:if={errorMessage}>
+      <p data-id="error" class="rc-detail__alert" role="alert">
+        {errorMessage}
+      </p>
+    </template>
+
+    <template lwc:if={fields}>
+      <div class="rc-detail__groups">
+        <div class="rc-detail__group">
+          <h3 class="rc-detail__subtitle">Status</h3>
+          <dl class="rc-detail__fields">
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Tracking number</dt>
+              <dd data-field="trackingNumber">{fields.trackingNumber}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Request date</dt>
+              <dd data-field="requestDate">{fields.requestDate}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Status</dt>
+              <dd data-field="status">{fields.status}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Service type</dt>
+              <dd data-field="serviceType">{fields.serviceType}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Price</dt>
+              <dd data-field="price">{fields.price}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Estimated delivery</dt>
+              <dd data-field="estimatedDelivery">{fields.estimatedDelivery}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Last update</dt>
+              <dd data-field="lastUpdate">{fields.lastUpdate}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Last location</dt>
+              <dd data-field="lastLocation">{fields.lastLocation}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="rc-detail__group">
+          <h3 class="rc-detail__subtitle">Pickup</h3>
+          <dl class="rc-detail__fields">
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Pickup address</dt>
+              <dd data-field="pickupAddress">{fields.pickupAddress}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Pickup city</dt>
+              <dd data-field="pickupCity">{fields.pickupCity}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Pickup postal code</dt>
+              <dd data-field="pickupPostalCode">{fields.pickupPostalCode}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Pickup date</dt>
+              <dd data-field="pickupDate">{fields.pickupDate}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="rc-detail__group">
+          <h3 class="rc-detail__subtitle">Recipient</h3>
+          <dl class="rc-detail__fields">
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Recipient name</dt>
+              <dd data-field="recipientName">{fields.recipientName}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Destination city</dt>
+              <dd data-field="destinationCity">{fields.destinationCity}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Destination postal code</dt>
+              <dd data-field="destinationPostalCode">
+                {fields.destinationPostalCode}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="rc-detail__group">
+          <h3 class="rc-detail__subtitle">Package</h3>
+          <dl class="rc-detail__fields">
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Weight</dt>
+              <dd data-field="weightKg">{fields.weightKg}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Package description</dt>
+              <dd data-field="packageDescription">
+                {fields.packageDescription}
+              </dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Declared value</dt>
+              <dd data-field="declaredValue">{fields.declaredValue}</dd>
+            </div>
+            <div class="rc-detail__pair">
+              <dt class="rc-detail__label">Order reference</dt>
+              <dd data-field="customerReference">{fields.customerReference}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </template>
+  </section>
+</template>

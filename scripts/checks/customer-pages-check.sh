@@ -3,7 +3,7 @@
 # (odd/tasks/req-005-customer-signup.md S3, S4; AC-005.5 live logout,
 # AC-005.7 T3 part, AC-005.9 published views, assumption F9).
 # Reads the source, runs constant SOQL queries and anonymous HTTP requests.
-# It never submits the rcSignUp form. Section 4 is OPT-IN
+# It never submits the rcSignUp form. Section 5 is OPT-IN
 # (--probe-standard-selfreg): it sends the STANDARD self-registration action
 # twice, live, with a fake example.com email and a random password that is
 # never printed nor put on a command line (the request body goes to curl on
@@ -22,7 +22,18 @@
 #      rcHeader.js), requested with no session, never answers 404 or 5xx,
 #      redirects only within the site host and ends in the platform's logout
 #      page that sends the visitor back to the LWR site (base path);
-#   4. (only with --probe-standard-selfreg) F9: the standard self-registration action
+#   4. login-only customer pages (odd/tasks/req-006-007-customer-shipments.md
+#      S5, AC-007.4): in source, the routes My_Shipments__c, Request_Shipment__c and
+#      Shipment_Detail__c each have pageAccess "RequiresLogin", their urlPrefix
+#      (my-shipments, request-shipment, shipment-detail) and an active view
+#      that places its component (c:rcMyShipments, c:rcRequestShipment,
+#      c:rcShipmentDetail) once; rcHeader.js links to the first two prefixes
+#      (MY_SHIPMENTS_PATH, REQUEST_SHIPMENT_PATH); live, an anonymous GET of
+#      each page (no redirects followed) never answers 404 or 5xx and does
+#      not return the page's content: it either redirects within the site
+#      host to the login page, or answers the LWR shell without the page's
+#      view module (<view>_view) and without its component;
+#   5. (only with --probe-standard-selfreg) F9: the standard self-registration action
 #      (applauncher.SelfRegisterController.selfRegisterGetRedirectUrl, called
 #      directly as the guest, with no account and with the account of a
 #      RutaCargo customer) creates no User, Contact or Account for its email,
@@ -30,6 +41,9 @@
 #      licenses used are unchanged, and it answers no redirect URL.
 #
 # A failed query stops the check with exit code 3; violations exit 1.
+#
+# Sections 1 to 4 read the source, run constant SOQL queries and anonymous
+# GETs only: no sign-up, no shipment request, no session.
 #
 # Usage: scripts/checks/customer-pages-check.sh <org-alias> [--probe-standard-selfreg]
 set -uo pipefail
@@ -57,6 +71,12 @@ LWR_SITE='RutaCargo1'
 STANDARD_COMPONENTS='selfRegister loginForm forgotPassword'
 # view folder : page path : component
 PAGES='register:SelfRegister:rcSignUp login:login:rcLogin forgotPassword:ForgotPassword:rcForgotPassword'
+ROUTES="$REPO_ROOT/force-app/main/default/digitalExperiences/site/RutaCargo1/sfdc_cms__route"
+# route folder : view folder : url prefix : component : header constant (or -)
+LOGIN_PAGES='My_Shipments__c:myShipments:my-shipments:rcMyShipments:MY_SHIPMENTS_PATH Request_Shipment__c:requestShipment:request-shipment:rcRequestShipment:REQUEST_SHIPMENT_PATH Shipment_Detail__c:shipmentDetail:shipment-detail:rcShipmentDetail:-'
+LOGIN_REQUIRED='RequiresLogin'
+# A well-formed tracking number for the anonymous GET of the detail page.
+DETAIL_QUERY='?tracking=RC000000001'
 CUSTOMER_PROFILE='RutaCargo Customer'
 CUSTOMER_LICENSE='Customer Community'
 TIMEOUT="${PAGES_TIMEOUT:-60}"
@@ -194,9 +214,69 @@ else
     fi
 fi
 
-# ─── 4. F9: the standard self-registration action creates nothing (opt-in) ─
+# ─── 4. Login-only customer pages ───────────────────────────────────────────
+for entry in $LOGIN_PAGES; do
+    IFS=: read -r route view prefix component constant <<<"$entry"
+    route_file="$ROUTES/$route/content.json"
+    if [[ ! -f "$route_file" ]]; then
+        fail "route $route: $route_file is missing"
+        continue
+    fi
+    access="$(jq -r '.contentBody.pageAccess // ""' "$route_file")"
+    if [[ "$access" == "$LOGIN_REQUIRED" ]]; then
+        pass "route $route has pageAccess $LOGIN_REQUIRED"
+    else
+        fail "route $route has pageAccess '${access:-none}', expected $LOGIN_REQUIRED"
+    fi
+    actual_prefix="$(jq -r '.contentBody.urlPrefix // ""' "$route_file")"
+    active_view="$(jq -r '.contentBody.activeViewId // ""' "$route_file")"
+    [[ "$actual_prefix" == "$prefix" ]] || fail "route $route has urlPrefix '$actual_prefix', expected $prefix"
+    [[ "$active_view" == "$view" ]] || fail "route $route shows view '$active_view', expected $view"
+    view_file="$VIEWS/$view/content.json"
+    n="$(grep -c "\"definition\" : \"c:$component\"" "$view_file" 2>/dev/null || true)"
+    if [[ "${n:-0}" -eq 1 ]]; then
+        pass "view $view places c:$component once"
+    else
+        fail "view $view places c:$component ${n:-0} times, expected 1"
+    fi
+    if [[ "$constant" != "-" ]]; then
+        linked="$(grep -oE "^const $constant = \"[^\"]+\";" "$HEADER_JS" | sed -E 's/^const [A-Z_]+ = "([^"]+)";$/\1/' || true)"
+        if [[ "$linked" == "/$prefix" ]]; then
+            pass "rcHeader links to /$prefix ($constant)"
+        else
+            fail "rcHeader $constant is '${linked:-missing}', expected /$prefix"
+        fi
+    fi
+
+    url="$SITE_URL/$prefix"
+    [[ "$route" == "Shipment_Detail__c" ]] && url="$url$DETAIL_QUERY"
+    read -r code location <<<"$(curl -s -o "$tmp/login-page.html" -w '%{http_code} %{redirect_url}' --max-time "$TIMEOUT" "$url" || true)"
+    code="${code:-000}"
+    echo "      anonymous GET $url -> $code ${location:-}"
+    if [[ "$code" =~ ^3[0-9][0-9]$ ]]; then
+        if [[ "$location" != "https://$HOST$PREFIX/"* ]]; then
+            fail "anonymous GET of /$prefix redirects off the site to '${location:-no Location}'"
+        elif [[ "$location" =~ ^https://[^/]+$PREFIX/(login|s/login)([/?#]|$) ]]; then
+            pass "anonymous GET of /$prefix redirects to the login page"
+        else
+            fail "anonymous GET of /$prefix redirects to '$location', expected the site's login page"
+        fi
+    elif [[ "$code" == "200" ]]; then
+        if grep -qE "/webruntime/view/[^\"]+/${view}_view" "$tmp/login-page.html"; then
+            fail "anonymous GET of /$prefix returns the page: it loads the ${view}_view module"
+        elif grep -q "c/$component" "$tmp/login-page.html"; then
+            fail "anonymous GET of /$prefix returns the page: it names c/$component"
+        else
+            pass "anonymous GET of /$prefix returns the LWR shell without the page (no ${view}_view, no c/$component)"
+        fi
+    else
+        fail "anonymous GET of /$prefix answers $code, expected a redirect to the login page or the LWR shell without the page"
+    fi
+done
+
+# ─── 5. F9: the standard self-registration action creates nothing (opt-in) ─
 if [[ "$PROBE_STANDARD_SELFREG" -ne 1 ]]; then
-    echo "skip: section 4 (F9, the standard self-registration action called live) is opt-in: run with --probe-standard-selfreg"
+    echo "skip: section 5 (F9, the standard self-registration action called live) is opt-in: run with --probe-standard-selfreg"
     finish
 fi
 

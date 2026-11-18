@@ -22,13 +22,21 @@ const FONT_STYLESHEET = "montserrat.css";
 // the session and sends the visitor back to the site (checked live by
 // scripts/checks/customer-pages-check.sh, which reads this constant).
 const LOGOUT_PATH = "/secur/logout.jsp";
+// The two login-only customer routes (req-006-007 S5): their urlPrefix in
+// sfdc_cms__route/My_Shipments__c and Request_Shipment__c (checked by
+// scripts/checks/customer-pages-check.sh, which reads these constants).
+const MY_SHIPMENTS_PATH = "/my-shipments";
+const REQUEST_SHIPMENT_PATH = "/request-shipment";
 
 /**
  * Site header of RutaCargo: the brand mark on night blue (the isotype on its
  * tile on narrow screens, the full negative logo with at least 360 px of
  * visible artwork on wider ones) and
  * the main navigation, and the account links: "Log in" and "Sign up" for
- * guests, "Log out" for logged-in users (req-005 S3). The theme layout already
+ * guests, "Log out" for logged-in users (req-005 S3). Logged-in customers
+ * also get "My shipments" and "Request a shipment" in the main navigation
+ * (req-006-007 S5); the routes themselves require login, so the links are
+ * navigation only, never access control. The theme layout already
  * renders the <header> landmark around this component, so it adds only the
  * two named <nav> landmarks.
  */
@@ -40,6 +48,9 @@ export default class RcHeader extends LightningElement {
   loginUrl = `${BASE_PATH}/login`;
   signUpUrl = `${BASE_PATH}/SelfRegister`;
   logoutUrl = `${BASE_PATH}${LOGOUT_PATH}`;
+  isCustomer = !IS_GUEST;
+  myShipmentsUrl = `${BASE_PATH}${MY_SHIPMENTS_PATH}`;
+  requestShipmentUrl = `${BASE_PATH}${REQUEST_SHIPMENT_PATH}`;
   // 'loading', then 'loaded', or 'fallback' when the browser keeps its
   // fallback font because the stylesheet did not load.
   fontState = "loading";

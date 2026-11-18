@@ -10,8 +10,9 @@
 #      _NeutralColor #D6E0EA (enamel gray); its BaseFont is Montserrat;
 #   2. each main palette color (#0D1F5F #016BFA #07E9F6 #D6E0EA) appears in the
 #      theme (branding set, site styles) or in the CSS of a component of
-#      LWC_DIRS (rcHeader, rcHome, rcTracking, rcDeliveryDetails and the
-#      req-005 forms rcSignUp, rcLogin, rcForgotPassword);
+#      LWC_DIRS (rcHeader, rcHome, rcTracking, rcDeliveryDetails, the
+#      req-005 forms rcSignUp, rcLogin, rcForgotPassword and the req-006-007
+#      customer pages rcRequestShipment, rcMyShipments, rcShipmentDetail);
 #   3. every logo a component shows comes from the rcBrandLogos static resource,
 #      exists there, sits on the background color it was cropped from
 #      (docs/brand/README.txt) and every <img> has alt="Coffee Blazers Summit",
@@ -77,7 +78,7 @@ fi
 cd "$(dirname "$0")/../.."
 
 BUNDLE='force-app/main/default/digitalExperiences/site/RutaCargo1'
-LWC_DIRS='force-app/main/default/lwc/rcHeader force-app/main/default/lwc/rcHome force-app/main/default/lwc/rcTracking force-app/main/default/lwc/rcDeliveryDetails force-app/main/default/lwc/rcSignUp force-app/main/default/lwc/rcLogin force-app/main/default/lwc/rcForgotPassword'
+LWC_DIRS='force-app/main/default/lwc/rcHeader force-app/main/default/lwc/rcHome force-app/main/default/lwc/rcTracking force-app/main/default/lwc/rcDeliveryDetails force-app/main/default/lwc/rcSignUp force-app/main/default/lwc/rcLogin force-app/main/default/lwc/rcForgotPassword force-app/main/default/lwc/rcRequestShipment force-app/main/default/lwc/rcMyShipments force-app/main/default/lwc/rcShipmentDetail'
 HEADER_JS='force-app/main/default/lwc/rcHeader/rcHeader.js'
 SR='force-app/main/default/staticresources'
 FONT_CSS_NAME='montserrat.css'

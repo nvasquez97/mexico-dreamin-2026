@@ -1,0 +1,118 @@
+<template>
+  <section class="rc-shipments" aria-labelledby="rc-shipments-title">
+    <div class="rc-shipments__heading">
+      <h2 id="rc-shipments-title" class="rc-shipments__title">My shipments</h2>
+      <a data-id="request-link" class="rc-shipments__link" href={requestUrl}
+        >Request a shipment</a
+      >
+    </div>
+
+    <form
+      data-id="filters"
+      class="rc-shipments__filters"
+      role="search"
+      aria-label="Filter my shipments"
+      novalidate
+      onsubmit={handleSearch}
+    >
+      <div class="rc-shipments__field">
+        <label class="rc-shipments__label" for="status">Status</label>
+        <select
+          id="status"
+          data-id="status"
+          class="rc-shipments__input"
+          onchange={handleStatusChange}
+        >
+          <option value="">All statuses</option>
+          <template for:each={statusOptions} for:item="option">
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          </template>
+        </select>
+      </div>
+      <div class="rc-shipments__field">
+        <label class="rc-shipments__label" for="search"
+          >Tracking number, recipient or reference</label
+        >
+        <input
+          id="search"
+          data-id="search"
+          class="rc-shipments__input"
+          type="search"
+          autocomplete="off"
+          aria-invalid={searchInvalid}
+          aria-describedby="search-error"
+        />
+        <p id="search-error" data-error="search" class="rc-shipments__error">
+          {searchError}
+        </p>
+      </div>
+      <button
+        data-id="search-button"
+        class="rc-shipments__button"
+        type="submit"
+      >
+        Search
+      </button>
+    </form>
+
+    <template lwc:if={errorMessage}>
+      <p data-id="error" class="rc-shipments__alert" role="alert">
+        {errorMessage}
+      </p>
+    </template>
+    <p data-id="summary" class="rc-shipments__summary" aria-live="polite">
+      {summary}
+    </p>
+
+    <template lwc:if={hasCards}>
+      <ul class="rc-shipments__cards">
+        <template for:each={cards} for:item="card">
+          <li key={card.key} data-id="card" class="rc-shipments__card">
+            <h3 class="rc-shipments__card-title">
+              <span class="rc-shipments__label">Tracking number</span>
+              <a
+                data-id="card-link"
+                data-field="trackingNumber"
+                class="rc-shipments__card-link"
+                href={card.detailUrl}
+                >{card.trackingNumber}</a
+              >
+            </h3>
+            <dl class="rc-shipments__fields">
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Status</dt>
+                <dd data-field="status">{card.status}</dd>
+              </div>
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Request date</dt>
+                <dd data-field="requestDate">{card.requestDate}</dd>
+              </div>
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Recipient</dt>
+                <dd data-field="recipientName">{card.recipientName}</dd>
+              </div>
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Destination city</dt>
+                <dd data-field="destinationCity">{card.destinationCity}</dd>
+              </div>
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Service type</dt>
+                <dd data-field="serviceType">{card.serviceType}</dd>
+              </div>
+              <div class="rc-shipments__pair">
+                <dt class="rc-shipments__label">Price</dt>
+                <dd data-field="price">{card.price}</dd>
+              </div>
+            </dl>
+          </li>
+        </template>
+      </ul>
+    </template>
+
+    <template lwc:if={showEmpty}>
+      <p data-id="empty" class="rc-shipments__empty">{emptyMessage}</p>
+    </template>
+  </section>
+</template>

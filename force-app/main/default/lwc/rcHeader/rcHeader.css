@@ -65,6 +65,8 @@
 
 .rc-header__list {
   display: flex;
+  /* Logged-in customers get three main links: they wrap on narrow screens. */
+  flex-wrap: wrap;
   gap: var(--slds-g-spacing-4, 1rem);
   margin: 0;
   padding: 0;

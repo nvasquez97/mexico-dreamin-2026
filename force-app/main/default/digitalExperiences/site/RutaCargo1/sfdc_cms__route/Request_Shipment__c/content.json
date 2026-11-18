@@ -1,0 +1,12 @@
+{
+  "type" : "sfdc_cms__route",
+  "title" : "Request a Shipment",
+  "contentBody" : {
+    "activeViewId" : "requestShipment",
+    "configurationTags" : [],
+    "pageAccess" : "RequiresLogin",
+    "routeType" : "custom-request-shipment",
+    "urlPrefix" : "request-shipment"
+  },
+  "urlName" : "request-shipment"
+}

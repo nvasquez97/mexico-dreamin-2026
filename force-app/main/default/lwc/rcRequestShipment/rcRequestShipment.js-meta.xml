@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>RutaCargo Request Shipment</masterLabel>
+    <description
+  >Shipment request of a logged-in customer: the request fields, a live quote, and the confirmation with the tracking number and the access code. Place it on the login-only Request a shipment page.</description>
+    <targets>
+        <target>lightningCommunity__Page</target>
+        <target>lightningCommunity__Default</target>
+    </targets>
+</LightningComponentBundle>

@@ -1,0 +1,540 @@
+<template>
+  <section class="rc-request" aria-labelledby="rc-request-title">
+    <h2 id="rc-request-title" class="rc-request__title">Request a shipment</h2>
+
+    <template lwc:if={confirmation}>
+      <div data-id="confirmation" class="rc-request__confirmation">
+        <h3
+          data-id="confirmation-title"
+          class="rc-request__subtitle"
+          tabindex="-1"
+        >
+          Your shipment is requested
+        </h3>
+        <dl class="rc-request__summary">
+          <div class="rc-request__pair">
+            <dt class="rc-request__label">Tracking number</dt>
+            <dd data-field="trackingNumber" class="rc-request__value">
+              {confirmation.trackingNumber}
+            </dd>
+          </div>
+          <div class="rc-request__pair">
+            <dt class="rc-request__label">Price</dt>
+            <dd data-field="price" class="rc-request__value">
+              {confirmedPrice}
+            </dd>
+          </div>
+          <div class="rc-request__pair">
+            <dt class="rc-request__label">Estimated delivery</dt>
+            <dd data-field="estimatedDelivery" class="rc-request__value">
+              {confirmation.estimatedDelivery}
+            </dd>
+          </div>
+          <div class="rc-request__pair rc-request__code">
+            <dt class="rc-request__label">Delivery access code</dt>
+            <dd data-field="accessCode" class="rc-request__code-value">
+              {confirmation.accessCode}
+            </dd>
+          </div>
+        </dl>
+        <p class="rc-request__note">
+          Give this code to the recipient: it is needed to receive the shipment.
+          It is shown only now and cannot be shown again, so write it down
+          before you leave this page.
+        </p>
+        <div class="rc-request__links">
+          <a data-id="detail-link" class="rc-request__link" href={detailUrl}
+            >View this shipment</a
+          >
+          <a data-id="list-link" class="rc-request__link" href={myShipmentsUrl}
+            >My shipments</a
+          >
+        </div>
+        <button
+          data-id="new-request"
+          class="rc-request__secondary"
+          type="button"
+          onclick={handleNewRequest}
+        >
+          Request another shipment
+        </button>
+      </div>
+    </template>
+    <template lwc:else>
+      <p class="rc-request__hint">
+        Fields marked * are required. Get a quote, then confirm your request.
+      </p>
+      <form
+        data-id="form"
+        class="rc-request__form"
+        novalidate
+        onsubmit={handleSubmit}
+      >
+        <fieldset class="rc-request__group">
+          <legend class="rc-request__legend">Package and service</legend>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="serviceType"
+              >Service type
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <select
+              id="serviceType"
+              data-field="serviceType"
+              class="rc-request__input"
+              required
+              aria-invalid={invalid.serviceType}
+              aria-describedby="serviceType-error"
+              onchange={handleQuoteFieldChange}
+            >
+              <option value="">Choose a service</option>
+              <option value="Standard">Standard</option>
+              <option value="Express">Express</option>
+            </select>
+            <p
+              id="serviceType-error"
+              data-error="serviceType"
+              class="rc-request__error"
+            >
+              {errors.serviceType}
+            </p>
+          </div>
+          <div class="rc-request__columns">
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="weightKg"
+                >Weight (kg)
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="weightKg"
+                data-field="weightKg"
+                class="rc-request__input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.weightKg}
+                aria-describedby="weightKg-help weightKg-error"
+                oninput={handleQuoteFieldChange}
+              />
+              <p id="weightKg-help" class="rc-request__help">
+                More than 0, up to 30 kg; up to 2 decimals.
+              </p>
+              <p
+                id="weightKg-error"
+                data-error="weightKg"
+                class="rc-request__error"
+              >
+                {errors.weightKg}
+              </p>
+            </div>
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="declaredValue"
+                >Declared value (MXN)
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="declaredValue"
+                data-field="declaredValue"
+                class="rc-request__input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.declaredValue}
+                aria-describedby="declaredValue-help declaredValue-error"
+                oninput={handleQuoteFieldChange}
+              />
+              <p id="declaredValue-help" class="rc-request__help">
+                From 0 to 50000; digits and a decimal point.
+              </p>
+              <p
+                id="declaredValue-error"
+                data-error="declaredValue"
+                class="rc-request__error"
+              >
+                {errors.declaredValue}
+              </p>
+            </div>
+          </div>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="packageDescription"
+              >Package description
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <input
+              id="packageDescription"
+              data-field="packageDescription"
+              class="rc-request__input"
+              type="text"
+              required
+              aria-invalid={invalid.packageDescription}
+              aria-describedby="packageDescription-error"
+            />
+            <p
+              id="packageDescription-error"
+              data-error="packageDescription"
+              class="rc-request__error"
+            >
+              {errors.packageDescription}
+            </p>
+          </div>
+          <button
+            data-id="quote"
+            class="rc-request__secondary"
+            type="button"
+            disabled={isQuoting}
+            onclick={handleQuote}
+          >
+            {quoteLabel}
+          </button>
+          <div class="rc-request__quote" role="status">
+            <template lwc:if={hasQuote}>
+              <p class="rc-request__quote-line">
+                <span class="rc-request__label">Price at the current rate</span>
+                <strong data-id="quote-price" class="rc-request__price"
+                  >{quotePrice}</strong
+                >
+              </p>
+              <p data-id="pickup-window" class="rc-request__help">
+                {pickupWindowText}
+              </p>
+            </template>
+          </div>
+        </fieldset>
+
+        <fieldset class="rc-request__group">
+          <legend class="rc-request__legend">Pickup</legend>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="pickupAddress"
+              >Pickup address
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <textarea
+              id="pickupAddress"
+              data-field="pickupAddress"
+              class="rc-request__input rc-request__textarea"
+              autocomplete="street-address"
+              required
+              aria-invalid={invalid.pickupAddress}
+              aria-describedby="pickupAddress-error"
+            ></textarea>
+            <p
+              id="pickupAddress-error"
+              data-error="pickupAddress"
+              class="rc-request__error"
+            >
+              {errors.pickupAddress}
+            </p>
+          </div>
+          <div class="rc-request__columns">
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="pickupCity"
+                >Pickup city
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="pickupCity"
+                data-field="pickupCity"
+                class="rc-request__input"
+                type="text"
+                autocomplete="address-level2"
+                required
+                aria-invalid={invalid.pickupCity}
+                aria-describedby="pickupCity-error"
+              />
+              <p
+                id="pickupCity-error"
+                data-error="pickupCity"
+                class="rc-request__error"
+              >
+                {errors.pickupCity}
+              </p>
+            </div>
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="pickupPostalCode"
+                >Pickup postal code
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="pickupPostalCode"
+                data-field="pickupPostalCode"
+                class="rc-request__input"
+                type="text"
+                autocomplete="postal-code"
+                required
+                aria-invalid={invalid.pickupPostalCode}
+                aria-describedby="pickupPostalCode-error"
+              />
+              <p
+                id="pickupPostalCode-error"
+                data-error="pickupPostalCode"
+                class="rc-request__error"
+              >
+                {errors.pickupPostalCode}
+              </p>
+            </div>
+          </div>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="pickupDate"
+              >Pickup date
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <input
+              id="pickupDate"
+              data-field="pickupDate"
+              class="rc-request__input"
+              type="date"
+              min={pickupMin}
+              max={pickupMax}
+              required
+              aria-invalid={invalid.pickupDate}
+              aria-describedby="pickupDate-help pickupDate-error"
+            />
+            <p id="pickupDate-help" class="rc-request__help">
+              A business day (Monday to Friday) from tomorrow up to 15 days
+              ahead; the quote shows the exact window.
+            </p>
+            <p
+              id="pickupDate-error"
+              data-error="pickupDate"
+              class="rc-request__error"
+            >
+              {errors.pickupDate}
+            </p>
+          </div>
+        </fieldset>
+
+        <fieldset class="rc-request__group">
+          <legend class="rc-request__legend">Recipient</legend>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="recipientName"
+              >Recipient name
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <input
+              id="recipientName"
+              data-field="recipientName"
+              class="rc-request__input"
+              type="text"
+              autocomplete="off"
+              required
+              aria-invalid={invalid.recipientName}
+              aria-describedby="recipientName-error"
+            />
+            <p
+              id="recipientName-error"
+              data-error="recipientName"
+              class="rc-request__error"
+            >
+              {errors.recipientName}
+            </p>
+          </div>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="recipientAddress"
+              >Recipient address
+              <span class="rc-request__required" aria-hidden="true"
+                >*</span
+              ></label
+            >
+            <textarea
+              id="recipientAddress"
+              data-field="recipientAddress"
+              class="rc-request__input rc-request__textarea"
+              autocomplete="off"
+              required
+              aria-invalid={invalid.recipientAddress}
+              aria-describedby="recipientAddress-error"
+            ></textarea>
+            <p
+              id="recipientAddress-error"
+              data-error="recipientAddress"
+              class="rc-request__error"
+            >
+              {errors.recipientAddress}
+            </p>
+          </div>
+          <div class="rc-request__columns">
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="recipientCity"
+                >Destination city
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="recipientCity"
+                data-field="recipientCity"
+                class="rc-request__input"
+                type="text"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.recipientCity}
+                aria-describedby="recipientCity-error"
+              />
+              <p
+                id="recipientCity-error"
+                data-error="recipientCity"
+                class="rc-request__error"
+              >
+                {errors.recipientCity}
+              </p>
+            </div>
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="recipientPostalCode"
+                >Destination postal code
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="recipientPostalCode"
+                data-field="recipientPostalCode"
+                class="rc-request__input"
+                type="text"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.recipientPostalCode}
+                aria-describedby="recipientPostalCode-error"
+              />
+              <p
+                id="recipientPostalCode-error"
+                data-error="recipientPostalCode"
+                class="rc-request__error"
+              >
+                {errors.recipientPostalCode}
+              </p>
+            </div>
+          </div>
+          <div class="rc-request__columns">
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="recipientPhone"
+                >Recipient phone
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="recipientPhone"
+                data-field="recipientPhone"
+                class="rc-request__input"
+                type="tel"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.recipientPhone}
+                aria-describedby="recipientPhone-error"
+              />
+              <p
+                id="recipientPhone-error"
+                data-error="recipientPhone"
+                class="rc-request__error"
+              >
+                {errors.recipientPhone}
+              </p>
+            </div>
+            <div class="rc-request__field">
+              <label class="rc-request__label" for="recipientEmail"
+                >Recipient email
+                <span class="rc-request__required" aria-hidden="true"
+                  >*</span
+                ></label
+              >
+              <input
+                id="recipientEmail"
+                data-field="recipientEmail"
+                class="rc-request__input"
+                type="email"
+                autocomplete="off"
+                required
+                aria-invalid={invalid.recipientEmail}
+                aria-describedby="recipientEmail-error"
+              />
+              <p
+                id="recipientEmail-error"
+                data-error="recipientEmail"
+                class="rc-request__error"
+              >
+                {errors.recipientEmail}
+              </p>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="rc-request__group">
+          <legend class="rc-request__legend">Your references</legend>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="customerReference"
+              >Order reference (optional)</label
+            >
+            <input
+              id="customerReference"
+              data-field="customerReference"
+              class="rc-request__input"
+              type="text"
+              autocomplete="off"
+              aria-invalid={invalid.customerReference}
+              aria-describedby="customerReference-error"
+            />
+            <p
+              id="customerReference-error"
+              data-error="customerReference"
+              class="rc-request__error"
+            >
+              {errors.customerReference}
+            </p>
+          </div>
+          <div class="rc-request__field">
+            <label class="rc-request__label" for="deliveryInstructions"
+              >Delivery instructions (optional)</label
+            >
+            <textarea
+              id="deliveryInstructions"
+              data-field="deliveryInstructions"
+              class="rc-request__input rc-request__textarea"
+              autocomplete="off"
+              aria-invalid={invalid.deliveryInstructions}
+              aria-describedby="deliveryInstructions-error"
+            ></textarea>
+            <p
+              id="deliveryInstructions-error"
+              data-error="deliveryInstructions"
+              class="rc-request__error"
+            >
+              {errors.deliveryInstructions}
+            </p>
+          </div>
+        </fieldset>
+
+        <p data-id="form-error" class="rc-request__alert" role="alert">
+          {formError}
+        </p>
+
+        <button
+          data-id="submit"
+          class="rc-request__submit"
+          type="submit"
+          disabled={isConfirmDisabled}
+        >
+          {submitLabel}
+        </button>
+      </form>
+    </template>
+  </section>
+</template>
