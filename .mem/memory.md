@@ -195,3 +195,9 @@
 - Why / evidence: odd/evidence/req-006-007-customer-shipments/T1.md.
 - Next: tick T1 (fix round waits for T2's commit if needed), review T2, then T3, Close.
 - Update 00:40: T2 stopped once (scope: CustomerShipmentAccessTest asserts T1's exact grants) → scope widened (d385a0a), same worker resumed. T1 reviews: security approved (Low CODE-001), access approved, task-reviewer Medium (customer-access-check.sh omits PermissionsViewAllFields) → T1 fix round after T2 commits (same files); Lows batched to Close. Reviewer ids on the T1 line.
+
+## 2026-11-18 01:40 — REQ-006+007: T2 committed and reviewed; org FLS residue from a mutation
+- Type: environment
+- What: T2 8a322bd (evidence 3698f0c). T2 reviews: security-reviewer adedd08cf3d4fae52 approved (Medium CODE-001 = G7 residual → Hardening; Low CODE-002 approver pending; Low CODE-003 direct create skips recipient-field checks → Close), task-reviewer a23e4911d3479ab40 2 Lows (evidence reds not assertions; tz test repeats logic → Close), access-auditor a1cd9ff33029a9062 pending. T1 fix worker aa4fc50d3c25417bc. LESSON: a viewAllFields=true mutation leaves read FieldPermissions on every field after it is turned off, and a source redeploy does not remove them; revert with explicit readable=false entries and compare org FieldPermissions with the file. Verified 01:40: the org had 29 rows vs 21 in the file (cost, margin, notes, hash, Proof_Id readable by customers) — T1 fix worker told to clean it.
+- Why / evidence: FieldPermissions query on RutaCargo_Customer.
+- Next: confirm cleanup (29 → 21 rows), T1 closing check (task-reviewer), tick T1 and T2, then T3.

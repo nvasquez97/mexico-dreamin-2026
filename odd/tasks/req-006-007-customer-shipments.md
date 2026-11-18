@@ -72,7 +72,7 @@ Order gate: this document starts after REQ-005 is archived (it needs the custome
 
 ## Tasks
 - [ ] T1 (S2): Customer access to their shipments: permission set grants and the sharing set — check first — 3c2a0ee, evidence f39406a — review: findings (task-reviewer Medium: customer-access-check.sh omits PermissionsViewAllFields at :126/:315 → fix round after T2 commits; batched to Close: Apex reds taken on an earlier test layout, negative tests never seen red; security-reviewer Low CODE-001 missing SECURITY-JUSTIFICATION on two test WITH SYSTEM_MODE queries) · reviewers: task-reviewer a17b1c6b429a0af91, security-reviewer a4806eee61e1a8113, access-auditor a4ea6a3056837fa40
-- [ ] T2 (S1, S3, S4): Pricing and dates rules, request and my-shipments Apex, trigger enforcement for customer inserts — test first
+- [ ] T2 (S1, S3, S4): Pricing and dates rules, request and my-shipments Apex, trigger enforcement for customer inserts — test first — 8a322bd, evidence 3698f0c — review: findings (security-reviewer Medium CODE-001 + access-auditor Medium ACC-001: create FLS lets the sender read the recipient's address, phone, email and the recipient's later delivery-instruction changes and their history through the API — G7 wider than recorded → fix round; security-reviewer Low CODE-003 direct customer create skips the recipient-field checks → same fix round; Low CODE-002 justification approver pending → open, owner; batched to Close: task-reviewer Lows — Apex reds before code were not assertions, timezone test repeats the code's expression) · reviewers: task-reviewer a23e4911d3479ab40, security-reviewer adedd08cf3d4fae52, access-auditor a1cd9ff33029a9062
 - [ ] T3 (S5): Request, my-shipments and detail LWCs on login-only routes — test first
 
 ## Assumptions
