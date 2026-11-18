@@ -154,3 +154,9 @@
 - What: Gate @ 3ae2ef1 296/296 and re-run @ 0d67085 303/303, org 95.86% (Recipient* 94-100%, ProofOfDeliveryService 95%), Jest 122/122. Reviews: test-reviewer (2 Medium + 6 Low fixed at 8e3db4f), brand approved, sf-security-auditor pass (SEC-001 Low + E1/C1 chain → Hardening), access-auditor approved. E11: password Named Credential (the guest's External Credential callout needs a forbidden object permission). Owner items in the Close section.
 - Why / evidence: odd/tasks/archive/2026-11-18-req-002-003-recipient-delivery.md (or the date `date +%Y-%m-%d` gave).
 - Next: REQ-005 T1 (customer profile, policy, permission set, owner role, network self-registration, seeded customer users) running; then T2, T3, Close; REQ-006+007; Hardening.
+
+## 2026-11-18 04:00 — REQ-005: T1, T2 ticked; T3 running
+- Type: status
+- What: (Correction: REQ-002+003 is archived as odd/tasks/archive/2026-11-17-req-002-003-recipient-delivery.md.) REQ-005 T1 1938f82 fixed in 25b3df5 (customer profile revokes 709 license-default field permissions, 21 user permissions, all 287 tabs; allow-lists: 2 fields, EnableNotifications); T1 open item EXP-001 → T3 live negative self-registration test (F9). T2 d609edc ticked with batched Close items and F11 (sign-up does not prove email ownership: owner decision, Hardening). Customer Community licenses: 2/5 used (Ana, Marta).
+- Why / evidence: odd/tasks/req-005-customer-signup.md task lines, F9-F11.
+- Next: T3 review; REQ-005 Close (batched items: password passed to Site not asserted, one-input reset case, nickname from the email local part, inner-class sharing keywords); REQ-006+007.
