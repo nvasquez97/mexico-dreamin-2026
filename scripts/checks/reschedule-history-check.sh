@@ -39,6 +39,9 @@
 # Usage: scripts/checks/reschedule-history-check.sh <org-alias>
 set -uo pipefail
 export LC_ALL=C
+# A debug-level sf CLI log could record the anonymous Apex body, which holds
+# the access code: every sf call here runs at the CLI's default log level.
+unset SF_LOG_LEVEL SFDX_LOG_LEVEL
 
 ORG="${1:-}"
 if [[ -z "$ORG" ]]; then
@@ -205,7 +208,11 @@ apex="$WORKDIR/reschedule.apex"
 out="$(sf apex run --file "$apex" --target-org "$ORG" --json 2>/dev/null || true)"
 rm -f "$apex"
 marker="$(jq -r '.result.logs // ""' <<<"$out" 2>/dev/null | grep 'USER_DEBUG' | grep -oE 'RHCHECK:[A-Z_]+:[0-9-]*' | tail -1 || true)"
-problem="$(jq -r '.result.exceptionMessage // .result.compileProblem // .message // ""' <<<"$out" 2>/dev/null | awk -v c="$code" '{ gsub(c, "<code>"); print }' | cut -c1-200)"
+problem="$(jq -r '.result.exceptionMessage // .result.compileProblem // .message // ""' <<<"$out" 2>/dev/null || true)"
+# The code is replaced in bash, never passed as a command argument (another
+# local user could read it with ps while that command runs).
+[[ -n "$code" ]] && problem="${problem//"$code"/<code>}"
+problem="$(cut -c1-200 <<<"$problem")"
 unset out code
 clean_up
 

@@ -126,6 +126,36 @@ describe("c-rc-delivery-details accessibility", () => {
     await expect(element).toBeAccessible();
   });
 
+  it("AC-003.1: a rejection that closes the reschedule form has no Sa11y violations", async () => {
+    rescheduleDelivery.mockResolvedValue({
+      outcome: "REJECTED",
+      message: "This delivery cannot be rescheduled in its current status.",
+      details: details({
+        status: "Delivered",
+        canReschedule: false,
+        rescheduleFrom: null,
+        rescheduleTo: null,
+        proofAvailable: false
+      })
+    });
+    const element = await renderAndVerify({
+      outcome: "SUCCESS",
+      message: null,
+      details: details()
+    });
+    await change(element, '[data-id="new-date"]', "2026-11-20");
+    element.shadowRoot.querySelector('[data-id="reschedule"]').click();
+    await flushPromises();
+
+    expect(
+      element.shadowRoot.querySelector('[data-id="reschedule-form"]')
+    ).toBeNull();
+    expect(
+      element.shadowRoot.querySelector('[data-id="reschedule-error"]')
+    ).not.toBeNull();
+    await expect(element).toBeAccessible();
+  });
+
   it("AC-002.8: the saved date and the proof error have no Sa11y violations", async () => {
     downloadProof.mockResolvedValue({
       outcome: "UNAVAILABLE",

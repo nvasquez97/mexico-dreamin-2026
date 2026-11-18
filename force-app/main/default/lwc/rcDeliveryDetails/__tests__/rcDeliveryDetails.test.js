@@ -36,12 +36,16 @@ const NOT_MATCHED = "The details do not match this shipment";
 const LOCKED = "Too many attempts. Please try again in 15 minutes.";
 const PROOF_UNAVAILABLE =
   "We could not get the proof of delivery, please try again later";
+const PROOF_NOT_AVAILABLE =
+  "The proof of delivery is not available for this shipment.";
 const WINDOW_MESSAGE =
   "The new delivery date is outside the allowed rescheduling window.";
 const STATUS_MESSAGE =
   "This delivery cannot be rescheduled in its current status.";
 const LIMIT_MESSAGE =
   "This delivery has already been rescheduled the maximum number of times.";
+const NO_ESTIMATE_MESSAGE =
+  "This delivery has no estimated date to reschedule from yet.";
 const GENERIC_ERROR =
   "We could not complete your request. Please try again later.";
 
@@ -480,10 +484,62 @@ describe("c-rc-delivery-details", () => {
       await click(element, '[data-id="download-proof"]');
 
       expect(openSpy).not.toHaveBeenCalled();
-      clickedAnchors.forEach((anchor) => {
-        expect(anchor.href).toMatch(/^blob:/);
+      expect(clickedAnchors).toHaveLength(1);
+      expect(clickedAnchors[0].href).toBe(
+        createObjectURL.mock.results[0].value
+      );
+      expect(clickedAnchors[0].href).toMatch(/^blob:/);
+    });
+
+    it.each([
+      ["NOT_MATCHED", NOT_MATCHED],
+      ["LOCKED", LOCKED]
+    ])(
+      "AC-002.3 / AC-002.1b: a %s answer to the download hides the details and shows exactly the server text",
+      async (outcome, message) => {
+        getDeliveryDetails.mockResolvedValue(
+          success({ status: "Delivered", proofAvailable: true })
+        );
+        downloadProof.mockResolvedValue({
+          outcome,
+          message,
+          proofAvailable: false
+        });
+        const element = render();
+
+        await verify(element);
+        await click(element, '[data-id="download-proof"]');
+
+        expect(query(element, '[data-id="details"]')).toBeNull();
+        expect(query(element, '[data-id="download-proof"]')).toBeNull();
+        expect(text(query(element, '[data-id="error"]'))).toBe(message);
+        expect(element.shadowRoot.textContent).not.toContain("Ana López");
+        expect(createObjectURL).not.toHaveBeenCalled();
+        expect(clickedAnchors).toEqual([]);
+      }
+    );
+
+    it("AC-002.5: a NOT_AVAILABLE answer shows exactly the server text, keeps the details and downloads nothing", async () => {
+      getDeliveryDetails.mockResolvedValue(
+        success({ status: "Delivered", proofAvailable: true })
+      );
+      downloadProof.mockResolvedValue({
+        outcome: "NOT_AVAILABLE",
+        message: PROOF_NOT_AVAILABLE,
+        proofAvailable: false
       });
-      expect(window.location.href).not.toMatch(/^data:/);
+      const element = render();
+
+      await verify(element);
+      await click(element, '[data-id="download-proof"]');
+
+      expect(text(query(element, '[data-id="proof-error"]'))).toBe(
+        PROOF_NOT_AVAILABLE
+      );
+      expect(query(element, '[data-id="details"]')).not.toBeNull();
+      expect(query(element, '[data-id="error"]')).toBeNull();
+      expect(createObjectURL).not.toHaveBeenCalled();
+      expect(clickedAnchors).toEqual([]);
     });
 
     it("AC-002.5: an EntregaYa failure shows exactly the server text and downloads nothing", async () => {
@@ -655,14 +711,28 @@ describe("c-rc-delivery-details", () => {
       );
     });
 
-    it.each([WINDOW_MESSAGE, STATUS_MESSAGE, LIMIT_MESSAGE])(
-      "AC-003.1: the rejection '%s' is shown exactly and no success",
-      async (message) => {
+    // The details the server returns with these rejections
+    // (RecipientDeliveryController.detailsOf): once the shipment can no longer
+    // be rescheduled, canReschedule is false and the window is null.
+    const closed = {
+      canReschedule: false,
+      rescheduleFrom: null,
+      rescheduleTo: null
+    };
+
+    it.each([
+      [STATUS_MESSAGE, { ...closed, status: "Delivered", reschedulesLeft: 2 }],
+      [LIMIT_MESSAGE, { ...closed, reschedulesLeft: 0 }],
+      [NO_ESTIMATE_MESSAGE, { ...closed, estimatedDelivery: null }],
+      [WINDOW_MESSAGE, { ...closed, reschedulesLeft: 1 }]
+    ])(
+      "AC-003.1: the rejection '%s' with canReschedule false shows the exact text, hides the form and no success",
+      async (message, serverDetails) => {
         getDeliveryDetails.mockResolvedValue(success(window1));
         rescheduleDelivery.mockResolvedValue({
           outcome: "REJECTED",
           message,
-          details: details(window1)
+          details: details(serverDetails)
         });
         const element = render();
 
@@ -670,12 +740,40 @@ describe("c-rc-delivery-details", () => {
         await change(element, '[data-id="new-date"]', "2026-11-20");
         await click(element, '[data-id="reschedule"]');
 
-        expect(text(query(element, '[data-id="reschedule-error"]'))).toBe(
-          message
-        );
+        const error = query(element, '[data-id="reschedule-error"]');
+        expect(text(error)).toBe(message);
+        expect(error.getAttribute("role")).toBe("alert");
+        expect(query(element, '[data-id="reschedule-form"]')).toBeNull();
         expect(query(element, '[data-id="reschedule-success"]')).toBeNull();
+        expect(query(element, '[data-id="details"]')).not.toBeNull();
       }
     );
+
+    it("AC-003.1: a window rejection while the window is still open keeps the form with the new bounds and the typed date", async () => {
+      getDeliveryDetails.mockResolvedValue(success(window1));
+      rescheduleDelivery.mockResolvedValue({
+        outcome: "REJECTED",
+        message: WINDOW_MESSAGE,
+        details: details({
+          ...window1,
+          rescheduleFrom: "2026-11-21",
+          rescheduleTo: "2026-11-27"
+        })
+      });
+      const element = render();
+
+      await verify(element);
+      await change(element, '[data-id="new-date"]', "2026-11-20");
+      await click(element, '[data-id="reschedule"]');
+
+      expect(text(query(element, '[data-id="reschedule-error"]'))).toBe(
+        WINDOW_MESSAGE
+      );
+      expect(query(element, '[data-id="reschedule-form"]')).not.toBeNull();
+      expect(query(element, '[data-id="new-date"]').min).toBe("2026-11-21");
+      expect(query(element, '[data-id="new-date"]').value).toBe("2026-11-20");
+      expect(query(element, '[data-id="reschedule-success"]')).toBeNull();
+    });
 
     it.each([
       ["", "no date"],
@@ -760,6 +858,41 @@ describe("c-rc-delivery-details", () => {
       expect(pushState).not.toHaveBeenCalled();
       expect(replaceState).not.toHaveBeenCalled();
       expect(window.location.href).toBe(hrefBefore);
+    });
+
+    it("AC-002.8: removing the component revokes the Blob URL and clears the code, the postal code and the details", async () => {
+      getDeliveryDetails.mockResolvedValue(
+        success({ status: "Delivered", proofAvailable: true })
+      );
+      downloadProof.mockResolvedValue({
+        outcome: "SUCCESS",
+        proofAvailable: true,
+        fileName: "proof.pdf",
+        signedBy: "Ana",
+        pdfBase64: PDF_BASE64
+      });
+      const element = render();
+      await verify(element, "06050", "ABCD2345EFGH");
+      await click(element, '[data-id="download-proof"]');
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+
+      expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith(
+        "blob:https://rutacargo.example/1a2b"
+      );
+      // Re-attached, the same instance renders what it still holds in memory.
+      document.body.appendChild(element);
+      await flushPromises();
+      expect(query(element, '[data-id="postal-code"]').value).toBe("");
+      expect(query(element, '[data-id="access-code"]').value).toBe("");
+      expect(query(element, '[data-id="details"]')).toBeNull();
+      await click(element, '[data-id="verify"]');
+      expect(getDeliveryDetails).toHaveBeenCalledTimes(1);
+      expect(text(query(element, '[data-id="error"]'))).toBe(
+        "Enter the destination postal code and the access code."
+      );
     });
 
     it("AC-002.8: the bundle source has no storage, cookie, URL or HTML-injection sink", () => {

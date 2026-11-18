@@ -146,6 +146,13 @@
           ></lightning-button>
         </fieldset>
       </template>
+      <template lwc:elseif={rescheduleError}>
+        <!-- A rejection that closed the form (canReschedule false) still shows
+             the server's text, in place of the form. -->
+        <p data-id="reschedule-error" class="rc-delivery__error" role="alert">
+          {rescheduleError}
+        </p>
+      </template>
     </template>
   </section>
 </template>
