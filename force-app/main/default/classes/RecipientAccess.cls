@@ -9,7 +9,14 @@
  *              Shipment_Key__c is the shipment Id, ":" and the hex SHA-256 of the
  *              typed postal code normalized exactly as the comparison does
  *              (whitespace removed, upper case; a blank value hashes a fixed
- *              empty token). For an existing shipment the pair's row, if any, is
+ *              empty token; a value longer than Destination_Postal_Code__c after
+ *              normalization, which no stored code can equal, hashes one fixed
+ *              "malformed" token, so all such values share one per-shipment row
+ *              with the same response and hash work, hardening-1 S2). The typed
+ *              postal code matches only when its normalized value equals the
+ *              stored one exactly (String.equals: no case folding, so a
+ *              Kelvin-sign "K" neither matches nor gets a pair of its own on a
+ *              matching value). For an existing shipment the pair's row, if any, is
  *              read FOR UPDATE before anything is compared, and a locked pair is
  *              refused before any hash work. Otherwise the postal code is
  *              compared and DeliveryAccessCode.matches runs exactly once on every
@@ -30,7 +37,9 @@
  *              row yet) is not counted; a success makes no DML here and
  *              resetAttempts resets a non-zero counter of the verified pair.
  *              Guard rows keyed on the shipment Id alone (written before
- *              hardening-1) match no pair key and are ignored.
+ *              hardening-1) match no pair key and are ignored; they and every
+ *              other row with no active lock untouched for a day are deleted by
+ *              RecipientAccessGuardPurge.
  *              Failures and the lock are RETURNED, never thrown, so the guard DML
  *              commits on the site. The only Shipment__c write is saveReschedule,
  *              which sets Estimated_Delivery__c, Delivery_Instructions__c and
@@ -79,6 +88,14 @@ public without sharing class RecipientAccess {
     private static final String KEY_SEPARATOR = ':';
     private static final String BLANK_POSTAL_CODE_TOKEN = '';
     private static final String PAIR_DIGEST = 'SHA-256';
+    // A typed postal code longer than the stored field after normalization can
+    // equal no stored code, so all of them share the pair of this fixed token: at
+    // most one more guard row per shipment (hardening-1 S2, P3). The token is
+    // longer than the field, so no value of the field's length or fewer, which
+    // keeps its own pair, can share it.
+    private static final String MALFORMED_POSTAL_CODE_TOKEN = 'MALFORMED-POSTAL-CODE';
+    private static final Integer MAX_POSTAL_CODE_LENGTH =
+        Shipment__c.Destination_Postal_Code__c.getDescribe().getLength();
 
     // Test seam for "now" (AC-H1.3: the lock expires on the clock).
     @TestVisible
@@ -161,8 +178,10 @@ public without sharing class RecipientAccess {
         if (isLocked(guard)) {
             return new Verification(Outcome.LOCKED, LOCKED_MESSAGE);
         }
-        Boolean postalMatches = row != null && normalizedPostalCode(row.Destination_Postal_Code__c) != null
-            && normalizedPostalCode(row.Destination_Postal_Code__c) == normalizedPostalCode(postalCode);
+        // Exact comparison (CODE-001, X16): Apex == ignores case and folds the Kelvin
+        // sign to "K", while the pair key hashes the exact normalized value.
+        String storedPostalCode = row == null ? null : normalizedPostalCode(row.Destination_Postal_Code__c);
+        Boolean postalMatches = storedPostalCode != null && storedPostalCode.equals(normalizedPostalCode(postalCode));
         String code = String.isBlank(accessCode) ? '' : accessCode.replaceAll(TYPING_SEPARATORS, '').toUpperCase();
         Boolean wellFormed = CODE_FORMAT.matcher(code).matches();
         Boolean checkRow = postalMatches && wellFormed && String.isNotBlank(row.Delivery_Access_Code_Hash__c);
@@ -279,9 +298,11 @@ public without sharing class RecipientAccess {
 
     // The guard key of the pair (shipment, typed postal code): the 18-character
     // shipment Id, ":" and the hex SHA-256 of exactly normalizedPostalCode(typed),
-    // or of a fixed token when it is blank. Never returned or logged.
+    // of a fixed token when it is blank, or of the malformed token when it is
+    // longer than the stored field. Never returned or logged.
     private static String pairKeyOf(Id shipmentId, String typedPostalCode) {
-        String token = normalizedPostalCode(typedPostalCode) ?? BLANK_POSTAL_CODE_TOKEN;
+        String normalized = normalizedPostalCode(typedPostalCode) ?? BLANK_POSTAL_CODE_TOKEN;
+        String token = normalized.length() > MAX_POSTAL_CODE_LENGTH ? MALFORMED_POSTAL_CODE_TOKEN : normalized;
         Blob digest = Crypto.generateDigest(PAIR_DIGEST, Blob.valueOf(token));
         return String.valueOf(shipmentId) + KEY_SEPARATOR + EncodingUtil.convertToHex(digest);
     }

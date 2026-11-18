@@ -21,6 +21,13 @@
  *              on the clock seam; an existing pair row is read FOR UPDATE before
  *              the code comparison; a success makes no DML). The guard tests of
  *              AC-002.1b now read the pair of the typed postal code.
+ *              hardening-1 T2 (S2): AC-H2.1 (typed postal codes longer than 10
+ *              characters after normalization share one per-shipment malformed
+ *              row, with the same response and hash work; a value of 10
+ *              characters keeps its own pair; a recipient whose stored code has
+ *              punctuation is still granted access after over-long failures)
+ *              and T1's Low CODE-001 (X16): the postal code is compared exactly,
+ *              so a Kelvin-sign variant of a stored "K" does not match.
  */
 @IsTest
 private with sharing class RecipientAccessTest {
@@ -38,6 +45,10 @@ private with sharing class RecipientAccessTest {
     private static final Date TODAY_IN_MEXICO = Date.newInstance(2026, 12, 5);
     private static final String VALID_NEW_DATE = '2026-12-12';
     private static final String DOORMAN = 'Leave with the doorman';
+    private static final String ELEVEN_CHARACTERS = '12345678901';
+    private static final String PUNCTUATED_POSTAL_CODE = '28-001';
+    // U+212A KELVIN SIGN, written as an escape: Apex == folds it to "K".
+    private static final String KELVIN_SIGN = '\u212A';
 
     // A saved shipment with its tracking number and its clear access code.
     private with sharing class Fixture {
@@ -768,6 +779,150 @@ private with sharing class RecipientAccessTest {
 
         Assert.isFalse(failed.containsIgnoreCase(hash), 'A failure never carries the postal-code hash');
         Assert.isFalse(verified.containsIgnoreCase(hash), 'A success never carries the postal-code hash');
+    }
+
+    // ─── AC-H2.1: over-long postal codes share one malformed key ─────────
+
+    // Distinct postal codes longer than 10 characters after normalization (11, 12, ...).
+    private static List<String> overLongValues(Integer count) {
+        List<String> values = new List<String>();
+        for (Integer index = 0; index < count; index++) {
+            values.add('9'.repeat(11 + index));
+        }
+        return values;
+    }
+
+    // One getDeliveryDetails answer per typed postal code, each with a wrong code.
+    private static List<String> wrongCodeAnswers(Fixture fixture, List<String> postalCodes) {
+        List<String> answers = new List<String>();
+        for (String postalCode : postalCodes) {
+            answers.add(answerOf(fixture.trackingNumber, postalCode, wrongCode(fixture.code)));
+        }
+        return answers;
+    }
+
+    @IsTest
+    static void shouldCountUnderOneMalformedRow_WhenElevenAnd200CharacterPostalCodesFail() {
+        // AC-H2.1 (S2, P3): an 11-character and a 200-character value fail; one guard row for
+        // both, on neither value's own pair, with the response and hash work of any failure.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        String twoHundred = 'A'.repeat(200);
+
+        Test.startTest();
+        List<String> answers = wrongCodeAnswers(fixture, new List<String>{ ELEVEN_CHARACTERS, twoHundred });
+        Test.stopTest();
+
+        String failure = RecipientDeliveryController.OUTCOME_NOT_MATCHED + '|' + RecipientAccess.NOT_MATCHED_MESSAGE + '|1';
+        Assert.areEqual(new List<String>{ failure, failure }, answers, 'Over-long values answer like any failure, with one hash');
+        List<Recipient_Access_Guard__c> guards = allGuardsOf(fixture.shipmentId);
+        Assert.areEqual(1, guards.size(), 'All over-long values share one malformed guard row');
+        Assert.areEqual(2, guards[0].Failed_Attempts__c, 'Both over-long failures are counted on that row');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, ELEVEN_CHARACTERS).size(), 'The 11-character value has no pair of its own');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, twoHundred).size(), 'The 200-character value has no pair of its own');
+    }
+
+    @IsTest
+    static void shouldLock_WhenSixDifferentOverLongPostalCodesFail() {
+        // AC-H2.1 (S2, P3), a second input: six different over-long values (11 to 16 characters)
+        // share the malformed key's 5-attempt limit: NOT_MATCHED five times, then LOCKED.
+        Fixture fixture = insertShipment(MADRID_POSTAL_CODE);
+
+        Test.startTest();
+        List<String> answers = wrongCodeAnswers(fixture, overLongValues(MAX_FAILURES + 1));
+        Test.stopTest();
+
+        Assert.areEqual(fiveNotMatchedThenLocked(), answers, 'Over-long values share one limit');
+        Assert.areEqual(1, allGuardsOf(fixture.shipmentId).size(), 'One guard row for all the over-long values');
+    }
+
+    @IsTest
+    static void shouldKeepOwnPair_WhenPostalCodeIsTenCharactersAfterNormalization() {
+        // AC-H2.1 (S2): "12345 67890" (11 typed, 10 after normalization) and "28-001-ABC" (10, with
+        // punctuation) each keep their own pair key, not the malformed one.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+
+        Test.startTest();
+        wrongCodeAnswers(fixture, new List<String>{ '12345 67890', '28-001-ABC' });
+        Test.stopTest();
+
+        Assert.areEqual(1, guardsOf(fixture.shipmentId, '1234567890').size(), 'Ten characters keep their own pair');
+        Assert.areEqual(1, guardsOf(fixture.shipmentId, '28-001-ABC').size(), 'Ten characters with punctuation keep their own pair');
+        Assert.areEqual(2, allGuardsOf(fixture.shipmentId).size(), 'Two values, two pairs');
+    }
+
+    @IsTest
+    static void shouldGrantAccess_WhenGuestFailedFiveOverLongValuesAndRecipientSendsPunctuatedCode() {
+        // AC-H2.1 (S2, P3): stored "28-001"; the guest sends 5 failing over-long values; the
+        // recipient then sends "28-001" and the right code.
+        Fixture fixture = insertShipment(PUNCTUATED_POSTAL_CODE);
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            wrongCodeAnswers(fixture, overLongValues(MAX_FAILURES));
+        }
+        RecipientDeliveryController.DeliveryResponse response = details(fixture, PUNCTUATED_POSTAL_CODE, fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual(DEFAULT_RECIPIENT, response.details.recipientName, 'The details are returned');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, PUNCTUATED_POSTAL_CODE).size(), 'The recipient\'s pair has no failure recorded');
+        List<Recipient_Access_Guard__c> guards = allGuardsOf(fixture.shipmentId);
+        Assert.areEqual(1, guards.size(), 'Only the malformed row exists');
+        Assert.isNotNull(guards[0].Locked_Until__c, 'The malformed row is locked by the five failures');
+    }
+
+    @IsTest
+    static void shouldGrantAccess_WhenGuestFailedSixOverLongValuesAndRecipientSendsLowerCasePunctuatedCode() {
+        // AC-H2.1 (S2, P3), a second input: stored "K1A-0B1"; the guest sends 6 failing over-long
+        // values that contain it ("K1A-0B1 K1A-0B1" and longer); the recipient sends " k1a-0b1".
+        Fixture fixture = insertShipment('K1A-0B1', 'Maria Lopez');
+        List<String> overLong = new List<String>();
+        for (Integer index = 0; index <= MAX_FAILURES; index++) {
+            overLong.add('K1A-0B1 K1A-0B1' + 'X'.repeat(index));
+        }
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            wrongCodeAnswers(fixture, overLong);
+        }
+        RecipientDeliveryController.DeliveryResponse response = details(fixture, ' k1a-0b1', fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual('Maria Lopez', response.details.recipientName, 'The details are returned');
+        Assert.areEqual(1, allGuardsOf(fixture.shipmentId).size(), 'Only the malformed row exists');
+    }
+
+    // ─── T1 Low CODE-001 (X16): exact postal-code comparison ──────────────
+
+    @IsTest
+    static void shouldNotMatch_WhenPostalCodeUsesKelvinSignForK() {
+        // AC-H2.1 / CODE-001 (X16): stored "K1A0B1"; the Kelvin sign U+212A in place of "K" with the
+        // right code must not match (it hashes to another pair, so it must not get a fresh limit).
+        Fixture fixture = insertShipment(LETTER_POSTAL_CODE);
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = details(fixture, KELVIN_SIGN + '1A0B1', fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(1, KELVIN_SIGN.length(), 'Fixture: one character');
+        Assert.areEqual(8490, KELVIN_SIGN.codePointAt(0), 'Fixture: the Kelvin sign U+212A');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'A Kelvin-sign variant does not match');
+        Assert.isNull(response.details, 'No details without verification');
+    }
+
+    @IsTest
+    static void shouldNotMatch_WhenPostalCodeUsesKelvinSignWithSpacesAndLowerCase() {
+        // AC-H2.1 / CODE-001 (X16), a second input: " " + U+212A + "1a 0b1" with the right code.
+        Fixture fixture = insertShipment(LETTER_POSTAL_CODE, 'Maria Lopez');
+
+        Test.startTest();
+        RecipientAccess.Verification verification =
+            RecipientAccess.verifyBeforeCallout(fixture.trackingNumber, ' ' + KELVIN_SIGN + '1a 0b1', fixture.code);
+        Test.stopTest();
+
+        Assert.areEqual(RecipientAccess.Outcome.NOT_MATCHED, verification.outcome, 'A Kelvin-sign variant does not match');
+        Assert.areEqual(0, guardsOf(fixture.shipmentId, LETTER_POSTAL_CODE).size(), 'The recipient\'s pair is untouched');
     }
 
     // ─── Seam for T2 (downloadProof): no DML before a callout ────────────

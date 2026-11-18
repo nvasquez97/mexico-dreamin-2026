@@ -200,6 +200,29 @@ Replace `<alias>` with the target org. Run each command on its own.
    sf apex run test --test-level RunLocalTests --wait 60 --result-format human --target-org <alias>
    ```
 
+5e. The daily purge of stale recipient attempt guards (hardening-1 S2,
+   AC-H2.1), after step 2 deployed `RecipientAccessGuardPurge`. Idempotent: it
+   schedules the job `RecipientAccessGuardPurge daily` (03:00 every day, in the
+   time zone of the user who runs it) only when it is missing, so a second run
+   changes nothing and there is never a duplicate. Run it as an admin: the job
+   runs as that user and deletes only the guard rows it can see:
+
+   ```bash
+   scripts/setup/schedule-guard-purge.sh <alias>
+   ```
+
+   The purge deletes `Recipient_Access_Guard__c` rows with no active lock that
+   were last modified more than a day ago, the legacy rows keyed on the shipment
+   Id alone included. An active lock is never deleted.
+
+   Once the job is scheduled, the platform refuses any deploy that includes
+   `RecipientAccessGuardPurge.cls` ("This schedulable class has jobs pending
+   or in progress"), so a later `--source-dir force-app` or
+   `force-app/main/default/classes` deploy fails as a whole, even when that
+   class is unchanged (seen in cargo-opus-t1, hardening-1 T2). Until the owner
+   decides how to handle it, deploy other classes by file, or allow
+   deployments with Apex jobs in Setup, Deployment Settings.
+
 6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
    External Client App "EntregaYa Status", the permission set and the group
    `RutaCargo_EntregaYa_Integration`. Idempotent; it refuses an org that is not
