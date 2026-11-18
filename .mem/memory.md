@@ -227,3 +227,4 @@
 - What: Audit 1 (report .security-reports/20261118-035506-hardening-1/security-audit.md): Critical 1 (SEC-001 key in git history, owner rotation), High 2 (SEC-002 guest lockout oracle; SEC-003 MFA not enforced), Medium 7, Low 7, Info 6; CA High 2 (CA-001 rcHeader tests promise executor; CA-002 SeeAllData), 134 CA GlobalVariable dismissed (false positive). Plan odd/tasks/hardening-1.md (Base 2230597): T1 guard per (shipment, postal) pair, T2 MFA settings + org-security-check.sh, T3 secret scan + pre-commit hook + CA fixes. Assumptions H1-H4 (SEC-001 rotation/purge owner; MFA affects admins' next UI login).
 - Why / evidence: the report and the task document.
 - Next: plan-reviewer on the plan commit, then T1-T3, Close, audit 2.
+- Update 05:30: plan review fixed (4 High: normalized key, unbounded rows → T2 purge + malformed key > 10 chars, schema-check, Husky not core.hooksPath); plan now T1-T5 (f5c0161). T1 worker a64d0b6317ea49b5c launched (guard per pair).
