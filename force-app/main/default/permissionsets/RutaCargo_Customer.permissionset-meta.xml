@@ -8,7 +8,7 @@
         <apexClass>ShipmentRequestController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
-    <description>Registered customers (req-005 S1). Shipment__c Read and Create (req-006-007 S2): My shipments read FLS, create FLS on request fields only, two customer controllers; sharing set limits reads to own account.</description>
+    <description>Registered customers (req-005 S1). Shipment__c Read, Create (req-006-007 S2): read FLS for My shipments, create FLS on readable request fields, two controllers; no FLS on recipient address, phone, email, instructions (BR-02).</description>
     <fieldPermissions>
         <editable>true</editable>
         <field>Shipment__c.Customer_Reference__c</field>
@@ -20,9 +20,9 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Delivery_Instructions__c</field>
-        <readable>true</readable>
+        <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
@@ -80,14 +80,14 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Recipient_Address__c</field>
-        <readable>true</readable>
+        <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Recipient_Email__c</field>
-        <readable>true</readable>
+        <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
@@ -95,9 +95,9 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Shipment__c.Recipient_Phone__c</field>
-        <readable>true</readable>
+        <readable>false</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>

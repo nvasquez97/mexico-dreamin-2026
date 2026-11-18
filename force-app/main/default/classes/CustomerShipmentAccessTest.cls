@@ -6,8 +6,11 @@
  *              each one exactly the shipments of their own account, and the permission
  *              set RutaCargo_Customer gives Read and Create on Shipment__c (T2, Create
  *              step), read FLS on the AC-007 list and detail fields and create FLS on
- *              the AC-006.1 entered fields only. No portal user is inserted (req-005
- *              F7): the seeded users are queried.
+ *              the AC-006.1 entered fields the customer may read, never on the four
+ *              recipient-owned fields (Recipient_Address__c, Recipient_Phone__c,
+ *              Recipient_Email__c, Delivery_Instructions__c: BR-02, G7, T2 fix), so a
+ *              customer reads neither them nor their field history. No portal user
+ *              is inserted (req-005 F7): the seeded users are queried.
  */
 @IsTest
 private with sharing class CustomerShipmentAccessTest {
@@ -15,31 +18,45 @@ private with sharing class CustomerShipmentAccessTest {
     // 251 shipments per account: more than one 200-record trigger batch.
     private static final Integer SHIPMENTS_PER_ACCOUNT = 251;
 
-    // S2, T2: the custom Shipment__c fields RutaCargo_Customer may read: the 17
-    // fields of T1 plus the 4 recipient fields that their create FLS makes
-    // readable (G7 residual: Recipient_Address__c, Recipient_Phone__c,
-    // Recipient_Email__c, Delivery_Instructions__c). Account__c (a required
-    // lookup, no FLS can be granted on it) is not among them: the describe
-    // reports it not accessible to a customer without Read on Account (G2).
+    // S2, T2: the custom Shipment__c fields RutaCargo_Customer may read: exactly
+    // the 17 fields of T1. Never the four recipient-owned fields (BR-02, G7:
+    // RECIPIENT_OWNED_FIELDS). Account__c (a required lookup, no FLS can be
+    // granted on it) is not among them: the describe reports it not accessible
+    // to a customer without Read on Account (G2).
     private static final Set<String> READABLE_CUSTOM_FIELDS = new Set<String>{
         'status__c', 'service_type__c', 'price__c', 'estimated_delivery__c',
         'pickup_address__c', 'pickup_date__c', 'pickup_postal_code__c',
         'origin_city__c', 'destination_city__c', 'destination_postal_code__c',
         'recipient_name__c', 'package_description__c', 'weight_kg__c',
-        'declared_value__c', 'customer_reference__c', 'last_location__c', 'last_update__c',
-        'recipient_address__c', 'recipient_phone__c', 'recipient_email__c', 'delivery_instructions__c'
+        'declared_value__c', 'customer_reference__c', 'last_location__c', 'last_update__c'
     };
 
-    // S2, T2: the AC-006.1 entered fields RutaCargo_Customer may write on create.
+    // S2, T2: the AC-006.1 entered fields RutaCargo_Customer may write on
+    // create: the 12 the customer may also read. ShipmentRequestController
+    // stores the four recipient-owned ones through the trigger (T2 fix).
     private static final Set<String> CREATEABLE_CUSTOM_FIELDS = new Set<String>{
         'pickup_address__c', 'origin_city__c', 'pickup_postal_code__c', 'pickup_date__c',
-        'recipient_name__c', 'recipient_address__c', 'destination_city__c', 'destination_postal_code__c',
-        'recipient_phone__c', 'recipient_email__c', 'service_type__c', 'weight_kg__c',
-        'package_description__c', 'declared_value__c', 'customer_reference__c', 'delivery_instructions__c'
+        'recipient_name__c', 'destination_city__c', 'destination_postal_code__c',
+        'service_type__c', 'weight_kg__c', 'package_description__c', 'declared_value__c', 'customer_reference__c'
     };
 
-    @TestSetup
-    static void setupShipments() {
+    // BR-02 (G7): fields the recipient owns; the customer can neither read nor write them.
+    private static final List<String> RECIPIENT_OWNED_FIELDS = new List<String>{
+        'Recipient_Address__c', 'Recipient_Phone__c', 'Recipient_Email__c', 'Delivery_Instructions__c'
+    };
+
+    private static final String INSTRUCTIONS_HISTORY_FIELD = 'Delivery_Instructions__c';
+    private static final String CREATED_HISTORY_FIELD = 'created';
+
+    // Two fields the customer must read on the same shipment: the control that
+    // a refused field query is FLS, not a missing record.
+    private static final List<String> CUSTOMER_READABLE_CONTROL_FIELDS = new List<String>{
+        'Recipient_Name__c', 'Destination_City__c'
+    };
+
+    // Not a @TestSetup: anaReadsNoHistoryOfTheDeliveryInstructions needs
+    // SeeAllData=true, which a class with @TestSetup cannot have.
+    private static void insertShipmentsOfBothAccounts() {
         List<Shipment__c> shipments = new List<Shipment__c>();
         shipments.addAll(TestDataFactory.newShipments(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL), SHIPMENTS_PER_ACCOUNT));
         shipments.addAll(TestDataFactory.newShipments(accountIdOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL), SHIPMENTS_PER_ACCOUNT));
@@ -51,6 +68,7 @@ private with sharing class CustomerShipmentAccessTest {
     @IsTest
     static void anaReadsEveryShipmentOfHerAccount() {
         // AC-006.7 / AC-007.1: customer A (Ana López) reads her own account's shipments.
+        insertShipmentsOfBothAccounts();
         User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
         Set<Id> own = shipmentIdsOfAccount(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL));
         Set<Id> visible;
@@ -66,6 +84,7 @@ private with sharing class CustomerShipmentAccessTest {
     @IsTest
     static void martaReadsEveryShipmentOfHerAccount() {
         // AC-006.7 / AC-007.1: customer B (Marta Ruiz) reads her own account's shipments.
+        insertShipmentsOfBothAccounts();
         User marta = TestDataFactory.seededCustomerUser(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL);
         Set<Id> own = shipmentIdsOfAccount(accountIdOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL));
         Set<Id> visible;
@@ -81,6 +100,7 @@ private with sharing class CustomerShipmentAccessTest {
     @IsTest
     static void anaReadsNoneOfMartasShipments() {
         // AC-006.7 / AC-007.1 (BR-07): customer A reads none of customer B's shipments.
+        insertShipmentsOfBothAccounts();
         User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
         Set<Id> martas = shipmentIdsOfAccount(accountIdOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL));
         Set<Id> visible;
@@ -96,6 +116,7 @@ private with sharing class CustomerShipmentAccessTest {
     @IsTest
     static void martaReadsNoneOfAnasShipments() {
         // AC-006.7 / AC-007.1 (BR-07): customer B reads none of customer A's shipments.
+        insertShipmentsOfBothAccounts();
         User marta = TestDataFactory.seededCustomerUser(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL);
         Set<Id> anas = shipmentIdsOfAccount(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL));
         Set<Id> visible;
@@ -127,10 +148,10 @@ private with sharing class CustomerShipmentAccessTest {
     }
 
     @IsTest
-    static void customerReadsExactlyTheAc007FieldsAndTheEnteredRecipientFields() {
-        // AC-006.7 (BR-03, P4, G7): read FLS on exactly the AC-007 list and detail
-        // fields plus the 4 recipient fields their create FLS makes readable;
-        // nothing on cost, margin, notes, hash or Proof_Id__c.
+    static void customerReadsExactlyTheAc007Fields() {
+        // AC-006.7 (BR-02, BR-03, P4, G7): read FLS on exactly the AC-007 list and
+        // detail fields; nothing on the recipient's address, phone, email or
+        // delivery instructions, nor on cost, margin, notes, hash or Proof_Id__c.
         User customer = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
         Set<String> readable = new Set<String>();
         Test.startTest();
@@ -150,8 +171,9 @@ private with sharing class CustomerShipmentAccessTest {
 
     @IsTest
     static void customerCreatesExactlyTheAc0061Fields() {
-        // AC-006.7 (X6): create FLS on exactly the AC-006.1 entered fields; never
-        // on price, status, estimate, cost, notes, hash, proof or the last update
+        // AC-006.7 (X6, BR-02): create FLS on exactly the 12 AC-006.1 entered fields
+        // the customer may read; never on the 4 recipient-owned fields, price,
+        // status, estimate, cost, notes, hash, proof or the last update
         User customer = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
         Set<String> createable = new Set<String>();
         Test.startTest();
@@ -166,7 +188,7 @@ private with sharing class CustomerShipmentAccessTest {
         }
         Test.stopTest();
         Assert.areEqual(CREATEABLE_CUSTOM_FIELDS, createable,
-            'RutaCargo_Customer must make exactly the AC-006.1 custom fields createable on Shipment__c');
+            'RutaCargo_Customer must make exactly the 12 readable AC-006.1 custom fields createable on Shipment__c');
     }
 
     @IsTest
@@ -180,6 +202,75 @@ private with sharing class CustomerShipmentAccessTest {
         }
         Test.stopTest();
         Assert.isFalse(accountReadable, 'A customer must not have Read on Account (G2)');
+    }
+
+    // ─── Recipient-owned fields (BR-02, G7, T2 fix) ─────────────────────────
+
+    @IsTest
+    static void anaCannotReadTheRecipientOwnedFieldsOfHerOwnShipment() {
+        // AC-006.7 / AC-007.3 (BR-02, P4, G7): in user mode Ana cannot read the
+        // recipient's address, phone, email or delivery instructions of a shipment
+        // of her own account (the API, not only the DTO, refuses them)
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Id ownShipmentId = insertOneShipmentOfAna();
+        List<String> readable;
+        Test.startTest();
+        System.runAs(ana) {
+            readable = fieldsReadableInUserMode(ownShipmentId, RECIPIENT_OWNED_FIELDS);
+        }
+        Test.stopTest();
+        Assert.areEqual(new List<String>(), readable,
+            'Ana must not read any recipient-owned field of her own shipment in user mode');
+    }
+
+    @IsTest
+    static void anaReadsTheRecipientNameAndCityOfHerOwnShipment() {
+        // AC-007.3 (control of the test above): the same user-mode field query
+        // returns the recipient's name and destination city of the same shipment
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Id ownShipmentId = insertOneShipmentOfAna();
+        List<String> readable;
+        Test.startTest();
+        System.runAs(ana) {
+            readable = fieldsReadableInUserMode(ownShipmentId, CUSTOMER_READABLE_CONTROL_FIELDS);
+        }
+        Test.stopTest();
+        Assert.areEqual(CUSTOMER_READABLE_CONTROL_FIELDS, readable,
+            'Ana must read the recipient name and destination city of her own shipment');
+    }
+
+    // SeeAllData=true: field tracking writes no history row inside a test and
+    // Shipment__History refuses DML ("DML operation INSERT not allowed"), so the
+    // proof reads the history already in the org: recipient reschedules of
+    // seeded Abarrotes Acme shipments (scripts/checks/reschedule-history-check.sh
+    // runs RecipientDeliveryController.rescheduleDelivery, which changes
+    // Delivery_Instructions__c). Without SeeAllData the test sees no history
+    // row at all (checked 2026-11-18: the precondition fails), so the
+    // ApexUnitTestShouldNotUseSeeAllDataTrue finding is accepted for this one
+    // read-only method. Read-only: the test writes nothing.
+    @IsTest(SeeAllData=true)
+    static void anaReadsNoHistoryOfTheDeliveryInstructions() {
+        // AC-006.7 (BR-02, P4, G7): Shipment__History follows FLS: on her own
+        // shipment whose Delivery_Instructions__c the recipient changed, Ana reads
+        // in user mode the "created" history row but no Delivery_Instructions__c
+        // row; the administrator reads both
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Id shipmentId = shipmentWithInstructionHistory(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL));
+        Map<String, Integer> adminCounts = historyCountsInUserMode(shipmentId);
+        Map<String, Integer> anaCounts;
+        Test.startTest();
+        System.runAs(ana) {
+            anaCounts = historyCountsInUserMode(shipmentId);
+        }
+        Test.stopTest();
+        Integer adminInstructions = adminCounts.get(INSTRUCTIONS_HISTORY_FIELD) ?? 0;
+        Integer adminCreated = adminCounts.get(CREATED_HISTORY_FIELD) ?? 0;
+        Assert.isTrue(adminInstructions > 0 && adminCreated > 0,
+            'Precondition: the administrator must read the seeded instructions and created history rows');
+        Assert.areEqual(INSTRUCTIONS_HISTORY_FIELD + '=0|' + CREATED_HISTORY_FIELD + '=' + adminCreated,
+            INSTRUCTIONS_HISTORY_FIELD + '=' + (anaCounts.get(INSTRUCTIONS_HISTORY_FIELD) ?? 0) + '|'
+                + CREATED_HISTORY_FIELD + '=' + (anaCounts.get(CREATED_HISTORY_FIELD) ?? 0),
+            'Ana must read the created history row but no Delivery_Instructions__c history row');
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
@@ -201,5 +292,56 @@ private with sharing class CustomerShipmentAccessTest {
     private static Id accountIdOf(String email) {
         Id userId = TestDataFactory.seededCustomerUser(email).Id;
         return [SELECT AccountId FROM User WHERE Id = :userId WITH SYSTEM_MODE].AccountId;
+    }
+
+    // Each field whose user-mode query on the shipment succeeds, in the given
+    // order. The field names come only from the constant lists of this class.
+    private static List<String> fieldsReadableInUserMode(Id shipmentId, List<String> fieldNames) {
+        List<String> readable = new List<String>();
+        for (String fieldName : fieldNames) {
+            try {
+                List<Shipment__c> rows = Database.queryWithBinds(
+                    'SELECT ' + fieldName + ' FROM Shipment__c WHERE Id = :shipmentId',
+                    new Map<String, Object>{ 'shipmentId' => shipmentId }, AccessLevel.USER_MODE);
+                if (rows.size() == 1) {
+                    readable.add(fieldName);
+                }
+            } catch (QueryException e) {
+                continue;
+            }
+        }
+        return readable;
+    }
+
+    private static Id insertOneShipmentOfAna() {
+        List<Shipment__c> shipments = TestDataFactory.newShipments(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL), 1);
+        TestDataFactory.insertShipmentsWithCodes(shipments);
+        return shipments[0].Id;
+    }
+
+    // A shipment of the account with a seeded Delivery_Instructions__c history row.
+    private static Id shipmentWithInstructionHistory(Id accountId) {
+        List<Shipment__History> rows = [
+            SELECT ParentId FROM Shipment__History
+            WHERE Field = :INSTRUCTIONS_HISTORY_FIELD AND Parent.Account__c = :accountId
+            WITH SYSTEM_MODE
+            ORDER BY ParentId
+            LIMIT 1
+        ];
+        if (rows.isEmpty()) {
+            Assert.fail('The org must hold a Delivery_Instructions__c history row of an Abarrotes Acme shipment (run scripts/checks/reschedule-history-check.sh)');
+        }
+        return rows[0].ParentId;
+    }
+
+    // History rows of the shipment the running user reads in user mode, by Field.
+    private static Map<String, Integer> historyCountsInUserMode(Id shipmentId) {
+        Map<String, Integer> counts = new Map<String, Integer>();
+        for (Shipment__History row : [
+            SELECT Field FROM Shipment__History WHERE ParentId = :shipmentId WITH USER_MODE
+        ]) {
+            counts.put(row.Field, (counts.get(row.Field) ?? 0) + 1);
+        }
+        return counts;
     }
 }

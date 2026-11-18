@@ -9,9 +9,14 @@
  *              once (A1). The request carries only the entered fields: the
  *              account, price, estimate and status are never taken from the
  *              client; ShipmentTriggerHandler sets them for every customer insert
- *              with the same ShipmentRequestRules (P2, P5, X6). Only a signed-in
- *              user with a customer account may call it (BR-07); errors are
- *              generic (no internal detail).
+ *              with the same ShipmentRequestRules (P2, P5, X6). The customer
+ *              has no FLS on the four recipient-owned fields (recipient's
+ *              address, phone, email, delivery instructions: BR-02, G7), so
+ *              their validated values are staged for that guard
+ *              (ShipmentTriggerHandler.stageRecipientValues), which writes them
+ *              on this one-row insert only. Only a signed-in user with a
+ *              customer account may call it (BR-07); errors are generic (no
+ *              internal detail).
  */
 public with sharing class ShipmentRequestController {
 
@@ -23,8 +28,6 @@ public with sharing class ShipmentRequestController {
     private static final String INVALID_FIELDS_PREFIX = 'Check these fields: ';
     private static final String FIELD_SEPARATOR = ', ';
     private static final String GUEST_USER_TYPE = 'Guest';
-    private static final Pattern EMAIL_FORMAT =
-        Pattern.compile('^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\-]+(\\.[A-Za-z0-9\\-]+)*\\.[A-Za-z]{2,}$');
 
     /**
      * @description The AC-006.1 fields of a request, one property per entered
@@ -102,6 +105,13 @@ public with sharing class ShipmentRequestController {
         Map<Id, String> codes;
         Shipment__c saved;
         try {
+            // SECURITY-JUSTIFICATION: see ShipmentTriggerHandler.stagedRecipientValues:
+            // the four recipient-owned fields (no customer FLS, BR-02) of this
+            // validated request only, written by the guard on this one-row
+            // insert and cleared below. (pending owner approval, 2026-11-18)
+            ShipmentTriggerHandler.stageRecipientValues(
+                clean(entered.recipientAddress), clean(entered.recipientPhone),
+                clean(entered.recipientEmail), clean(entered.deliveryInstructions));
             codes = DeliveryAccessCode.insertWithCodes(new List<Shipment__c>{ shipment });
             saved = [
                 SELECT Name, Price__c, Estimated_Delivery__c FROM Shipment__c
@@ -115,6 +125,8 @@ public with sharing class ShipmentRequestController {
             throw userError(SAVE_FAILED_MESSAGE);
         } catch (System.SecurityException e) {
             throw userError(NOT_AVAILABLE_MESSAGE);
+        } finally {
+            ShipmentTriggerHandler.clearStagedRecipientValues();
         }
         Confirmation confirmation = new Confirmation();
         confirmation.trackingNumber = saved.Name;
@@ -147,7 +159,7 @@ public with sharing class ShipmentRequestController {
         addIfFalse(invalidFields, fits(request.recipientPostalCode, Shipment__c.Destination_Postal_Code__c, true), 'recipientPostalCode');
         addIfFalse(invalidFields, fits(request.recipientPhone, Shipment__c.Recipient_Phone__c, true), 'recipientPhone');
         addIfFalse(invalidFields, fits(request.recipientEmail, Shipment__c.Recipient_Email__c, true)
-            && EMAIL_FORMAT.matcher(request.recipientEmail.trim()).matches(), 'recipientEmail');
+            && ShipmentRequestRules.isValidEmail(request.recipientEmail), 'recipientEmail');
         addIfFalse(invalidFields, ShipmentRequestRules.isServiceType(request.serviceType), 'serviceType');
         addIfFalse(invalidFields, ShipmentRequestRules.isValidWeight(request.weightKg), 'weightKg');
         addIfFalse(invalidFields, fits(request.packageDescription, Shipment__c.Package_Description__c, true), 'packageDescription');
@@ -177,8 +189,9 @@ public with sharing class ShipmentRequestController {
         }
     }
 
-    // Only the entered fields: Account__c, Price__c, Estimated_Delivery__c and
-    // Status__c are set by ShipmentTriggerHandler (S3).
+    // Only the entered fields the customer may write: Account__c, Price__c,
+    // Estimated_Delivery__c and Status__c are set by ShipmentTriggerHandler (S3),
+    // and so are the four staged recipient-owned fields (BR-02, G7).
     private static Shipment__c toShipment(ShipmentRequest request) {
         return new Shipment__c(
             Pickup_Address__c = clean(request.pickupAddress),
@@ -186,17 +199,13 @@ public with sharing class ShipmentRequestController {
             Pickup_Postal_Code__c = clean(request.pickupPostalCode),
             Pickup_Date__c = request.pickupDate,
             Recipient_Name__c = clean(request.recipientName),
-            Recipient_Address__c = clean(request.recipientAddress),
             Destination_City__c = clean(request.recipientCity),
             Destination_Postal_Code__c = clean(request.recipientPostalCode),
-            Recipient_Phone__c = clean(request.recipientPhone),
-            Recipient_Email__c = clean(request.recipientEmail),
             Service_Type__c = request.serviceType,
             Weight_Kg__c = request.weightKg,
             Package_Description__c = clean(request.packageDescription),
             Declared_Value__c = request.declaredValue,
-            Customer_Reference__c = clean(request.customerReference),
-            Delivery_Instructions__c = clean(request.deliveryInstructions)
+            Customer_Reference__c = clean(request.customerReference)
         );
     }
 

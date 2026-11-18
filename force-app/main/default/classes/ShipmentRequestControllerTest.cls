@@ -91,6 +91,46 @@ private with sharing class ShipmentRequestControllerTest {
     }
 
     @IsTest
+    static void submitRequest_storesTheRecipientOwnedFieldsOfASecondRequest() {
+        // AC-006.1 (BR-02, G7): the customer has no FLS on the recipient's address,
+        // phone, email and instructions, yet submitRequest stores the entered ones
+        // (trimmed): a second set of values
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        ShipmentRequestController.ShipmentRequest request = TestDataFactory.newShipmentRequest();
+        request.recipientAddress = '  Calle Morelos 12, San Pedro ';
+        request.recipientPhone = '+52 81 1111 2222';
+        request.recipientEmail = ' pedro.ruiz@example.com';
+        request.deliveryInstructions = 'Leave at the front desk';
+        Test.startTest();
+        submitAs(ana(), request);
+        Test.stopTest();
+        Shipment__c stored = theOnlyStoredShipment();
+        Assert.areEqual('Calle Morelos 12, San Pedro|+52 81 1111 2222|pedro.ruiz@example.com|Leave at the front desk',
+            stored.Recipient_Address__c + '|' + stored.Recipient_Phone__c + '|' + stored.Recipient_Email__c + '|'
+                + stored.Delivery_Instructions__c,
+            'The recipient-owned fields of the request must be stored, trimmed');
+    }
+
+    @IsTest
+    static void submitRequest_leavesNoStagedRecipientValues() {
+        // AC-006.5 (BR-02, X6): after submitRequest, a direct user-mode create by
+        // the same customer in the same transaction gets none of the request's
+        // recipient values and is refused; only the request's shipment exists
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User customer = ana();
+        List<Shipment__c> direct = TestDataFactory.newCustomerCreateableShipments(1);
+        Boolean directSaved;
+        Test.startTest();
+        System.runAs(customer) {
+            ShipmentRequestController.submitRequest(TestDataFactory.newShipmentRequest());
+            directSaved = Database.insert(direct, false, AccessLevel.USER_MODE)[0].isSuccess();
+        }
+        Test.stopTest();
+        Assert.areEqual('false|1', directSaved + '|' + storedShipments().size(),
+            'The direct create must be refused and only the requested shipment stored');
+    }
+
+    @IsTest
     static void submitRequest_acceptsARequestWithoutTheOptionalFields() {
         // AC-006.1: order reference and delivery instructions are optional
         ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;

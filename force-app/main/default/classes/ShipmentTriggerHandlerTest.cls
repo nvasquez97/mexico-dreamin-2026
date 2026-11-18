@@ -11,7 +11,11 @@
  *              odd/tasks/foundation.md, and AC-004.9 of
  *              odd/tasks/req-004-carrier-status.md: a direct update by a holder of
  *              RutaCargo_EntregaYa_Sender is refused on every row, a support
- *              agent's is applied (251 records each).
+ *              agent's is applied (251 records each). And the customer-insert
+ *              guard of odd/tasks/req-006-007-customer-shipments.md (AC-006.5,
+ *              AC-006.1): own account, price, status, cleared internal fields,
+ *              refused broken rules and missing recipient data, and the staged
+ *              recipient-owned values (BR-02, G7).
  */
 @IsTest
 private with sharing class ShipmentTriggerHandlerTest {
@@ -765,8 +769,8 @@ private with sharing class ShipmentTriggerHandlerTest {
     }
 
     @IsTest
-    static void customerInsert_inUserMode_isForcedToTheOwnAccountAndPrice() {
-        // AC-006.5 (BR-07): Marta creates a shipment in user mode (her own grants)
+    static void customerInsert_byMarta_isForcedToHerAccountAndTheExpressPrice() {
+        // AC-006.5 (BR-07): Marta creates a complete Express shipment directly
         // naming Ana's account → stored under Marta's account with the Express price
         ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
         User marta = TestDataFactory.seededCustomerUser(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL);
@@ -775,15 +779,107 @@ private with sharing class ShipmentTriggerHandlerTest {
         shipments[0].Service_Type__c = 'Express';
 
         Test.startTest();
-        System.runAs(marta) {
-            Database.insert(shipments, AccessLevel.USER_MODE);
-        }
+        insertAsUserIgnoringFls(marta, shipments);
         Test.stopTest();
 
         Shipment__c saved = readCustomerFields(shipments)[0];
         Assert.areEqual(accountOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL) + '|310.00|2026-11-24',
             saved.Account__c + '|' + saved.Price__c + '|' + String.valueOf(saved.Estimated_Delivery__c),
             'Marta\'s direct create must be under her account at 310.00, estimate Tuesday 2026-11-24');
+    }
+
+    private static final String GENERIC = ShipmentTriggerHandler.INVALID_FIELD_MESSAGE;
+    // A customer's user-mode insert without the recipient's address, phone and
+    // email: three generic field errors whose field names the platform hides
+    // from her, as she has no FLS on those fields (BR-02, G7).
+    private static final String HIDDEN_RECIPIENT_REFUSALS = '=' + GENERIC + '|=' + GENERIC + '|=' + GENERIC;
+
+    // The errors of the one row of a refused insert, each "<fields>=<message>", sorted.
+    private static List<String> refusalsAs(User actor, Shipment__c shipment, System.AccessLevel mode) {
+        List<String> refusals = new List<String>();
+        System.runAs(actor) {
+            Database.SaveResult result = Database.insert(new List<Shipment__c>{ shipment }, false, mode)[0];
+            Assert.isFalse(result.isSuccess(), 'The insert must be refused');
+            for (Database.Error error : result.getErrors()) {
+                refusals.add(String.join(error.getFields(), ',') + '=' + error.getMessage());
+            }
+        }
+        refusals.sort();
+        return refusals;
+    }
+
+    @IsTest
+    static void customerInsert_inUserMode_isRefusedOnTheRecipientOwnedFields_whenOnlyItsCreateableFieldsAreSet() {
+        // AC-006.5 (CODE-003, X6): Ana's direct create through her own grants (UI
+        // API / plain DML) cannot carry the recipient's address, phone or email
+        // (no FLS, BR-02) → refused with a field error on each, nothing created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerCreateableShipments(1)[0];
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.USER_MODE);
+        Test.stopTest();
+
+        Assert.areEqual(HIDDEN_RECIPIENT_REFUSALS, String.join(refused, '|'),
+            'A direct create without the recipient\'s address, phone and email must be refused on each');
+        Assert.areEqual(0, [SELECT COUNT() FROM Shipment__c WITH SYSTEM_MODE], 'Nothing must be created');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedOnTheNameCityAndPostalCode_whenTheyAreBlank() {
+        // AC-006.5 (CODE-003): a direct create with a blank recipient name,
+        // destination city and postal code is refused with a field error on each
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerShipments(1)[0];
+        shipment.Recipient_Name__c = ' ';
+        shipment.Destination_City__c = null;
+        shipment.Destination_Postal_Code__c = '';
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.SYSTEM_MODE);
+        Test.stopTest();
+
+        Assert.areEqual('Destination_City__c=' + GENERIC + '|Destination_Postal_Code__c=' + GENERIC
+            + '|Recipient_Name__c=' + GENERIC, String.join(refused, '|'),
+            'A direct create without the recipient name, city and postal code must be refused on each');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedOnTheEmail_whenTheTopLevelDomainHasOneLetter() {
+        // AC-006.5 (CODE-003): laura@example.c is accepted by the platform's email
+        // check but not by the AC-006.1 rule of submitRequest: a direct create
+        // with it is refused on Recipient_Email__c with the generic field error
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerShipments(1)[0];
+        shipment.Recipient_Email__c = 'laura@example.c';
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.SYSTEM_MODE);
+        Test.stopTest();
+
+        Assert.areEqual('Recipient_Email__c=' + GENERIC, String.join(refused, '|'),
+            'An email the AC-006.1 rule refuses must be refused on Recipient_Email__c only');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedOnTheEmail_whenTheLocalPartHasAnExclamationMark() {
+        // AC-006.5 (CODE-003): laura!@example.com is accepted by the platform's email
+        // check but not by the AC-006.1 rule of submitRequest: a direct create
+        // with it is refused on Recipient_Email__c with the generic field error
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerShipments(1)[0];
+        shipment.Recipient_Email__c = 'laura!@example.com';
+
+        Test.startTest();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.SYSTEM_MODE);
+        Test.stopTest();
+
+        Assert.areEqual('Recipient_Email__c=' + GENERIC, String.join(refused, '|'),
+            'An email the AC-006.1 rule refuses must be refused on Recipient_Email__c only');
     }
 
     @IsTest
@@ -819,26 +915,123 @@ private with sharing class ShipmentTriggerHandlerTest {
             failure.getDmlFieldNames(0)[0] + '|' + failure.getDmlMessage(0), 'The pickup date must carry the generic field error');
     }
 
+    // The validated recipient-owned values ShipmentRequestController stages
+    // (BR-02, G7): a second set of values, other than the factory's.
+    private static void stageOtherRecipientValues() {
+        ShipmentTriggerHandler.stageRecipientValues(
+            'Calle Morelos 12, San Pedro', '+52 81 1111 2222', 'pedro.ruiz@example.com', 'Leave at the front desk');
+    }
+
+    private static String recipientOwnedValues(Id shipmentId) {
+        Shipment__c row = [
+            SELECT Recipient_Address__c, Recipient_Phone__c, Recipient_Email__c, Delivery_Instructions__c
+            FROM Shipment__c WHERE Id = :shipmentId WITH SYSTEM_MODE
+        ];
+        return row.Recipient_Address__c + '|' + row.Recipient_Phone__c + '|' + row.Recipient_Email__c + '|'
+            + row.Delivery_Instructions__c;
+    }
+
     @IsTest
     static void customerInsert_keepsAWorkingAccessCode() {
         // AC-006.5 (A1): clearing a customer's internal fields happens before the
-        // code is issued: the code returned by insertWithCodes opens the shipment
+        // code is issued: the code insertWithCodes returns for Ana's user-mode
+        // insert (the controller's path, staged recipient values) opens the shipment
         ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
         User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
-        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(2);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerCreateableShipments(1);
         Map<Id, String> codes;
 
         Test.startTest();
         System.runAs(ana) {
+            stageOtherRecipientValues();
             codes = DeliveryAccessCode.insertWithCodes(shipments);
         }
         Test.stopTest();
 
-        Assert.areEqual(2, codes.size(), 'Each customer shipment must get a clear code');
-        for (Shipment__c shipment : shipments) {
-            Assert.isTrue(DeliveryAccessCode.verify(shipment.Id, codes.get(shipment.Id)),
-                'The clear code of a customer insert must match its stored hash');
+        Assert.isTrue(DeliveryAccessCode.verify(shipments[0].Id, codes.get(shipments[0].Id)),
+            'The clear code of a customer insert must match its stored hash');
+    }
+
+    @IsTest
+    static void customerInsert_storesTheStagedRecipientValues() {
+        // AC-006.1 (BR-02, G7): Ana's user-mode insert carries no recipient-owned
+        // field; the guard writes the staged address, phone, email and instructions
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerCreateableShipments(1);
+
+        Test.startTest();
+        System.runAs(ana) {
+            stageOtherRecipientValues();
+            Database.insert(shipments, AccessLevel.USER_MODE);
         }
+        Test.stopTest();
+
+        Assert.areEqual('Calle Morelos 12, San Pedro|+52 81 1111 2222|pedro.ruiz@example.com|Leave at the front desk',
+            recipientOwnedValues(shipments[0].Id), 'The staged recipient-owned values must be stored');
+    }
+
+    @IsTest
+    static void stagedRecipientValues_areUsedOnce() {
+        // AC-006.5 (BR-02, X6): the staged values fill one insert only: Ana's
+        // second user-mode insert in the same transaction is refused on the
+        // recipient's address, phone and email
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> first = TestDataFactory.newCustomerCreateableShipments(1);
+        Shipment__c second = TestDataFactory.newCustomerCreateableShipments(1)[0];
+        List<String> refused;
+
+        Test.startTest();
+        System.runAs(ana) {
+            stageOtherRecipientValues();
+            Database.insert(first, AccessLevel.USER_MODE);
+        }
+        refused = refusalsAs(ana, second, AccessLevel.USER_MODE);
+        Test.stopTest();
+
+        Assert.areEqual(HIDDEN_RECIPIENT_REFUSALS, String.join(refused, '|'),
+            'A second insert must not reuse the staged recipient values');
+    }
+
+    @IsTest
+    static void stagedRecipientValues_areNotApplied_toAMultiRowInsert() {
+        // AC-006.5 (BR-02, X6): the staged values of one request never fill a
+        // two-row insert: both rows are refused and nothing is created
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerCreateableShipments(2);
+        Integer refusedRows = 0;
+
+        Test.startTest();
+        System.runAs(ana) {
+            stageOtherRecipientValues();
+            for (Database.SaveResult result : Database.insert(shipments, false, AccessLevel.USER_MODE)) {
+                refusedRows += result.isSuccess() ? 0 : 1;
+            }
+        }
+        Test.stopTest();
+
+        Assert.areEqual('2|0', refusedRows + '|' + [SELECT COUNT() FROM Shipment__c WITH SYSTEM_MODE],
+            'Both rows of a two-row insert must be refused and nothing created');
+    }
+
+    @IsTest
+    static void stagedRecipientValues_areDiscardedByClear() {
+        // AC-006.5 (BR-02): after clearStagedRecipientValues (the controller's
+        // finally block) a user-mode insert gets no staged values and is refused
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        Shipment__c shipment = TestDataFactory.newCustomerCreateableShipments(1)[0];
+
+        Test.startTest();
+        stageOtherRecipientValues();
+        ShipmentTriggerHandler.clearStagedRecipientValues();
+        List<String> refused = refusalsAs(ana, shipment, AccessLevel.USER_MODE);
+        Test.stopTest();
+
+        Assert.areEqual(HIDDEN_RECIPIENT_REFUSALS, String.join(refused, '|'),
+            'Cleared staged values must not fill the next insert');
     }
 
     @IsTest

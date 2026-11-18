@@ -7,6 +7,8 @@
  *              - Price (BR-08): Standard 120 + 18 per kg, Express 220 + 30 per
  *                kg, plus 1.5% of the declared value, rounded half-up to 2
  *                decimals (G4).
+ *              - Recipient email (AC-006.1): isValidEmail, shared by the
+ *                controller and the guard.
  *              - Limits (AC-006.4): weight more than 0 and at most 30 kg with at
  *                most 2 decimals (G6); declared value from 0 to 50,000 with at
  *                most 2 decimals.
@@ -35,6 +37,8 @@ public with sharing class ShipmentRequestRules {
     private static final Integer LAST_PICKUP_DAY = 15;
     private static final Integer DAYS_PER_WEEK = 7;
     private static final Integer BUSINESS_DAYS_PER_WEEK = 5;
+    private static final Pattern EMAIL_FORMAT =
+        Pattern.compile('^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\-]+(\\.[A-Za-z0-9\\-]+)*\\.[A-Za-z]{2,}$');
     // Monday 1 January 1900: the day of the week is counted from it.
     private static final Date KNOWN_MONDAY = Date.newInstance(1900, 1, 1);
     private static final Map<String, Decimal> BASE_PRICE_BY_SERVICE = new Map<String, Decimal>{
@@ -97,6 +101,17 @@ public with sharing class ShipmentRequestRules {
     public static Boolean isValidDeclaredValue(Decimal declaredValue) {
         return declaredValue != null && declaredValue >= 0 && declaredValue <= MAX_DECLARED_VALUE
             && hasAtMostTwoDecimals(declaredValue);
+    }
+
+    /**
+     * @description Whether the value, trimmed, is a well-formed email address
+     *              (AC-006.1): the one check of submitRequest and of the
+     *              customer-insert guard of ShipmentTriggerHandler.
+     * @param email the recipient email
+     * @return true when present and well formed
+     */
+    public static Boolean isValidEmail(String email) {
+        return String.isNotBlank(email) && EMAIL_FORMAT.matcher(email.trim()).matches();
     }
 
     /**

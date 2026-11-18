@@ -28,7 +28,9 @@
 #      CUSTOMER_EDIT_FIELDS, edit (create)
 #      FLS on exactly the AC-006.1 entered fields of CUSTOMER_EDIT_FIELDS, no
 #      other field permission (never on CUSTOMER_FORBIDDEN_FIELDS: cost,
-#      margin, notes, hash, Proof_Id__c, the credit fields), Apex class access
+#      margin, notes, hash, Proof_Id__c, the credit fields; never on
+#      RECIPIENT_OWNED_FIELDS: the recipient's address, phone, email and the
+#      delivery instructions, BR-02, G7), Apex class access
 #      to exactly CUSTOMER_CLASSES (the two customer controllers), nor View All
 #      Data, Modify All Data or View All Users;
 #   4. the Network "RutaCargo" has the profile as a member
@@ -124,16 +126,19 @@ SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
 # The exact grants of RutaCargo_Customer at the current step of req-006-007 S2
 # (section 3). T1, Read step: Read on Shipment__c and read-only FLS on the
 # AC-007 list and detail fields. T2, Create step: plus Create, create FLS on
-# the AC-006.1 entered fields (which, by FLS rules, also makes the recipient's
-# address, phone, email and the delivery instructions readable through the API
-# for the customer's own shipments: G7 residual, recorded for Hardening) and
-# class access to the two customer controllers. Object grants are
+# the AC-006.1 entered fields the customer may read (never the recipient's
+# address, phone, email or the delivery instructions: create FLS would make
+# them readable through the API, and BR-02 makes them the recipient's;
+# ShipmentRequestController stores them through the trigger guard, T2 fix of
+# G7) and class access to the two customer controllers. Object grants are
 # "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll,ViewAllFields" as
 # true/false (View All Fields would make every Shipment__c field readable,
 # cost, margin, notes and hash included, whatever the FLS says).
 CUSTOMER_OBJECT_GRANTS='Shipment__c:true,true,false,false,false,false,false'
 CUSTOMER_READ_FIELDS='Shipment__c.Status__c Shipment__c.Service_Type__c Shipment__c.Price__c Shipment__c.Estimated_Delivery__c Shipment__c.Pickup_Address__c Shipment__c.Pickup_Date__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Origin_City__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Name__c Shipment__c.Package_Description__c Shipment__c.Weight_Kg__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Last_Location__c Shipment__c.Last_Update__c'
-CUSTOMER_EDIT_FIELDS='Shipment__c.Pickup_Address__c Shipment__c.Origin_City__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Pickup_Date__c Shipment__c.Recipient_Name__c Shipment__c.Recipient_Address__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Service_Type__c Shipment__c.Weight_Kg__c Shipment__c.Package_Description__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Delivery_Instructions__c'
+CUSTOMER_EDIT_FIELDS='Shipment__c.Pickup_Address__c Shipment__c.Origin_City__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Pickup_Date__c Shipment__c.Recipient_Name__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Service_Type__c Shipment__c.Weight_Kg__c Shipment__c.Package_Description__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c'
+# BR-02 (G7): the fields the recipient owns; no read or edit FLS for customers.
+RECIPIENT_OWNED_FIELDS='Shipment__c.Recipient_Address__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Delivery_Instructions__c'
 CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Account.Credit_Limit__c Account.Credit_Risk__c'
 CUSTOMER_CLASSES='MyShipmentsController ShipmentRequestController'
 # The customer controllers of req-006-007 (T2): never guest entry points.
@@ -360,6 +365,12 @@ else
         pass "permission set $CUSTOMER_PERMSET: no field permission on cost, margin, notes, hash, Proof_Id__c or credit fields"
     else
         fail "permission set $CUSTOMER_PERMSET: field permissions on forbidden fields: $forbidden"
+    fi
+    recipient_owned="$(comm -12 <(printf '%s\n' "$actual_any" | grep -v '^$' || true) <(words "$RECIPIENT_OWNED_FIELDS") | paste -sd ' ' -)"
+    if [[ -z "$recipient_owned" ]]; then
+        pass "permission set $CUSTOMER_PERMSET: no field permission on the recipient's address, phone, email or delivery instructions (BR-02)"
+    else
+        fail "permission set $CUSTOMER_PERMSET: field permissions on recipient-owned fields (BR-02, G7): $recipient_owned"
     fi
     # Apex class access: exactly CUSTOMER_CLASSES.
     query "SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId = '$permset_id'"; permset_class_rows="$ROWS"

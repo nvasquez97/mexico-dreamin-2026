@@ -3,8 +3,9 @@
  *              customer shipment requests (odd/tasks/req-006-007-customer-shipments.md,
  *              S1): the BR-08 price (AC-006.2), the BR-06 pickup window of business
  *              days in Mexico City (AC-006.3), the weight and declared value limits
- *              (AC-006.4) and the estimated delivery in business days (AC-006.6).
- *              Pure functions: no records are needed.
+ *              (AC-006.4), the estimated delivery in business days (AC-006.6) and
+ *              the recipient email format shared by the controller and the
+ *              customer-insert guard (AC-006.1). Pure functions: no records are needed.
  */
 @IsTest
 private with sharing class ShipmentRequestRulesTest {
@@ -16,6 +17,53 @@ private with sharing class ShipmentRequestRulesTest {
     private static final Date SATURDAY = Date.newInstance(2026, 11, 21);
     private static final Date SUNDAY = Date.newInstance(2026, 11, 22);
     private static final Date MONDAY = Date.newInstance(2026, 11, 23);
+
+    // ─── AC-006.1: recipient email ───────────────────────────────────────────
+
+    @IsTest
+    static void isValidEmail_acceptsAPlainAddress() {
+        // AC-006.1: laura.gomez@example.com is a valid recipient email
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidEmail('laura.gomez@example.com');
+        Test.stopTest();
+        Assert.isTrue(valid, 'laura.gomez@example.com must be a valid email');
+    }
+
+    @IsTest
+    static void isValidEmail_acceptsASubdomainAddressWithSpaces() {
+        // AC-006.1: a padded address with a plus tag and a subdomain is valid once trimmed
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidEmail('  pedro+envios@mail.example.com.mx ');
+        Test.stopTest();
+        Assert.isTrue(valid, 'A padded address with a subdomain must be a valid email');
+    }
+
+    @IsTest
+    static void isValidEmail_refusesAnAddressWithoutTheAtSign() {
+        // AC-006.1: "laura.gomez at example" is not an email
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidEmail('laura.gomez at example');
+        Test.stopTest();
+        Assert.isFalse(valid, 'An address without @ must be refused');
+    }
+
+    @IsTest
+    static void isValidEmail_refusesABlankValue() {
+        // AC-006.1: a blank email is not valid
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidEmail('   ');
+        Test.stopTest();
+        Assert.isFalse(valid, 'A blank email must be refused');
+    }
+
+    @IsTest
+    static void isValidEmail_refusesNull() {
+        // AC-006.1: a missing email is not valid
+        Test.startTest();
+        Boolean valid = ShipmentRequestRules.isValidEmail(null);
+        Test.stopTest();
+        Assert.isFalse(valid, 'A null email must be refused');
+    }
 
     // ─── AC-006.2 (BR-08): price ─────────────────────────────────────────────
 

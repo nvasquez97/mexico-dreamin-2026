@@ -584,6 +584,35 @@ public with sharing class TestDataFactory {
         return shipments;
     }
 
+    /**
+     * @description Unsaved shipments as a customer creates them with her own
+     *              grants (UI API or user-mode DML): newCustomerShipments
+     *              without the four recipient-owned fields the customer has no
+     *              FLS on (Recipient_Address__c, Recipient_Phone__c,
+     *              Recipient_Email__c, Delivery_Instructions__c; BR-02, G7).
+     * @param count how many
+     * @return the unsaved shipments
+     */
+    public static List<Shipment__c> newCustomerCreateableShipments(Integer count) {
+        // Copied without the four fields: a field set even to null is still
+        // written, and refused, by a user-mode insert.
+        Set<String> recipientOwned = new Set<String>{
+            'Recipient_Address__c', 'Recipient_Phone__c', 'Recipient_Email__c', 'Delivery_Instructions__c'
+        };
+        List<Shipment__c> shipments = new List<Shipment__c>();
+        for (Shipment__c complete : newCustomerShipments(count)) {
+            Shipment__c createable = new Shipment__c();
+            Map<String, Object> values = complete.getPopulatedFieldsAsMap();
+            for (String fieldName : values.keySet()) {
+                if (!recipientOwned.contains(fieldName)) {
+                    createable.put(fieldName, values.get(fieldName));
+                }
+            }
+            shipments.add(createable);
+        }
+        return shipments;
+    }
+
     // ─── EntregaYa status requests ────────────────────────────────────────
 
     /**
