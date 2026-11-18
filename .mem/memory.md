@@ -188,3 +188,9 @@
 - What: Gate @ df792b0 358/358 and re-run @ 7f2554d 373/373, org 95.64% (Customer* 88-100%), Jest 257/257. Reviews: test-reviewer (2 Medium + 6 Low fixed in 0bb3a33), brand (1 Low fixed), sf-security-auditor pass (SEC-002 fixed; SEC-001 → Hardening), access-auditor approved. Open: live sign-up mode not built, F11, justification approver. Hardening list and owner items in the Close section.
 - Why / evidence: odd/tasks/archive/2026-11-17-req-005-customer-signup.md.
 - Next: REQ-006+007 T1 (permission set Read + sharing set; CustomerShipmentAccessTest), then T2, T3, Close; Hardening; End of run.
+
+## 2026-11-18 00:15 — REQ-006+007: T1 in review, T2 running
+- Type: status
+- What: T1 committed 3c2a0ee (evidence f39406a): sharing set works inside Apex tests (no A10 mirror); customers read 17 fields, not Account__c; M2 done by dropping the sharing set's profile (deletion forbidden). T1 reviewers (task, security, access) running in parallel with the T2 worker (only committing worker). T2 told: grant Account__c read FLS only if the user-mode filter needs it; G8 probe decides Account Read.
+- Why / evidence: odd/evidence/req-006-007-customer-shipments/T1.md.
+- Next: tick T1 (fix round waits for T2's commit if needed), review T2, then T3, Close.
