@@ -2,7 +2,8 @@
  * @description Tests of the customer sign-up (odd/tasks/req-005-customer-signup.md
  *              S2): CustomerSignUpController.signUp and the CustomerRegistration
  *              helper behind it. AC-005.1 (server), AC-005.2, AC-005.3 (server),
- *              AC-005.4 (server) and AC-005.7 (the real site guest runs it).
+ *              AC-005.4 (server), AC-005.7 (the real site guest runs it) and
+ *              AC-005.10 (server: a platform error never reaches the visitor).
  *              Site.validatePassword and Site.createExternalUser run through the
  *              CustomerRegistration.gateway seam; the user the seam "creates" is the
  *              seeded customer Marta Ruiz, because tests never insert portal users
@@ -27,6 +28,7 @@ private class CustomerSignUpControllerTest {
         List<Id> accountIds = new List<Id>();
         Boolean rejectPolicy = false;
         Boolean failCreate = false;
+        String failCreateMessage = 'Simulated createExternalUser failure.';
         Boolean returnNoUser = false;
         Id userIdToReturn;
 
@@ -38,7 +40,7 @@ private class CustomerSignUpControllerTest {
 
         public Id createExternalUser(User newUser, Id accountId, String pass) {
             if (failCreate) {
-                throw new CustomerRegistration.RegistrationException('Simulated createExternalUser failure.');
+                throw new CustomerRegistration.RegistrationException(failCreateMessage);
             }
             createdUsers.add(newUser);
             accountIds.add(accountId);
@@ -401,6 +403,30 @@ private class CustomerSignUpControllerTest {
         Assert.isFalse(result.success, 'The sign-up fails');
         Assert.areEqual(CustomerSignUpController.CODE_FAILED, result.code, 'Failure code');
         Assert.areEqual(CustomerSignUpController.MESSAGE_FAILED, result.message, 'Generic message');
+        Assert.isNull(result.field, 'No field is blamed');
+        assertNothingCreated(fake, 0, 0);
+    }
+
+    @IsTest
+    static void signUp_ownerReportedPlatformError_returnsOnlyTheGenericMessage() {
+        // AC-005.10: the platform text the owner reported never reaches the visitor
+        assertPlatformErrorIsHidden('[accountId parameter value is not valid.]');
+    }
+
+    @IsTest
+    static void signUp_privilegePlatformError_returnsOnlyTheGenericMessage() {
+        // AC-005.10: another platform text (second input) never reaches the visitor
+        assertPlatformErrorIsHidden('Insufficient Privileges: You do not have the level of access necessary to perform the operation you requested.');
+    }
+
+    private static void assertPlatformErrorIsHidden(String platformText) {
+        FakeSite fake = installFakeSite();
+        fake.failCreate = true;
+        fake.failCreateMessage = platformText;
+        CustomerSignUpController.SignUpResult result = submitAsGuest(new SignUpForm());
+        Assert.areEqual(CustomerSignUpController.CODE_FAILED, result.code, 'Failure code');
+        Assert.areEqual(CustomerSignUpController.MESSAGE_FAILED, result.message, 'Only the generic message is returned');
+        Assert.isFalse(result.message.contains(platformText), 'The platform text is never returned');
         Assert.isNull(result.field, 'No field is blamed');
         assertNothingCreated(fake, 0, 0);
     }

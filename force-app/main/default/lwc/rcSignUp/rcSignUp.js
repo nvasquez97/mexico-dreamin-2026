@@ -36,9 +36,21 @@ const MESSAGE_FAILED =
   "We could not create your account. Please try again later.";
 const MESSAGE_CREATED =
   "Your account is ready. Log in with your email and password.";
+const MESSAGE_PASS_POLICY =
+  "This password does not meet the password policy. Choose another one.";
+const MESSAGE_EMAIL_REGISTERED =
+  "This email is already registered. Log in instead.";
 const CODE_CREATED = "CREATED";
 const CODE_EMAIL_REGISTERED = "EMAIL_REGISTERED";
-const MAX_SERVER_MESSAGE = 300;
+// The closed list of messages CustomerSignUpController returns (req-005
+// AC-005.10): any other text (platform or exception text) is never shown.
+const KNOWN_SERVER_MESSAGES = new Set([
+  ...Object.values(MESSAGES),
+  MESSAGE_PASS_POLICY,
+  MESSAGE_EMAIL_REGISTERED,
+  MESSAGE_FAILED,
+  MESSAGE_CREATED
+]);
 
 const FIELDS = [
   "customerType",
@@ -112,13 +124,10 @@ function validate(values) {
   return errors;
 }
 
+/** The server's message when it is a known one, else the fallback text. */
 function serverMessage(result, fallback) {
   const message = result && result.message;
-  return typeof message === "string" &&
-    message !== "" &&
-    message.length <= MAX_SERVER_MESSAGE
-    ? message
-    : fallback;
+  return KNOWN_SERVER_MESSAGES.has(message) ? message : fallback;
 }
 
 /**
@@ -127,8 +136,9 @@ function serverMessage(result, fallback) {
  * confirmation, sent as individual fields to CustomerSignUpController.signUp
  * (imperative: it creates records). Values are read from the inputs at
  * submit; the password is kept nowhere else and is never logged, stored or
- * put in a URL. Every message is rendered as text. After a sign-up the form
- * is replaced by the server's message and a link to log in.
+ * put in a URL. Every message is rendered as text, and only a known server
+ * message is shown (a generic text otherwise). After a sign-up the form is
+ * replaced by the server's message and a link to log in.
  */
 export default class RcSignUp extends LightningElement {
   errors = {};

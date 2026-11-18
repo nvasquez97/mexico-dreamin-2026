@@ -3,7 +3,8 @@
 // boundary, the closed customer type list, field lengths), AC-005.3 (the
 // duplicate-email message with a link to the login page), AC-005.4 (the
 // client password rule and the confirmation) and AC-005.9 (text-only
-// rendering, no password logged or stored, one column below 768 px).
+// rendering, no password logged or stored, one column below 768 px) and
+// AC-005.10 (only the server's known messages are shown, a generic text otherwise).
 import { createElement } from "lwc";
 import RcSignUp from "c/rcSignUp";
 import signUp from "@salesforce/apex/CustomerSignUpController.signUp";
@@ -482,6 +483,100 @@ describe("c-rc-sign-up", () => {
     });
   });
 
+  describe("AC-005.10: only the server's known messages are shown", () => {
+    // The platform text the owner reported on 2026-11-18, and another raw one.
+    const PLATFORM_TEXT = "accountId parameter value is not valid";
+    const RAW_TEXTS = [
+      `Site.ExternalUserCreateException: [${PLATFORM_TEXT}.]`,
+      "System.DmlException: Insert failed. First exception on row 0"
+    ];
+    const KNOWN_GENERAL = [MESSAGE_FAILED, MESSAGE_EMAIL_REGISTERED];
+    const KNOWN_BY_FIELD = [
+      ["customerType", MESSAGE_CUSTOMER_TYPE],
+      ["accountName", MESSAGE_ACCOUNT_NAME],
+      ["firstName", MESSAGE_FIRST_NAME],
+      ["lastName", MESSAGE_LAST_NAME],
+      ["email", MESSAGE_EMAIL],
+      ["email", MESSAGE_EMAIL_REGISTERED],
+      ["phone", MESSAGE_PHONE],
+      ["password", MESSAGE_PASS_RULES],
+      ["password", MESSAGE_PASS_POLICY],
+      ["confirmPassword", MESSAGE_CONFIRMATION]
+    ];
+
+    it.each(RAW_TEXTS)(
+      "AC-005.10: an unknown failure message (%s) is replaced by the generic text",
+      async (raw) => {
+        signUp.mockResolvedValue(
+          serverResult({ code: "FAILED", message: raw })
+        );
+
+        const element = await signUpWith(BUSINESS);
+
+        expect(text(query(element, '[data-id="form-error"]'))).toBe(
+          MESSAGE_FAILED
+        );
+        expect(element.shadowRoot.textContent).not.toContain(raw);
+      }
+    );
+
+    it.each([
+      ["email", RAW_TEXTS[0]],
+      ["password", RAW_TEXTS[1]]
+    ])(
+      "AC-005.10: an unknown message for the field %s is replaced by the generic text",
+      async (field, raw) => {
+        signUp.mockResolvedValue(serverResult({ field, message: raw }));
+
+        const element = await signUpWith(BUSINESS);
+
+        expect(errorOf(element, field)).toBe(MESSAGE_FAILED);
+        expect(element.shadowRoot.textContent).not.toContain(PLATFORM_TEXT);
+        expect(element.shadowRoot.textContent).not.toContain(raw);
+      }
+    );
+
+    it.each([PLATFORM_TEXT, "Welcome <b>back</b>"])(
+      "AC-005.10: a success with an unknown message (%s) shows the known created text",
+      async (raw) => {
+        signUp.mockResolvedValue(
+          serverResult({ success: true, code: "CREATED", message: raw })
+        );
+
+        const element = await signUpWith(BUSINESS);
+
+        expect(text(query(element, '[data-id="success-message"]'))).toBe(
+          MESSAGE_CREATED
+        );
+        expect(element.shadowRoot.textContent).not.toContain(raw);
+      }
+    );
+
+    it.each(KNOWN_GENERAL)(
+      "AC-005.10: the known general message \"%s\" is shown above the button",
+      async (known) => {
+        signUp.mockResolvedValue(
+          serverResult({ code: "FAILED", message: known })
+        );
+
+        const element = await signUpWith(INDIVIDUAL);
+
+        expect(text(query(element, '[data-id="form-error"]'))).toBe(known);
+      }
+    );
+
+    it.each(KNOWN_BY_FIELD)(
+      "AC-005.10: the known message for %s (\"%s\") is shown under the field",
+      async (field, known) => {
+        signUp.mockResolvedValue(serverResult({ field, message: known }));
+
+        const element = await signUpWith(BUSINESS);
+
+        expect(errorOf(element, field)).toBe(known);
+      }
+    );
+  });
+
   describe("sign-up success", () => {
     it("AC-005.1: after a sign-up the form is replaced by the server's message and a link to log in", async () => {
       const element = await signUpWith(BUSINESS);
@@ -509,7 +604,7 @@ describe("c-rc-sign-up", () => {
   });
 
   describe("AC-005.9: text only, no stored password, mobile first", () => {
-    it("AC-005.9: a server message with markup is rendered as text", async () => {
+    it("AC-005.9: a server message with markup is never rendered (neither as markup nor as text)", async () => {
       signUp.mockResolvedValue(
         serverResult({ code: "FAILED", message: "<b>Bold</b> & co" })
       );
@@ -517,7 +612,7 @@ describe("c-rc-sign-up", () => {
       const element = await signUpWith(BUSINESS);
 
       const formError = query(element, '[data-id="form-error"]');
-      expect(text(formError)).toBe("<b>Bold</b> & co");
+      expect(text(formError)).toBe(MESSAGE_FAILED);
       expect(formError.querySelector("b")).toBeNull();
     });
 
