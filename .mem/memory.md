@@ -201,3 +201,9 @@
 - What: T2 8a322bd (evidence 3698f0c). T2 reviews: security-reviewer adedd08cf3d4fae52 approved (Medium CODE-001 = G7 residual → Hardening; Low CODE-002 approver pending; Low CODE-003 direct create skips recipient-field checks → Close), task-reviewer a23e4911d3479ab40 2 Lows (evidence reds not assertions; tz test repeats logic → Close), access-auditor a1cd9ff33029a9062 pending. T1 fix worker aa4fc50d3c25417bc. LESSON: a viewAllFields=true mutation leaves read FieldPermissions on every field after it is turned off, and a source redeploy does not remove them; revert with explicit readable=false entries and compare org FieldPermissions with the file. Verified 01:40: the org had 29 rows vs 21 in the file (cost, margin, notes, hash, Proof_Id readable by customers) — T1 fix worker told to clean it.
 - Why / evidence: FieldPermissions query on RutaCargo_Customer.
 - Next: confirm cleanup (29 → 21 rows), T1 closing check (task-reviewer), tick T1 and T2, then T3.
+
+## 2026-11-18 02:50 — REQ-006+007: T1 and T2 ticked; T3 running
+- Type: status
+- What: Org residue cleaned (21 rows, then 17 after the T2 fix). T1 ticked (fixed in 8d70377). T2 ticked (fixed in b8d954d): customers have no FLS on the 4 recipient fields; the controller stages them for the trigger (G9 in the task document); direct customer creates need valid recipient data; a SeeAllData history test needs reschedule-history-check.sh run once in a new org (DEPLOY-ORDER at Close). T3 worker af7bcda2fb03ad1fb running (LWCs, login-only routes).
+- Why / evidence: task lines and G9 in odd/tasks/req-006-007-customer-shipments.md.
+- Next: T3 review, then Close (gate, test, brand, sf-security-auditor, access-auditor; Close fix round with the batched Lows), archive, Hardening.
