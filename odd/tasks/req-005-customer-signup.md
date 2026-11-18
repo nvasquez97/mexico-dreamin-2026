@@ -92,4 +92,6 @@ Order gate: this document starts after REQ-002+003 is archived (T2 and T3 share 
 - F14 (T4 reviews, all clean; notes for Close): batched to the Close fix round — no parity check between rcSignUp KNOWN_SERVER_MESSAGES (rcSignUp.js:39-53) and the CustomerSignUpController constants (:17-28) (test-quality); a known message is not tied to its field (harmless). Open, not built: the opt-in live sign-up mode of customer-pages-check.sh (no live sign-ups allowed, 1 license free); the live clause rests on the one-time T4 evidence verified by all three reviewers. Hardening: the standard self-register action is guest-callable while network self-registration is on (consider turning it off, rcSignUp does not need it); guest profiles carry ~1,670 platform-default FieldPermissions (Edit on Account/Contact/Lead fields, no effect with 0 object permissions); CustomerRegistration SECURITY-JUSTIFICATION approver "pending owner approval".
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ df792b0 (deploy 0AfEk00000h5eGzKAI, --ignore-conflicts), Succeeded, 358/358 · Jest 232/232 · Coverage: org 95.62%, new classes CustomerSignUpController 100%, CustomerRegistration 92.85%, CustomerPermissionAssigner 94.73%, CustomerLoginController 85.71%
+Note: Base 3c64ca7..HEAD also holds the REQ-002+003 commits made in parallel (archived separately); the Close reviews cover the REQ-005 files of the Task analysis.
