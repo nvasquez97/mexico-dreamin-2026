@@ -208,3 +208,10 @@
 - Why / evidence: task lines and G9 in odd/tasks/req-006-007-customer-shipments.md.
 - Next: T3 review, then Close (gate, test, brand, sf-security-auditor, access-auditor; Close fix round with the batched Lows), archive, Hardening.
 - Update 03:20: T3 83b5a2e ticked clean. Close gate @ ee969a9 green 486/486, org 95.6%, Jest 375/375. Four Close reviewers running (ids on the Reviewers line).
+- Update 03:45: Close reviews in (Reviews line). Close fix worker a276c4e67bb591622 launched with 16 findings. Owner decision recorded, not fixed: SEC-001 Medium (sender is shown the recipient's access code → can use the guest recipient flow; follows D1/A1/G5 and AC-006.5). Hardening: SEC-002 no request cap.
+
+## 2026-11-18 04:10 — REQ-006+007 closed and archived; Hardening next
+- Type: close
+- What: Gate @ ee969a9 486/486 and re-run @ 56bac29 509/509, org 96.15% (Shipment* 96-99%), Jest 375/375. Reviews: test-reviewer (3 Medium + Lows fixed in 0c90270), brand (2 Low fixed), sf-security-auditor pass (SEC-001 Medium owner decision: sender holds the recipient's access code; SEC-002 → Hardening), access-auditor approved. Every requirement is now archived.
+- Why / evidence: odd/tasks/archive/2026-11-18-req-006-007-customer-shipments.md (date from `date`).
+- Next: Hardening round 1 — sf-security-audit --org cargo-opus-t1 over the whole project plus dx-code-analyzer-run (non-security rules, sev 1-2 = High CA-###); triage Critical/High into odd/tasks/hardening-1.md (Tier 2); at most 3 audits. Then End of run.
