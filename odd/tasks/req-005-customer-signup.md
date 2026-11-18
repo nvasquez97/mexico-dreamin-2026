@@ -64,7 +64,7 @@ Plan review: fixed (plan-reviewer aef707f288229ced4) — closing check closed 12
 Order gate: this document starts after REQ-002+003 is archived (T2 and T3 share the guest profile, guest-access-check.sh, TestDataFactory and brand-check.sh with the earlier requirements).
 
 ## Tasks
-- [ ] T1 (S1, S5): Customer profile, password policy, permission set, owner role, self-registration settings and the test customers' users — check first — review: findings · reviewers: task-reviewer a887d794d8c5685f1, security-reviewer a1d5b8f7c3244a437, access-auditor adf5996873242cafe
+- [x] T1 (S1, S5): Customer profile, password policy, permission set, owner role, self-registration settings and the test customers' users — 1938f82 · evidence: odd/evidence/req-005-customer-signup/T1.md · review: fixed in 25b3df5, open — EXP-001 standard self-registration path not yet proven unable to create a user (live negative test in T3, F9) · reviewers: task-reviewer a887d794d8c5685f1, security-reviewer a1d5b8f7c3244a437, access-auditor adf5996873242cafe
 - [x] T2 (S2, S3): Guest sign-up, login and password-reset Apex — d609edc · evidence: odd/evidence/req-005-customer-signup/T2.md · review: open — email ownership not proven at sign-up (F11, owner decision); batched to Close: password passed to Site not asserted, one-input reset case, nickname from email, inner-class sharing keywords · reviewers: task-reviewer ab917743b505d358a, security-reviewer a9d939c9336038cf2, access-auditor a5f607ddb72c63952
 - [ ] T3 (S4): Sign-up, login and forgot-password LWCs, header links — test first
 
