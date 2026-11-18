@@ -1,1 +1,2 @@
 npm run precommit
+bash scripts/checks/secret-scan.sh --staged

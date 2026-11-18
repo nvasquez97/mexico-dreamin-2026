@@ -375,6 +375,22 @@ Owner items:
   Enforced" in this org. It reflects Salesforce-side enforcement and cannot be
   changed through metadata. Check it again in the production org before go-live.
 
+## Repository hygiene
+
+- Enable the commit hook with `npm install` (its `prepare` script runs Husky).
+  `.husky/pre-commit` runs lint-staged and then
+  `scripts/checks/secret-scan.sh --staged`, which refuses a commit that stages
+  a value shaped like the EntregaYa key, a PEM private-key header, an SFDX
+  auth URL or a `consumerSecret`/password-like literal. It names the file, the
+  line and the rule, never the value.
+- Run `bash scripts/checks/secret-scan.sh --tree` in the gate: it scans every
+  tracked file at HEAD and must report 0 findings (exit 0 clean, 1 findings,
+  2 usage). `bash scripts/checks/tests/secret-scan-selftest.sh` proves the
+  hook and the scan in a temporary repository, with fixtures built at runtime.
+- The scan does not undo the old leak: the EntregaYa API key is still in the
+  git history and must be rotated by the owner (SEC-001, H1; see "Manual
+  steps pending for the owner").
+
 ## Manual steps pending for the owner
 
 - EntregaYa (B4): read the consumer key and secret of the External Client App
