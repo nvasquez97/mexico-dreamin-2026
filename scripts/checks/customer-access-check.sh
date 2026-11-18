@@ -14,16 +14,18 @@
 #   2. the profile has no object permission beyond the license defaults
 #      (LICENSE_DEFAULT_OBJECTS, empty: the profile file revokes every object
 #      the license would add), none on Account, Contact or Shipment__c, no View
-#      All or Modify All on any object, no field permission on Shipment__c or
-#      on the internal Account fields Credit_Limit__c and Credit_Risk__c, and
+#      All, Modify All or View All Fields on any object, no field permission on
+#      Shipment__c or on the internal Account fields Credit_Limit__c and
+#      Credit_Risk__c, and
 #      no field permission at all beyond LICENSE_DEFAULT_FIELDS (the profile
 #      file revokes every field the license would add);
 #   3. the permission set RutaCargo_Customer exists once and grants exactly the
 #      current step of req-006-007 S2 (odd/tasks/req-006-007-customer-shipments.md,
 #      AC-006.7; T2, Create step): one object permission, Read and Create on
-#      Shipment__c (CUSTOMER_OBJECT_GRANTS: no Edit, Delete, View All or Modify
-#      All, nothing on Account or Contact), read FLS on exactly the Shipment__c
-#      fields of CUSTOMER_READ_FIELDS and CUSTOMER_EDIT_FIELDS, edit (create)
+#      Shipment__c (CUSTOMER_OBJECT_GRANTS: no Edit, Delete, View All, Modify
+#      All or View All Fields, nothing on Account or Contact), read FLS on
+#      exactly the Shipment__c fields of CUSTOMER_READ_FIELDS and
+#      CUSTOMER_EDIT_FIELDS, edit (create)
 #      FLS on exactly the AC-006.1 entered fields of CUSTOMER_EDIT_FIELDS, no
 #      other field permission (never on CUSTOMER_FORBIDDEN_FIELDS: cost,
 #      margin, notes, hash, Proof_Id__c, the credit fields), Apex class access
@@ -126,8 +128,10 @@ SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
 # address, phone, email and the delivery instructions readable through the API
 # for the customer's own shipments: G7 residual, recorded for Hardening) and
 # class access to the two customer controllers. Object grants are
-# "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll" as true/false.
-CUSTOMER_OBJECT_GRANTS='Shipment__c:true,true,false,false,false,false'
+# "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll,ViewAllFields" as
+# true/false (View All Fields would make every Shipment__c field readable,
+# cost, margin, notes and hash included, whatever the FLS says).
+CUSTOMER_OBJECT_GRANTS='Shipment__c:true,true,false,false,false,false,false'
 CUSTOMER_READ_FIELDS='Shipment__c.Status__c Shipment__c.Service_Type__c Shipment__c.Price__c Shipment__c.Estimated_Delivery__c Shipment__c.Pickup_Address__c Shipment__c.Pickup_Date__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Origin_City__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Name__c Shipment__c.Package_Description__c Shipment__c.Weight_Kg__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Last_Location__c Shipment__c.Last_Update__c'
 CUSTOMER_EDIT_FIELDS='Shipment__c.Pickup_Address__c Shipment__c.Origin_City__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Pickup_Date__c Shipment__c.Recipient_Name__c Shipment__c.Recipient_Address__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Service_Type__c Shipment__c.Weight_Kg__c Shipment__c.Package_Description__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Delivery_Instructions__c'
 CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Account.Credit_Limit__c Account.Credit_Risk__c'
@@ -261,7 +265,7 @@ fi
 # scope (a SOQL condition on Parent). $1 label, $2 condition, $3 allowed objects.
 check_grants() {
     local label="$1" cond="$2" allowed="$3" rows objects extra sensitive vam fields
-    query "SELECT SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords FROM ObjectPermissions WHERE $cond"; rows="$ROWS"
+    query "SELECT SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords, PermissionsViewAllFields FROM ObjectPermissions WHERE $cond"; rows="$ROWS"
     objects="$(jq -r '.[].SobjectType' <<<"$rows" | sort -u)"
     extra="$(comm -23 <(printf '%s\n' "$objects" | grep -v '^$' || true) <(tr ' ,' '\n\n' <<<"$allowed" | grep -v '^$' | sort -u || true))"
     if [[ -z "$extra" ]]; then
@@ -277,11 +281,11 @@ check_grants() {
             fail "$label: has an object permission on $obj"
         fi
     done
-    vam="$(jq -r '[.[] | select(.PermissionsViewAllRecords or .PermissionsModifyAllRecords) | .SobjectType] | join(" ")' <<<"$rows")"
+    vam="$(jq -r '[.[] | select(.PermissionsViewAllRecords or .PermissionsModifyAllRecords or .PermissionsViewAllFields) | .SobjectType] | join(" ")' <<<"$rows")"
     if [[ -z "$vam" ]]; then
-        pass "$label: no View All or Modify All on any object"
+        pass "$label: no View All, Modify All or View All Fields on any object"
     else
-        fail "$label: View All or Modify All on $vam"
+        fail "$label: View All, Modify All or View All Fields on $vam"
     fi
     query "SELECT Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE $cond AND (SobjectType = 'Shipment__c' OR Field IN ($SENSITIVE_FIELDS))"; fields="$ROWS"
     if [[ "$(jq 'length' <<<"$fields")" -eq 0 ]]; then
@@ -316,13 +320,13 @@ else
     permset_id="$(jq -r '.[0].Id' <<<"$permset")"
     [[ "$permset_id" =~ ^0PS[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]] || { echo "ERROR: unexpected PermissionSet Id" >&2; exit 3; }
     # Object permissions: exactly CUSTOMER_OBJECT_GRANTS, flag by flag.
-    query "SELECT SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords FROM ObjectPermissions WHERE ParentId = '$permset_id'"; object_rows="$ROWS"
-    actual_objects="$(jq -r '.[] | "\(.SobjectType):\(.PermissionsRead),\(.PermissionsCreate),\(.PermissionsEdit),\(.PermissionsDelete),\(.PermissionsViewAllRecords),\(.PermissionsModifyAllRecords)"' <<<"$object_rows" | sort -u)"
+    query "SELECT SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsViewAllRecords, PermissionsModifyAllRecords, PermissionsViewAllFields FROM ObjectPermissions WHERE ParentId = '$permset_id'"; object_rows="$ROWS"
+    actual_objects="$(jq -r '.[] | "\(.SobjectType):\(.PermissionsRead),\(.PermissionsCreate),\(.PermissionsEdit),\(.PermissionsDelete),\(.PermissionsViewAllRecords),\(.PermissionsModifyAllRecords),\(.PermissionsViewAllFields)"' <<<"$object_rows" | sort -u)"
     expected_objects="$(tr ' ' '\n' <<<"$CUSTOMER_OBJECT_GRANTS" | grep -v '^$' | sort -u || true)"
     if [[ "$actual_objects" == "$expected_objects" ]]; then
-        pass "permission set $CUSTOMER_PERMSET: object permissions are exactly $CUSTOMER_OBJECT_GRANTS (Read,Create,Edit,Delete,ViewAll,ModifyAll)"
+        pass "permission set $CUSTOMER_PERMSET: object permissions are exactly $CUSTOMER_OBJECT_GRANTS (Read,Create,Edit,Delete,ViewAll,ModifyAll,ViewAllFields)"
     else
-        fail "permission set $CUSTOMER_PERMSET: object permissions '$(paste -sd ' ' - <<<"$actual_objects")', expected '$CUSTOMER_OBJECT_GRANTS' (Read,Create,Edit,Delete,ViewAll,ModifyAll)"
+        fail "permission set $CUSTOMER_PERMSET: object permissions '$(paste -sd ' ' - <<<"$actual_objects")', expected '$CUSTOMER_OBJECT_GRANTS' (Read,Create,Edit,Delete,ViewAll,ModifyAll,ViewAllFields)"
     fi
     for obj in Account Contact; do
         if jq -e --arg o "$obj" 'any(.[]; .SobjectType == $o)' <<<"$object_rows" >/dev/null; then
