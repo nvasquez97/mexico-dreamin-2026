@@ -64,13 +64,14 @@ Plan review: fixed (plan-reviewer aef707f288229ced4) — closing check closed 12
 Order gate: this document starts after REQ-002+003 is archived (T2 and T3 share the guest profile, guest-access-check.sh, TestDataFactory and brand-check.sh with the earlier requirements).
 
 ## Tasks
-- [ ] T1 (S1, S5): Customer profile, password policy, permission set, owner role, self-registration settings and the test customers' users — check first
+- [ ] T1 (S1, S5): Customer profile, password policy, permission set, owner role, self-registration settings and the test customers' users — check first — review: findings · reviewers: task-reviewer a887d794d8c5685f1, security-reviewer a1d5b8f7c3244a437, access-auditor adf5996873242cafe
 - [ ] T2 (S2, S3): Guest sign-up, login and password-reset Apex — test first
 - [ ] T3 (S4): Sign-up, login and forgot-password LWCs, header links — test first
 
 ## Assumptions
 - F7 (plan review, Lows): the login answers an unknown email without calling Site.login, so it may be faster than a wrong password (a timing hint under X16); anyone who knows a customer's email can trigger the platform lockout (5 attempts, 15 minutes); tests use seams or the two seeded customer users instead of creating new portal users (3 free Customer Community seats); the logo alt text in rcHeader stays per A14. All recorded for Hardening.
 - F8 (plan review note): the password policy's 90-day expiration and history of 3 are stricter than the design asks (conservative choice); between T1 and T3 the register view still shows the standard selfRegister component while self-registration is on, and the control that stops a user being created there is "no default self-registration account" (scratch org only, checked in T1's part of AC-005.7).
+- F9 (T1 security review EXP-001, Medium, needs org verification): with self-registration on, "no default self-registration account" is the only control against the standard self-register path creating a user; T3 adds a live negative test to its scope and evidence: submit the standard form once before removing the component and call its action directly after, then prove 0 User and 0 Contact created and Customer Community licenses unchanged; if a user is created, stop and report (a refusing registration handler or self-registration only behind T2 would be the fix).
 - F1: usernames are `<normalized email>.<org Id 18 characters, lower case>`; customers type only their email; the server maps email → username for login and password reset.
 - F2 (P6, X16): AC-005.3 discloses that an email is registered, as the design requires; there is no CAPTCHA (no external script host allowed) and no per-visitor rate limit on sign-up; the Customer Community license count (5) bounds account creation in this org. Recorded for Hardening.
 - F3: the internal owner of guest-created customer accounts is the org's admin with the role RutaCargo_Customer_Owner, set by script (no extra internal license is free); the owner should name a dedicated owner user in production.
