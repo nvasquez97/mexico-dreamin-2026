@@ -37,6 +37,7 @@
     <headlessRegistrationTemplate>unfiled$public/CommunityHeadlessRegistrationTemplate</headlessRegistrationTemplate>
     <networkMemberGroups>
         <profile>admin</profile>
+        <profile>rutacargo customer</profile>
     </networkMemberGroups>
     <networkPageOverrides>
         <changePasswordPageOverrideSetting>Standard</changePasswordPageOverrideSetting>
@@ -47,7 +48,8 @@
     </networkPageOverrides>
     <picassoSite>RutaCargo1</picassoSite>
     <secondaryEmailSenderEnabled>false</secondaryEmailSenderEnabled>
-    <selfRegistration>false</selfRegistration>
+    <selfRegProfile>rutacargo customer</selfRegProfile>
+    <selfRegistration>true</selfRegistration>
     <sendWelcomeEmail>true</sendWelcomeEmail>
     <site>RutaCargo</site>
     <siteArchiveStatus>NotArchived</siteArchiveStatus>

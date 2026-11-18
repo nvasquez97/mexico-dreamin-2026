@@ -1,4 +1,4 @@
-# Deploy order from zero: the RutaCargo site and its guest profile
+# Deploy order from zero: the RutaCargo site, its guest profile and the customer access
 
 Use this order in a new org (for example a fresh scratch org from
 `config/project-scratch-def.json`, which enables Communities). One
@@ -16,17 +16,50 @@ The other 22 Visualforce pages the profile lists (SiteRegister, CommunitiesLogin
 the error pages and so on) are created when Communities is enabled, so they
 exist before step 1.
 
+The customer self-registration (req-005 S1) adds a third reason:
+
+- force-app's Network lists the customer profile `RutaCargo Customer` as a
+  member and as its self-registration profile. The platform refuses a
+  self-registration profile that is not already a member of the site ("You
+  can only select profiles that are associated with the experience."), and it
+  refuses both in one deploy. So the profile is deployed first (step 0), the
+  site is created with a member-only copy of the Network
+  (`scripts/setup/templates/RutaCargo.network-bootstrap`: force-app's Network
+  with the profile as a member and self-registration off, step 1), and
+  force-app's Network turns self-registration on later (step 2).
+
 ## Steps
 
 Replace `<alias>` with the target org. Run each command on its own.
 
+0. The customer access metadata (req-005 S1): the profile
+   `RutaCargo Customer`, its password policy, the permission set
+   `RutaCargo_Customer` and the role `RutaCargo_Customer_Owner`. None of them
+   needs the site. Check the password policy first with `--dry-run`, then
+   deploy:
+
+   ```bash
+   sf project deploy start --dry-run --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/permissionsets/RutaCargo_Customer.permissionset-meta.xml --source-dir force-app/main/default/roles --target-org <alias> --wait 30
+   sf project deploy start --source-dir "force-app/main/default/profiles/RutaCargo Customer.profile-meta.xml" --source-dir force-app/main/default/profilePasswordPolicies --source-dir force-app/main/default/permissionsets/RutaCargo_Customer.permissionset-meta.xml --source-dir force-app/main/default/roles --target-org <alias> --wait 30
+   ```
+
 1. Site first: Network, CustomSite, DigitalExperienceConfig, the
    DigitalExperienceBundle and the site's navigation menu. This creates the site,
    its guest user, the guest profile `RutaCargo Profile` and `MicrobatchSelfReg`.
+   The Network is the member-only bootstrap copy (see the third reason above):
+   convert the site to metadata format in a temporary folder, replace its
+   Network with the bootstrap, and deploy that folder:
 
    ```bash
-   sf project deploy start --source-dir force-app/main/default/networks --source-dir force-app/main/default/sites --source-dir force-app/main/default/digitalExperienceConfigs --source-dir force-app/main/default/digitalExperiences --source-dir force-app/main/default/navigationMenus --target-org <alias> --wait 30
+   tmp="$(mktemp -d)"
+   sf project convert source --source-dir force-app/main/default/networks --source-dir force-app/main/default/sites --source-dir force-app/main/default/digitalExperienceConfigs --source-dir force-app/main/default/digitalExperiences --source-dir force-app/main/default/navigationMenus --output-dir "$tmp/site"
+   cp scripts/setup/templates/RutaCargo.network-bootstrap "$tmp/site/networks/RutaCargo.network"
+   sf project deploy start --metadata-dir "$tmp/site" --target-org <alias> --wait 30
    ```
+
+   The bootstrap must equal force-app's Network except for the
+   `selfRegistration` and `selfRegProfile` lines; `customer-owner.sh` (step 4b)
+   fails if it does not, so update both files together.
 
 1b. The EntregaYa proof credential and the guest's permission sets
    (req-002-003 E11). Idempotent. The platform refuses to create the
@@ -64,6 +97,26 @@ Replace `<alias>` with the target org. Run each command on its own.
    scripts/setup/site-guest-user.sh <alias>
    ```
 
+4b. The owner of customer accounts and the self-registration (req-005 S1).
+   Idempotent; it refuses an org that is not a sandbox or scratch org:
+
+   ```bash
+   scripts/setup/customer-owner.sh <alias>
+   ```
+
+   It gives the site's guest default record owner (`Site.GuestRecordDefaultOwnerId`,
+   by default the user who created the site) the role
+   `RutaCargo_Customer_Owner`: records the guest creates are owned by that
+   user, and an account that owns external users must be owned by a user with a
+   role. It fails if no owner is set, and it never replaces another role. It
+   never touches `sites/RutaCargo.site-meta.xml`. Then it applies the two
+   Network phases when they are missing (member first with the bootstrap, then
+   force-app's Network with self-registration on) and reads the result back.
+   After steps 1 and 2 both phases are already done; in an org whose site was
+   created before req-005 (for example cargo-opus-t1) this step applies them,
+   and a force-app deploy before it fails on the Network with the message
+   above.
+
 5. Check the guest (AC-F.9: Live, 0 object permissions, time zone, home 200,
    guest Visualforce pages equal to the allow-list, self-registration refused;
    req-002-003 AC-002.6: no permission set besides the profile's own, no key
@@ -73,6 +126,18 @@ Replace `<alias>` with the target org. Run each command on its own.
    ```bash
    scripts/checks/guest-access-check.sh <alias>
    ```
+
+5b. Check the customer access (req-005 AC-005.7 and AC-005.4: the profile's
+   license, no object or field permission on the profile or on
+   `RutaCargo_Customer`, the Network member and self-registration with no
+   default account, the owner's role, the retrieved password policy):
+
+   ```bash
+   scripts/checks/customer-access-check.sh <alias>
+   ```
+
+   The site users of the two seeded customers are created after the seed
+   (README, "Setup from zero", step 3b).
 
 6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
    External Client App "EntregaYa Status", the permission set and the group
@@ -122,7 +187,10 @@ Replace `<alias>` with the target org. Run each command on its own.
   would state something the org does not do (assumption A11 in
   odd/tasks/foundation.md).
 - What has been proven: steps 1 to 5 ran in this order in the development
-  org cargo-opus-t1, where the site already existed (a redeploy). Creating the
+  org cargo-opus-t1, where the site already existed (a redeploy). For req-005,
+  step 0, step 4b (both Network phases, the first time and again as a no-op)
+  and step 5b ran in cargo-opus-t1; step 1 with the bootstrap was validated
+  there only with `--dry-run --metadata-dir` (a redeploy of an existing site). Creating the
   site from zero in a second org has not been run, because deploys are allowed
   only to cargo-opus-t1 (A11). Run these steps in the next new org and record
   the result.

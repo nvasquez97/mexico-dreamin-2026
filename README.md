@@ -36,9 +36,11 @@ sandbox or scratch org, and nothing here is meant for production.
    ```
 
 2. Deploy the metadata, publish the site and set the guest user's time zone,
-   in the order given in `scripts/setup/DEPLOY-ORDER.md` (the site first, then
-   everything else with `RunLocalTests`, then `sf community publish`, then
-   `scripts/setup/site-guest-user.sh <alias>`).
+   in the order given in `scripts/setup/DEPLOY-ORDER.md` (the customer profile
+   first, then the site with the member-only Network, then everything else
+   with `RunLocalTests`, then `sf community publish`, then
+   `scripts/setup/site-guest-user.sh <alias>` and
+   `scripts/setup/customer-owner.sh <alias>`; see "Customer access" below).
 
 3. Load the test data:
 
@@ -71,6 +73,15 @@ sandbox or scratch org, and nothing here is meant for production.
    120 seeded shipments exist, and never overwrites an existing
    `.seed-output/access-codes.csv`.
 
+3b. Create the site users of the two seeded customers (after step 3 and
+   `customer-owner.sh`; a second run changes nothing):
+
+   ```bash
+   scripts/setup/seed-customer-users.sh <alias>
+   ```
+
+   See "Customer access" below.
+
 4. Verify the test data (read-only on the data; exits non-zero on any failure):
 
    ```bash
@@ -87,6 +98,7 @@ sandbox or scratch org, and nothing here is meant for production.
    ```bash
    scripts/checks/shipment-access-check.sh <alias>
    scripts/checks/guest-access-check.sh <alias>
+   scripts/checks/customer-access-check.sh <alias>
    scripts/checks/brand-check.sh <alias>
    scripts/checks/entregaya-access-check.sh <alias>
    scripts/entregaya/attack-check.sh <alias>
@@ -95,6 +107,45 @@ sandbox or scratch org, and nothing here is meant for production.
    `scripts/setup/DEPLOY-ORDER.md` includes the EntregaYa integration step
    (`scripts/setup/entregaya-integration.sh <alias>`) after the force-app
    deploy; see "EntregaYa integration" below.
+
+## Customer access
+
+Registered customers (req-005) sign in to the RutaCargo site with the
+Customer Community license. What they get, and how it is set up:
+
+- Profile `RutaCargo Customer` (Customer Community): no object permission.
+  The platform gives a new Customer Community profile about 30 object
+  permissions by default (Account, Contact, Case, Order and others); the
+  profile file revokes each of them. Its password policy
+  (`profilePasswordPolicies/`): at least 10 characters with letters and
+  numbers, locked for 15 minutes after 5 wrong passwords, expires after 90
+  days, the last 3 cannot be reused.
+- Permission set `RutaCargo_Customer`, assigned to every customer: no object
+  or field permission yet. REQ-006/007 add shipment access together with the
+  sharing set that limits it to the customer's own records.
+- Role `RutaCargo_Customer_Owner`, given by `scripts/setup/customer-owner.sh`
+  to the site's guest default record owner: accounts created through the site
+  are owned by that user, and an account that owns external users must be
+  owned by a user with a role. In a development org that is the user who
+  created the site; name a dedicated owner user before production (F3).
+- Network `RutaCargo`: the profile is a member and the self-registration
+  profile; self-registration is on with no default account, so a user can be
+  created only by code that names the account. The platform needs the member
+  before the self-registration profile, so `customer-owner.sh` applies the two
+  phases (`scripts/setup/templates/RutaCargo.network-bootstrap`, then
+  force-app's Network); `scripts/setup/DEPLOY-ORDER.md` gives the from-zero
+  order.
+- Users of the seeded customers Ana López (ana.lopez@example.com, Abarrotes
+  Acme) and Marta Ruiz (marta.ruiz@example.com, Globex Farma), created by
+  `scripts/setup/seed-customer-users.sh` with the profile and the permission
+  set. Their usernames are `<email>.<org Id, 18 characters, lower case>`,
+  because usernames are unique across all Salesforce orgs; customers type only
+  their email. They use 2 of the 5 Customer Community licenses. No password
+  is set or printed: to try them, reset the password in Setup > Users (the
+  emails go to example.com and are not delivered, F5).
+
+`scripts/checks/customer-access-check.sh <alias>` checks all of the above
+against the org (it retrieves the password policy, which SOQL cannot read).
 
 ## EntregaYa integration
 
@@ -303,6 +354,10 @@ your decision (a destructive deploy).
   are stored, D1). They were replaced with `scripts/seed/seed.sh
   --reissue-codes` (T7); the new codes exist only in the local, git-ignored
   `.seed-output/access-codes.csv` of the machine that ran it.
+
+- Customer access (req-005): reset the passwords of the seeded customer users
+  in Setup > Users to try the customer login (F5), and name a dedicated owner
+  for site-created customer accounts before production (F3).
 
 ## Project structure
 

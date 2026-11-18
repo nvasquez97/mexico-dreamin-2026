@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Actor permission set of registered customers (req-005 S1), assigned to every customer user. Grants no object or field permission yet: REQ-006/007 add Shipment__c access together with the sharing set that limits it to the customer's own records.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>RutaCargo Customer</label>
+</PermissionSet>
