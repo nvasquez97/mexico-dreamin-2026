@@ -315,6 +315,66 @@ The now-unused External Credential `EntregaYa` and permission set
 cargo-opus-t1 and are not in this repository. Removing them from the org is
 your decision (a destructive deploy).
 
+## Security settings (MFA for direct UI logins)
+
+`force-app/main/default/settings/Security.settings-meta.xml` turns on
+"Require multi-factor authentication (MFA) for all direct UI logins to your
+Salesforce org" (`sessionSettings.enableMFADirectUILoginOptIn`). The file holds
+**only** that element, on purpose: Security settings deploy as a whole type, and
+a copied full file carries `<networkAccess/>`, which would wipe the org's login
+IP ranges. Never replace it with a retrieved file; add any new setting by hand
+and validate it with a check-only deploy first.
+
+```bash
+sf project deploy start --source-dir force-app/main/default/settings/Security.settings-meta.xml --target-org <alias> --dry-run
+sf project deploy start --source-dir force-app/main/default/settings/Security.settings-meta.xml --target-org <alias>
+scripts/checks/org-security-check.sh <alias>
+```
+
+`scripts/checks/org-security-check.sh` is read-only. It fails unless the
+source file holds only that setting as true, the Security settings retrieved
+from the org show it true, and the Health Check row "MFA Enabled" meets the
+standard. It also fails if any customer profile or permission set grants
+"Multi-Factor Authentication for User Interface Logins": the profile "RutaCargo
+Customer", the permission set `RutaCargo_Customer`, any profile whose user type
+is not Standard, or any permission set assigned to an active user whose user
+type is not Standard. It exits 3 when a query or the retrieve fails.
+
+It prints the Health Check row "Require MFA for all direct UI logins" for
+information only. That row reports Salesforce-side MFA enforcement, and no
+Security setting controls it: it stayed "Not Enforced" (HIGH_RISK) for 16
+minutes after the setting was deployed, while "MFA Enabled" passed at once
+(see `odd/evidence/hardening-1/T3.md`).
+
+Who is affected:
+
+- Internal users who log in on the login page with a username and password
+  (both System Administrators) must register a verification method, such as
+  Salesforce Authenticator, at their next UI login. The CLI's existing
+  authorization of the scratch org (through the Dev Hub) and `sf org open`
+  (frontdoor with that session) are not direct UI logins and are not
+  affected; a new `sf org login web` goes through the login page and asks for
+  MFA.
+- The EntregaYa integration user uses the client credentials flow, not a UI
+  login.
+- Customers who log in on the RutaCargo site are not covered by this org
+  setting. MFA for Experience Cloud users is a separate opt-in, the "Multi-Factor
+  Authentication for User Interface Logins" user permission, and the check
+  makes sure the customer profile and permission set do not grant it.
+
+To reverse it, set the value to `false` in the file and deploy it the same
+way (the check then fails).
+
+Owner items:
+
+- After the deploy, log in once as a seeded customer on the RutaCargo site
+  and confirm that no MFA prompt appears. If MFA is demanded, deploy the setting
+  as `false` and reopen SEC-003. Record the result in
+  `odd/evidence/hardening-1/T3.md`.
+- The Health Check row "Require MFA for all direct UI logins" stays "Not
+  Enforced" in this org. It reflects Salesforce-side enforcement and cannot be
+  changed through metadata. Check it again in the production org before go-live.
+
 ## Manual steps pending for the owner
 
 - EntregaYa (B4): read the consumer key and secret of the External Client App
