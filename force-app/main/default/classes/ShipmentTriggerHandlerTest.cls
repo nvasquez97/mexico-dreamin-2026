@@ -675,4 +675,222 @@ private with sharing class ShipmentTriggerHandlerTest {
                 'The agent change must be saved');
         }
     }
+
+    // ─── Customer inserts (req-006-007 S1, AC-006.5, AC-006.6) ────────────
+    // A customer user (UserType not Standard) inserting a shipment directly (UI
+    // API or DML) gets the same result as the request controller: the shipment
+    // belongs to the user's own account, has the BR-08 price, the BR-06
+    // estimate, Status Requested and no internal field; an invalid weight or
+    // pickup date is a field error. "Today" is fixed by the rules' test seam.
+
+    private static Id accountOf(String email) {
+        return TestDataFactory.seededCustomerAccountId(email);
+    }
+
+    private static List<Shipment__c> newAttackShipments(Integer count, Id otherAccountId) {
+        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(count);
+        for (Shipment__c shipment : shipments) {
+            shipment.Account__c = otherAccountId;
+            shipment.Price__c = 1.00;
+            shipment.Status__c = 'Delivered';
+            shipment.Carrier_Cost__c = 90.00;
+            shipment.Internal_Notes__c = 'customer-written note';
+            shipment.Proof_Id__c = 'PROOF-1';
+            shipment.Delivered_At__c = Datetime.newInstanceGmt(2026, 11, 20, 12, 0, 0);
+            shipment.Last_Location__c = 'Nowhere';
+            shipment.Last_Update__c = Datetime.newInstanceGmt(2026, 11, 20, 12, 0, 0);
+            shipment.Reschedule_Count__c = 9;
+            shipment.Estimated_Delivery__c = Date.newInstance(2026, 11, 21);
+            shipment.Original_Estimated_Delivery__c = Date.newInstance(2026, 11, 21);
+        }
+        return shipments;
+    }
+
+    // The worst case of a direct create: every field written (system-mode DML
+    // run as the customer, as if FLS allowed them all).
+    private static void insertAsUserIgnoringFls(User actor, List<Shipment__c> shipments) {
+        System.runAs(actor) {
+            Database.insert(shipments, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    private static List<Shipment__c> readCustomerFields(List<Shipment__c> shipments) {
+        return [
+            SELECT Id, Account__c, Price__c, Status__c, Carrier_Cost__c, Internal_Notes__c, Proof_Id__c, Delivered_At__c,
+                Last_Location__c, Last_Update__c, Reschedule_Count__c, Estimated_Delivery__c, Original_Estimated_Delivery__c
+            FROM Shipment__c WHERE Id IN :shipments WITH SYSTEM_MODE
+        ];
+    }
+
+    private static String guardedValues(Shipment__c row) {
+        return row.Account__c + '|' + row.Price__c + '|' + row.Status__c + '|' + row.Carrier_Cost__c + '|'
+            + row.Internal_Notes__c + '|' + row.Proof_Id__c + '|' + row.Delivered_At__c + '|' + row.Last_Location__c + '|'
+            + row.Last_Update__c + '|' + row.Reschedule_Count__c + '|' + String.valueOf(row.Estimated_Delivery__c) + '|'
+            + String.valueOf(row.Original_Estimated_Delivery__c);
+    }
+
+    private static DmlException insertFailureAs(User actor, List<Shipment__c> shipments) {
+        DmlException failure;
+        System.runAs(actor) {
+            try {
+                Database.insert(shipments, AccessLevel.SYSTEM_MODE);
+                Assert.fail('The insert must be refused');
+            } catch (DmlException e) {
+                failure = e;
+            }
+        }
+        return failure;
+    }
+
+    @IsTest
+    static void customerInsert_isForcedToTheOwnAccountPriceStatusAndNoInternalField() {
+        // AC-006.5 (BR-07, BR-08, BR-09, X6): 251 direct creates by Ana with Marta's
+        // account, price 1, Delivered, cost, notes and proof set → each stored with
+        // Ana's account, 180.00, Requested, estimate 2026-11-27 and no internal field
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = newAttackShipments(BULK_SIZE, accountOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL));
+
+        Test.startTest();
+        insertAsUserIgnoringFls(ana, shipments);
+        Test.stopTest();
+
+        String expected = accountOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL)
+            + '|180.00|Requested|null|null|null|null|null|null|0|2026-11-27|2026-11-27';
+        List<Shipment__c> saved = readCustomerFields(shipments);
+        Assert.areEqual(BULK_SIZE, saved.size(), 'All 251 shipments must be saved');
+        for (Shipment__c row : saved) {
+            Assert.areEqual(expected, guardedValues(row), 'A customer insert must be forced to the guarded values');
+        }
+    }
+
+    @IsTest
+    static void customerInsert_inUserMode_isForcedToTheOwnAccountAndPrice() {
+        // AC-006.5 (BR-07): Marta creates a shipment in user mode (her own grants)
+        // naming Ana's account → stored under Marta's account with the Express price
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User marta = TestDataFactory.seededCustomerUser(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(1);
+        shipments[0].Account__c = accountOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        shipments[0].Service_Type__c = 'Express';
+
+        Test.startTest();
+        System.runAs(marta) {
+            Database.insert(shipments, AccessLevel.USER_MODE);
+        }
+        Test.stopTest();
+
+        Shipment__c saved = readCustomerFields(shipments)[0];
+        Assert.areEqual(accountOf(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL) + '|310.00|2026-11-24',
+            saved.Account__c + '|' + saved.Price__c + '|' + String.valueOf(saved.Estimated_Delivery__c),
+            'Marta\'s direct create must be under her account at 310.00, estimate Tuesday 2026-11-24');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedWithAFieldError_whenTheWeightIsInvalid() {
+        // AC-006.5 / AC-006.4: a direct create with 31 kg is refused on Weight_Kg__c
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(1);
+        shipments[0].Weight_Kg__c = 31;
+
+        Test.startTest();
+        DmlException failure = insertFailureAs(ana, shipments);
+        Test.stopTest();
+
+        Assert.areEqual('Weight_Kg__c|' + ShipmentTriggerHandler.INVALID_FIELD_MESSAGE,
+            failure.getDmlFieldNames(0)[0] + '|' + failure.getDmlMessage(0), 'The weight must carry the generic field error');
+        Assert.areEqual(0, [SELECT COUNT() FROM Shipment__c WHERE Weight_Kg__c = 31 WITH SYSTEM_MODE], 'Nothing must be created');
+    }
+
+    @IsTest
+    static void customerInsert_isRefusedWithAFieldError_whenThePickupDateIsInvalid() {
+        // AC-006.5 / AC-006.3: a direct create with a Saturday pickup is refused on Pickup_Date__c
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(1);
+        shipments[0].Pickup_Date__c = Date.newInstance(2026, 11, 21);
+
+        Test.startTest();
+        DmlException failure = insertFailureAs(ana, shipments);
+        Test.stopTest();
+
+        Assert.areEqual('Pickup_Date__c|' + ShipmentTriggerHandler.INVALID_FIELD_MESSAGE,
+            failure.getDmlFieldNames(0)[0] + '|' + failure.getDmlMessage(0), 'The pickup date must carry the generic field error');
+    }
+
+    @IsTest
+    static void customerInsert_keepsAWorkingAccessCode() {
+        // AC-006.5 (A1): clearing a customer's internal fields happens before the
+        // code is issued: the code returned by insertWithCodes opens the shipment
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = TestDataFactory.newCustomerShipments(2);
+        Map<Id, String> codes;
+
+        Test.startTest();
+        System.runAs(ana) {
+            codes = DeliveryAccessCode.insertWithCodes(shipments);
+        }
+        Test.stopTest();
+
+        Assert.areEqual(2, codes.size(), 'Each customer shipment must get a clear code');
+        for (Shipment__c shipment : shipments) {
+            Assert.isTrue(DeliveryAccessCode.verify(shipment.Id, codes.get(shipment.Id)),
+                'The clear code of a customer insert must match its stored hash');
+        }
+    }
+
+    @IsTest
+    static void externalUserTypeWithAnotherProfile_isGuarded() {
+        // AC-006.5: the guard keys on UserType, not on the profile: an
+        // administrator seen as an external user type (seam) is guarded, and
+        // without a customer account the insert is refused
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        List<Shipment__c> shipments = newAttackShipments(1, customerId());
+        ShipmentTriggerHandler.runningUserTypeOverride = 'PowerCustomerSuccess';
+
+        Test.startTest();
+        DmlException failure = insertFailureAs(new User(Id = UserInfo.getUserId()), shipments);
+        Test.stopTest();
+
+        Assert.areEqual(ShipmentTriggerHandler.NOT_A_CUSTOMER_MESSAGE, failure.getDmlMessage(0),
+            'An external user type with another profile and no account must be refused');
+    }
+
+    @IsTest
+    static void customerProfileSeenAsStandardUserType_isNotGuarded() {
+        // AC-006.5: the guard keys on UserType: Ana seen as a Standard (internal)
+        // user type (seam) keeps the price 1.00 and the cost she wrote (her own
+        // account: the platform refuses a lookup to an account she cannot read)
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
+        List<Shipment__c> shipments = newAttackShipments(1, accountOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL));
+        ShipmentTriggerHandler.runningUserTypeOverride = 'Standard';
+
+        Test.startTest();
+        insertAsUserIgnoringFls(ana, shipments);
+        Test.stopTest();
+
+        Shipment__c saved = readCustomerFields(shipments)[0];
+        Assert.areEqual('1.00|90.00|customer-written note',
+            saved.Price__c + '|' + saved.Carrier_Cost__c + '|' + saved.Internal_Notes__c,
+            'A Standard user type must not be guarded');
+    }
+
+    @IsTest
+    static void internalUserInsert_keepsTheValuesItWrites() {
+        // AC-006.5: an internal (Standard) user, here the administrator, is not guarded
+        ShipmentRequestRules.todayOverride = TestDataFactory.REQUEST_TODAY;
+        List<Shipment__c> shipments = newAttackShipments(1, customerId());
+
+        Test.startTest();
+        insertAsSystem(shipments);
+        Test.stopTest();
+
+        Shipment__c saved = readCustomerFields(shipments)[0];
+        Assert.areEqual(customerId() + '|1.00|90.00|customer-written note',
+            saved.Account__c + '|' + saved.Price__c + '|' + saved.Carrier_Cost__c + '|' + saved.Internal_Notes__c,
+            'An internal user must keep the values it writes');
+    }
 }

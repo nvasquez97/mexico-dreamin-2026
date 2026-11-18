@@ -20,15 +20,15 @@
 #      file revokes every field the license would add);
 #   3. the permission set RutaCargo_Customer exists once and grants exactly the
 #      current step of req-006-007 S2 (odd/tasks/req-006-007-customer-shipments.md,
-#      AC-006.7; T1, Read step): one object permission, Read on Shipment__c
-#      (CUSTOMER_OBJECT_GRANTS: no Create, Edit, Delete, View All or Modify
-#      All, nothing on Account or Contact), read-only FLS on exactly the
-#      Shipment__c fields of CUSTOMER_READ_FIELDS and no other field permission
-#      (never on CUSTOMER_FORBIDDEN_FIELDS: cost, margin, notes, hash,
-#      Proof_Id__c, the recipient's address, phone and email, the delivery
-#      instructions, the credit fields), Apex class access to exactly
-#      CUSTOMER_CLASSES (none in T1), nor View All Data, Modify All Data or View
-#      All Users;
+#      AC-006.7; T2, Create step): one object permission, Read and Create on
+#      Shipment__c (CUSTOMER_OBJECT_GRANTS: no Edit, Delete, View All or Modify
+#      All, nothing on Account or Contact), read FLS on exactly the Shipment__c
+#      fields of CUSTOMER_READ_FIELDS and CUSTOMER_EDIT_FIELDS, edit (create)
+#      FLS on exactly the AC-006.1 entered fields of CUSTOMER_EDIT_FIELDS, no
+#      other field permission (never on CUSTOMER_FORBIDDEN_FIELDS: cost,
+#      margin, notes, hash, Proof_Id__c, the credit fields), Apex class access
+#      to exactly CUSTOMER_CLASSES (the two customer controllers), nor View All
+#      Data, Modify All Data or View All Users;
 #   4. the Network "RutaCargo" has the profile as a member
 #      (NetworkMemberGroup), self-registration on, the profile as its
 #      self-registration profile, and no default self-registration account
@@ -121,13 +121,17 @@ SENSITIVE_OBJECTS='Account Contact Shipment__c'
 SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
 # The exact grants of RutaCargo_Customer at the current step of req-006-007 S2
 # (section 3). T1, Read step: Read on Shipment__c and read-only FLS on the
-# AC-007 list and detail fields. Object grants are
+# AC-007 list and detail fields. T2, Create step: plus Create, create FLS on
+# the AC-006.1 entered fields (which, by FLS rules, also makes the recipient's
+# address, phone, email and the delivery instructions readable through the API
+# for the customer's own shipments: G7 residual, recorded for Hardening) and
+# class access to the two customer controllers. Object grants are
 # "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll" as true/false.
-CUSTOMER_OBJECT_GRANTS='Shipment__c:true,false,false,false,false,false'
+CUSTOMER_OBJECT_GRANTS='Shipment__c:true,true,false,false,false,false'
 CUSTOMER_READ_FIELDS='Shipment__c.Status__c Shipment__c.Service_Type__c Shipment__c.Price__c Shipment__c.Estimated_Delivery__c Shipment__c.Pickup_Address__c Shipment__c.Pickup_Date__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Origin_City__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Name__c Shipment__c.Package_Description__c Shipment__c.Weight_Kg__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Last_Location__c Shipment__c.Last_Update__c'
-CUSTOMER_EDIT_FIELDS=''
-CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Shipment__c.Recipient_Address__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Delivery_Instructions__c Account.Credit_Limit__c Account.Credit_Risk__c'
-CUSTOMER_CLASSES=''
+CUSTOMER_EDIT_FIELDS='Shipment__c.Pickup_Address__c Shipment__c.Origin_City__c Shipment__c.Pickup_Postal_Code__c Shipment__c.Pickup_Date__c Shipment__c.Recipient_Name__c Shipment__c.Recipient_Address__c Shipment__c.Destination_City__c Shipment__c.Destination_Postal_Code__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Service_Type__c Shipment__c.Weight_Kg__c Shipment__c.Package_Description__c Shipment__c.Declared_Value__c Shipment__c.Customer_Reference__c Shipment__c.Delivery_Instructions__c'
+CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Account.Credit_Limit__c Account.Credit_Risk__c'
+CUSTOMER_CLASSES='MyShipmentsController ShipmentRequestController'
 # The customer controllers of req-006-007 (T2): never guest entry points.
 CUSTOMER_CONTROLLERS='ShipmentRequestController MyShipmentsController'
 # The sharing set of req-006-007 S2 (section 9): "object|objectField|userField|accessLevel".
@@ -349,7 +353,7 @@ else
     fi
     forbidden="$(comm -12 <(printf '%s\n' "$actual_any" | grep -v '^$' || true) <(words "$CUSTOMER_FORBIDDEN_FIELDS") | paste -sd ' ' -)"
     if [[ -z "$forbidden" ]]; then
-        pass "permission set $CUSTOMER_PERMSET: no field permission on cost, margin, notes, hash, Proof_Id__c, recipient contact, instructions or credit fields"
+        pass "permission set $CUSTOMER_PERMSET: no field permission on cost, margin, notes, hash, Proof_Id__c or credit fields"
     else
         fail "permission set $CUSTOMER_PERMSET: field permissions on forbidden fields: $forbidden"
     fi

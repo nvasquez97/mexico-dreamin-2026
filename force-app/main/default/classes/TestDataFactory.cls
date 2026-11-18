@@ -522,6 +522,68 @@ public with sharing class TestDataFactory {
         }
     }
 
+    // ─── Customer shipment requests (req-006-007) ─────────────────────────
+
+    /** @description Thursday 2026-11-19: "today" of the AC-006.3 examples (ShipmentRequestRules.todayOverride). */
+    public static final Date REQUEST_TODAY = Date.newInstance(2026, 11, 19);
+    /** @description Friday 2026-11-20: a valid pickup date (T+1) when today is REQUEST_TODAY. */
+    public static final Date REQUEST_PICKUP_DATE = Date.newInstance(2026, 11, 20);
+
+    /**
+     * @description The account of a seeded customer user (User.AccountId).
+     * @param email the seeded customer's email
+     * @return the customer's account Id
+     */
+    public static Id seededCustomerAccountId(String email) {
+        Id userId = seededCustomerUser(email).Id;
+        return [SELECT AccountId FROM User WHERE Id = :userId WITH SYSTEM_MODE].AccountId;
+    }
+
+    /**
+     * @description A complete, valid shipment request (every AC-006.1 field,
+     *              the optional ones included): Standard, 2.5 kg, declared
+     *              1,000.00, pickup REQUEST_PICKUP_DATE.
+     * @return the request
+     */
+    public static ShipmentRequestController.ShipmentRequest newShipmentRequest() {
+        ShipmentRequestController.ShipmentRequest request = new ShipmentRequestController.ShipmentRequest();
+        request.pickupAddress = 'Av. Insurgentes Sur 1000, Col. Del Valle';
+        request.pickupCity = 'Ciudad de Mexico';
+        request.pickupPostalCode = '03100';
+        request.pickupDate = REQUEST_PICKUP_DATE;
+        request.recipientName = 'Laura Gomez';
+        request.recipientAddress = 'Calle Hidalgo 45, Centro';
+        request.recipientCity = 'Puebla';
+        request.recipientPostalCode = '72000';
+        request.recipientPhone = '+52 222 000 0000';
+        request.recipientEmail = 'laura.gomez@example.com';
+        request.serviceType = 'Standard';
+        request.weightKg = 2.50;
+        request.packageDescription = 'Office supplies';
+        request.declaredValue = 1000.00;
+        request.customerReference = 'PO-2026-001';
+        request.deliveryInstructions = 'Ring the bell twice';
+        return request;
+    }
+
+    /**
+     * @description Unsaved shipments as a customer would create them directly
+     *              (UI API or DML): the AC-006.1 fields only, no account, valid
+     *              when today is REQUEST_TODAY (Standard, 2.5 kg, declared
+     *              1,000.00, pickup REQUEST_PICKUP_DATE).
+     * @param count how many
+     * @return the unsaved shipments
+     */
+    public static List<Shipment__c> newCustomerShipments(Integer count) {
+        List<Shipment__c> shipments = newShipments(null, count);
+        for (Shipment__c shipment : shipments) {
+            shipment.Pickup_Date__c = REQUEST_PICKUP_DATE;
+            shipment.Weight_Kg__c = 2.50;
+            shipment.Declared_Value__c = 1000.00;
+        }
+        return shipments;
+    }
+
     // ─── EntregaYa status requests ────────────────────────────────────────
 
     /**
