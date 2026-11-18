@@ -37,6 +37,9 @@ private with sharing class RecipientDeliveryControllerTest {
         'recipientName', 'deliveryAddress', 'contactPhone', 'estimatedDelivery', 'deliveryInstructions',
         'status', 'canReschedule', 'reschedulesLeft', 'rescheduleFrom', 'rescheduleTo', 'proofAvailable'
     };
+    // DML statements made by the last reschedule call on each shipment: a rejection
+    // must make none, so a write that keeps the same values is still caught.
+    private static final Map<Id, Integer> RESCHEDULE_DML_BY_SHIPMENT = new Map<Id, Integer>();
 
     // A saved shipment with its tracking number and its clear access code.
     private with sharing class Fixture {
@@ -83,14 +86,17 @@ private with sharing class RecipientDeliveryControllerTest {
     private static Shipment__c reload(Id shipmentId) {
         return [
             SELECT Estimated_Delivery__c, Original_Estimated_Delivery__c, Delivery_Instructions__c,
-                Reschedule_Count__c, Status__c, Price__c, Recipient_Name__c, SystemModstamp
+                Reschedule_Count__c, Status__c, Price__c, Recipient_Name__c
             FROM Shipment__c WHERE Id = :shipmentId WITH SYSTEM_MODE
         ];
     }
 
     private static RecipientDeliveryController.DeliveryResponse reschedule(Fixture fixture, String newDate, String instructions) {
-        return RecipientDeliveryController.rescheduleDelivery(
+        Integer dmlBefore = Limits.getDmlStatements();
+        RecipientDeliveryController.DeliveryResponse response = RecipientDeliveryController.rescheduleDelivery(
             fixture.trackingNumber, POSTAL_CODE, fixture.code, newDate, instructions);
+        RESCHEDULE_DML_BY_SHIPMENT.put(fixture.shipmentId, Limits.getDmlStatements() - dmlBefore);
+        return response;
     }
 
     private static String iso(Date value) {
@@ -107,7 +113,7 @@ private with sharing class RecipientDeliveryControllerTest {
         Assert.areEqual(before.Estimated_Delivery__c, after.Estimated_Delivery__c, 'The date must not change');
         Assert.areEqual(before.Delivery_Instructions__c, after.Delivery_Instructions__c, 'The instructions must not change');
         Assert.areEqual(before.Reschedule_Count__c, after.Reschedule_Count__c, 'The count must not change');
-        Assert.areEqual(before.SystemModstamp, after.SystemModstamp, 'The shipment must not be written');
+        Assert.areEqual(0, RESCHEDULE_DML_BY_SHIPMENT.get(shipmentId), 'A rejection makes no DML: the shipment must not be written');
     }
 
     // ─── AC-002.2: the details ───────────────────────────────────────────
@@ -282,6 +288,8 @@ private with sharing class RecipientDeliveryControllerTest {
         Shipment__c after = reload(fixture.shipmentId);
         Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The guest reschedule is accepted');
         Assert.areEqual(Date.newInstance(2026, 12, 14), after.Estimated_Delivery__c, 'The new date is saved');
+        Assert.areEqual(DOORMAN, after.Delivery_Instructions__c, 'The guest\'s instructions are saved');
+        Assert.areEqual(1, after.Reschedule_Count__c, 'The guest\'s reschedule is counted');
         Assert.areEqual(before.Status__c, after.Status__c, 'Status unchanged');
         Assert.areEqual(before.Price__c, after.Price__c, 'Price unchanged');
         Assert.areEqual(before.Recipient_Name__c, after.Recipient_Name__c, 'Recipient unchanged');
@@ -385,24 +393,53 @@ private with sharing class RecipientDeliveryControllerTest {
     }
 
     @IsTest
-    static void shouldReject_WhenNewDateIsUnparsable() {
-        // AC-003.2: unparsable dates (not ISO, impossible day, blank) are rejected.
+    static void shouldReject_WhenNewDateIsMalformed() {
+        // AC-003.2: malformed dates (not ISO, impossible day, missing zero) are rejected.
         RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
         Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
         Shipment__c before = reload(fixture.shipmentId);
 
         Test.startTest();
         List<String> messages = new List<String>();
-        for (String newDate : new List<String>{ 'next week', '12/12/2026', '2026-12-32', '2026-02-30', '', null }) {
+        for (String newDate : new List<String>{ 'next week', '12/12/2026', '2026-12-32', '2026-02-30' }) {
             messages.add(reschedule(fixture, newDate, DOORMAN).message);
         }
         RecipientDeliveryController.DeliveryResponse last = reschedule(fixture, '2026-1-12', DOORMAN);
         Test.stopTest();
 
-        for (String message : messages) {
-            Assert.areEqual(RecipientDeliveryController.WINDOW_MESSAGE, message, 'An unparsable date gets the window message');
-        }
+        Assert.areEqual(new List<String>{
+            RecipientDeliveryController.WINDOW_MESSAGE, RecipientDeliveryController.WINDOW_MESSAGE,
+            RecipientDeliveryController.WINDOW_MESSAGE, RecipientDeliveryController.WINDOW_MESSAGE
+        }, messages, 'Every malformed date gets the window message');
         assertRejectedUnchanged(last, RecipientDeliveryController.WINDOW_MESSAGE, before, fixture.shipmentId);
+    }
+
+    @IsTest
+    static void shouldReject_WhenNewDateIsNull() {
+        // AC-003.2: a missing date is rejected; nothing changes.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
+        Shipment__c before = reload(fixture.shipmentId);
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = reschedule(fixture, null, DOORMAN);
+        Test.stopTest();
+
+        assertRejectedUnchanged(response, RecipientDeliveryController.WINDOW_MESSAGE, before, fixture.shipmentId);
+    }
+
+    @IsTest
+    static void shouldReject_WhenNewDateIsEmpty() {
+        // AC-003.2: an empty date is rejected; nothing changes.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
+        Shipment__c before = reload(fixture.shipmentId);
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = reschedule(fixture, '', DOORMAN);
+        Test.stopTest();
+
+        assertRejectedUnchanged(response, RecipientDeliveryController.WINDOW_MESSAGE, before, fixture.shipmentId);
     }
 
     @IsTest
@@ -1023,5 +1060,70 @@ private with sharing class RecipientDeliveryControllerTest {
             Assert.areEqual(RecipientDeliveryController.GENERIC_ERROR_MESSAGE, expected.getMessage(), 'A generic message');
         }
         Test.stopTest();
+    }
+
+    @IsTest
+    static void shouldThrowGenericAuraHandledException_WhenRescheduleFailsUnexpectedly() {
+        // AC-003.1 (S2 rule): an unexpected exception in rescheduleDelivery becomes a generic
+        // AuraHandledException with no internal text.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Fixture fixture = insertShipment(IN_TRANSIT, 0, ORIGINAL);
+        RecipientDeliveryController.simulateUnexpectedFailure = true;
+
+        Test.startTest();
+        try {
+            reschedule(fixture, '2026-12-12', DOORMAN);
+            Assert.fail('An unexpected error must be thrown as AuraHandledException');
+        } catch (AuraHandledException expected) {
+            Assert.areEqual(RecipientDeliveryController.GENERIC_ERROR_MESSAGE, expected.getMessage(), 'A generic message');
+        }
+        Test.stopTest();
+    }
+
+    // ─── X16: another shipment's code never opens this shipment ──────────
+
+    @IsTest
+    static void shouldRefuseEveryMethod_WhenGuestSendsAnotherShipmentsCodeWithSamePostalCode() {
+        // AC-002.1, AC-002.1b, AC-002.7 (X16, wrong record): A and B share postal code 64000;
+        // the guest sends A's tracking number with B's valid code to all three methods.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Account customer = TestDataFactory.insertCustomerAccount(ACCOUNT_NAME);
+        List<Fixture> fixtures = insertShipments(
+            new List<Shipment__c>{ newShipment(customer.Id, ORIGINAL), newShipment(customer.Id, ORIGINAL) },
+            new List<String>{ IN_TRANSIT, IN_TRANSIT }, new List<Integer>{ 0, 0 });
+        Fixture shipmentA = fixtures[0];
+        Fixture shipmentB = fixtures[1];
+        Shipment__c beforeA = reload(shipmentA.shipmentId);
+        Shipment__c beforeB = reload(shipmentB.shipmentId);
+        ProofMock mock = setProofMock();
+        List<Object> responses = new List<Object>();
+
+        Test.startTest();
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            responses.add(RecipientDeliveryController.getDeliveryDetails(shipmentA.trackingNumber, POSTAL_CODE, shipmentB.code));
+            responses.add(RecipientDeliveryController.rescheduleDelivery(
+                shipmentA.trackingNumber, POSTAL_CODE, shipmentB.code, '2026-12-12', DOORMAN));
+            responses.add(RecipientDeliveryController.downloadProof(shipmentA.trackingNumber, POSTAL_CODE, shipmentB.code));
+        }
+        Test.stopTest();
+
+        for (Object response : responses) {
+            Map<String, Object> answer = (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(response));
+            Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, answer.get('outcome'), 'Another shipment\'s code is refused');
+            Assert.areEqual(RecipientAccess.NOT_MATCHED_MESSAGE, answer.get('message'), 'The shared message');
+            Assert.isNull(answer.get('details'), 'No details');
+            Assert.isNull(answer.get('pdfBase64'), 'No proof');
+        }
+        Assert.areEqual(0, mock.endpoints.size(), 'No callout');
+        assertSameRescheduleFields(beforeA, reload(shipmentA.shipmentId), 'Shipment A');
+        assertSameRescheduleFields(beforeB, reload(shipmentB.shipmentId), 'Shipment B');
+        Assert.areEqual(3, guardOf(shipmentA.shipmentId).Failed_Attempts__c, 'The three failures are counted on A');
+        Assert.isNull(guardOf(shipmentB.shipmentId), 'Nothing is counted on B');
+    }
+
+    private static void assertSameRescheduleFields(Shipment__c before, Shipment__c after, String label) {
+        Assert.areEqual(before.Estimated_Delivery__c, after.Estimated_Delivery__c, label + ': the date must not change');
+        Assert.areEqual(before.Delivery_Instructions__c, after.Delivery_Instructions__c, label + ': the instructions must not change');
+        Assert.areEqual(before.Reschedule_Count__c, after.Reschedule_Count__c, label + ': the count must not change');
     }
 }

@@ -23,6 +23,10 @@ private with sharing class RecipientAccessTest {
     private static final String ACCOUNT_NAME = 'Recipient Access Customer';
     private static final Integer MAX_FAILURES = 5;
     private static final Integer LOCK_MINUTES = 15;
+    private static final String DEFAULT_RECIPIENT = 'Test Recipient';
+    private static final Date TODAY_IN_MEXICO = Date.newInstance(2026, 12, 5);
+    private static final String VALID_NEW_DATE = '2026-12-12';
+    private static final String DOORMAN = 'Leave with the doorman';
 
     // A saved shipment with its tracking number and its clear access code.
     private with sharing class Fixture {
@@ -32,9 +36,14 @@ private with sharing class RecipientAccessTest {
     }
 
     private static Fixture insertShipment(String postalCode) {
+        return insertShipment(postalCode, DEFAULT_RECIPIENT);
+    }
+
+    private static Fixture insertShipment(String postalCode, String recipientName) {
         Account customer = TestDataFactory.insertCustomerAccount(ACCOUNT_NAME);
         Shipment__c shipment = TestDataFactory.newShipment(customer.Id);
         shipment.Destination_Postal_Code__c = postalCode;
+        shipment.Recipient_Name__c = recipientName;
         shipment.Estimated_Delivery__c = Date.newInstance(2026, 12, 10);
         Map<Id, String> codes = TestDataFactory.insertShipmentsWithCodes(new List<Shipment__c>{ shipment });
         Fixture fixture = new Fixture();
@@ -83,11 +92,18 @@ private with sharing class RecipientAccessTest {
         RecipientDeliveryController.DeliveryResponse response;
         try {
             response = RecipientDeliveryController.rescheduleDelivery(
-                fixture.trackingNumber, POSTAL_CODE, code, '2026-12-12', 'Leave with the doorman');
+                fixture.trackingNumber, POSTAL_CODE, code, VALID_NEW_DATE, DOORMAN);
         } catch (Exception unexpected) {
             Assert.fail('A failed verification must be returned, not thrown: ' + unexpected.getTypeName());
         }
         return response;
+    }
+
+    private static Shipment__c rescheduleFieldsOf(Id shipmentId) {
+        return [
+            SELECT Estimated_Delivery__c, Delivery_Instructions__c, Reschedule_Count__c
+            FROM Shipment__c WHERE Id = :shipmentId WITH SYSTEM_MODE
+        ];
     }
 
     private static Integer hashWorkOf(String trackingNumber, String postalCode, String code) {
@@ -109,13 +125,13 @@ private with sharing class RecipientAccessTest {
         Test.stopTest();
 
         Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The right values must open the details');
-        Assert.isNotNull(response.details, 'A verified request must return the details');
+        Assert.areEqual(DEFAULT_RECIPIENT, response.details.recipientName, 'The details are the verified shipment\'s');
     }
 
     @IsTest
     static void shouldOpenDetails_WhenCodeHasSpacesAndPostalCodeHasInnerSpaceAndOtherCase() {
         // AC-002.1, a second input: another shipment, code typed with spaces, postal code "c 1 0 0" vs "C100".
-        Fixture fixture = insertShipment('C100');
+        Fixture fixture = insertShipment('C100', 'Maria Lopez');
         String spaced = fixture.code.substring(0, 6) + ' ' + fixture.code.substring(6);
 
         Test.startTest();
@@ -123,6 +139,7 @@ private with sharing class RecipientAccessTest {
         Test.stopTest();
 
         Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'Spaces and case must be ignored');
+        Assert.areEqual('Maria Lopez', response.details.recipientName, 'The details are the verified shipment\'s');
     }
 
     // ─── AC-002.1: every failure looks the same ──────────────────────────
@@ -196,6 +213,42 @@ private with sharing class RecipientAccessTest {
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Blank code: not matched');
         Assert.areEqual('The details do not match this shipment', response.message, 'Blank code: the shared message');
         Assert.isNull(response.details, 'No details without verification');
+    }
+
+    @IsTest
+    static void shouldReturnNotMatchedWithOneHash_WhenTrackingNumberIsBlank() {
+        // AC-002.1 (E2): a blank tracking number is not matched and costs one hash, like any failure.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+
+        Test.startTest();
+        Integer hashesBefore = DeliveryAccessCode.hashesComputed;
+        RecipientDeliveryController.DeliveryResponse response =
+            RecipientDeliveryController.getDeliveryDetails('   ', POSTAL_CODE, fixture.code);
+        Integer hashWork = DeliveryAccessCode.hashesComputed - hashesBefore;
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Blank tracking number: not matched');
+        Assert.areEqual(RecipientAccess.NOT_MATCHED_MESSAGE, response.message, 'Blank tracking number: the shared message');
+        Assert.areEqual(1, hashWork, 'A blank tracking number costs the same hash work as a success');
+    }
+
+    @IsTest
+    static void shouldReturnNotMatchedWithOneHash_WhenTrackingNumberIsOver80Characters() {
+        // AC-002.1 (E2): a tracking number over 80 characters is not matched and costs one hash.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        String tooLong = fixture.trackingNumber + 'X'.repeat(81 - fixture.trackingNumber.length());
+
+        Test.startTest();
+        Integer hashesBefore = DeliveryAccessCode.hashesComputed;
+        RecipientDeliveryController.DeliveryResponse response =
+            RecipientDeliveryController.getDeliveryDetails(tooLong, POSTAL_CODE, fixture.code);
+        Integer hashWork = DeliveryAccessCode.hashesComputed - hashesBefore;
+        Test.stopTest();
+
+        Assert.areEqual(81, tooLong.length(), 'Fixture: 81 characters');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, response.outcome, 'Over 80 characters: not matched');
+        Assert.areEqual(RecipientAccess.NOT_MATCHED_MESSAGE, response.message, 'Over 80 characters: the shared message');
+        Assert.areEqual(1, hashWork, 'An over-long tracking number costs the same hash work as a success');
     }
 
     @IsTest
@@ -308,6 +361,36 @@ private with sharing class RecipientAccessTest {
         Assert.areEqual(4, afterFour, 'Both methods must count toward the same guard');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_NOT_MATCHED, fifth.outcome, 'A failed reschedule is returned as not matched');
         Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'The fifth failure must lock the shipment');
+    }
+
+    @IsTest
+    static void shouldRefuseRescheduleWithoutVerifyingOrWriting_WhenSixthAttemptHasRightValues() {
+        // AC-002.1b: after 5 failures, a reschedule with the right values and a date inside the
+        // window gets the lock message, makes no verification and does not change the shipment.
+        RecipientDeliveryController.todayOverride = TODAY_IN_MEXICO;
+        Fixture fixture = insertShipment(POSTAL_CODE);
+        TestDataFactory.updateAsSystem(new List<Shipment__c>{
+            new Shipment__c(Id = fixture.shipmentId, Status__c = 'In transit')
+        });
+        Shipment__c before = rescheduleFieldsOf(fixture.shipmentId);
+
+        Test.startTest();
+        for (Integer attempt = 0; attempt < MAX_FAILURES; attempt++) {
+            reschedule(fixture, wrongCode(fixture.code));
+        }
+        Integer hashesBefore = DeliveryAccessCode.hashesComputed;
+        RecipientDeliveryController.DeliveryResponse sixth = reschedule(fixture, fixture.code);
+        Integer hashWork = DeliveryAccessCode.hashesComputed - hashesBefore;
+        Test.stopTest();
+
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_LOCKED, sixth.outcome, 'A locked shipment must refuse the reschedule');
+        Assert.areEqual(RecipientAccess.LOCKED_MESSAGE, sixth.message, 'The lock message');
+        Assert.isNull(sixth.details, 'A locked shipment returns no details');
+        Assert.areEqual(0, hashWork, 'No verification is made while locked');
+        Shipment__c after = rescheduleFieldsOf(fixture.shipmentId);
+        Assert.areEqual(before.Estimated_Delivery__c, after.Estimated_Delivery__c, 'The date must not change');
+        Assert.areEqual(before.Delivery_Instructions__c, after.Delivery_Instructions__c, 'The instructions must not change');
+        Assert.areEqual(before.Reschedule_Count__c, after.Reschedule_Count__c, 'The count must not change');
     }
 
     @IsTest
@@ -466,11 +549,11 @@ private with sharing class RecipientAccessTest {
     @IsTest
     static void shouldDeclareSharingAndJustification_WhenClassesAreDeployed() {
         // AC-002.7 (P11): RecipientAccess is without sharing with a SECURITY-JUSTIFICATION;
-        // RecipientDeliveryController and RecipientDeliveryDetails are with sharing.
+        // RecipientDeliveryController, ProofOfDeliveryService and RecipientDeliveryDetails are with sharing.
         Map<String, String> bodies = new Map<String, String>();
         for (ApexClass apexClass : [
             SELECT Name, Body FROM ApexClass
-            WHERE Name IN ('RecipientAccess', 'RecipientDeliveryController', 'RecipientDeliveryDetails')
+            WHERE Name IN ('RecipientAccess', 'RecipientDeliveryController', 'ProofOfDeliveryService', 'RecipientDeliveryDetails')
             WITH SYSTEM_MODE
         ]) {
             bodies.put(apexClass.Name, apexClass.Body);
@@ -482,6 +565,8 @@ private with sharing class RecipientAccessTest {
             'RecipientAccess must carry a SECURITY-JUSTIFICATION comment');
         Assert.isTrue(bodies.get('RecipientDeliveryController').contains('public with sharing class RecipientDeliveryController'),
             'The controller must be with sharing');
+        Assert.isTrue(bodies.get('ProofOfDeliveryService').contains('public with sharing class ProofOfDeliveryService'),
+            'ProofOfDeliveryService must be with sharing');
         Assert.isTrue(bodies.get('RecipientDeliveryDetails').contains('public with sharing class RecipientDeliveryDetails'),
             'The DTO must be with sharing');
     }

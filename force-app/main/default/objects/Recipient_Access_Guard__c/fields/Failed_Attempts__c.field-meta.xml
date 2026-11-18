@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Failed_Attempts__c</fullName>
     <label>Failed Attempts</label>
-    <description>Consecutive failed verifications with the right postal code and a wrong access code; reset by a success and when the shipment is locked.</description>
+    <description>Consecutive failed verifications with the right postal code and a wrong access code; reset by a success; the fifth failure locks the shipment and the counter stays at 5 while it is locked.</description>
     <inlineHelpText>Consecutive failed access attempts since the last success or lock.</inlineHelpText>
     <type>Number</type>
     <precision>2</precision>
