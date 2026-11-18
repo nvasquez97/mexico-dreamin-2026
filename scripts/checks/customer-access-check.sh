@@ -7,12 +7,17 @@
 # Exits non-zero unless:
 #   1. the profile "RutaCargo Customer" exists once, is custom, has the
 #      Customer Community license and grants neither View All Data, Modify All
-#      Data nor View All Users;
+#      Data nor View All Users; it enables no user permission beyond
+#      LICENSE_DEFAULT_USER_PERMISSIONS (the profile file revokes every one the
+#      license would add) and never API Enabled; and it has no tab setting
+#      beyond LICENSE_DEFAULT_TABS and no DefaultOn tab (the file hides them);
 #   2. the profile has no object permission beyond the license defaults
 #      (LICENSE_DEFAULT_OBJECTS, empty: the profile file revokes every object
 #      the license would add), none on Account, Contact or Shipment__c, no View
-#      All or Modify All on any object, and no field permission on Shipment__c
-#      or on the internal Account fields Credit_Limit__c and Credit_Risk__c;
+#      All or Modify All on any object, no field permission on Shipment__c or
+#      on the internal Account fields Credit_Limit__c and Credit_Risk__c, and
+#      no field permission at all beyond LICENSE_DEFAULT_FIELDS (the profile
+#      file revokes every field the license would add);
 #   3. the permission set RutaCargo_Customer exists once and grants no object
 #      permission and no field permission (REQ-006/007 add Shipment__c access
 #      together with the sharing set), nor View All Data, Modify All Data or
@@ -22,8 +27,8 @@
 #      self-registration profile, and no default self-registration account
 #      (no NetworkSelfRegistration row): a user can be created only by code
 #      that names the account;
-#   5. every guest default record owner of the sites RutaCargo and RutaCargo1
-#      (Site.GuestRecordDefaultOwnerId) is set and has the role
+#   5. both sites RutaCargo and RutaCargo1 exist and the guest default record
+#      owner of each (Site.GuestRecordDefaultOwnerId) is set and has the role
 #      RutaCargo_Customer_Owner (an account that owns external users must be
 #      owned by a user with a role);
 #   6. the profile's password policy (ProfilePasswordPolicy, retrieved: SOQL
@@ -57,9 +62,28 @@ CUSTOMER_PERMSET='RutaCargo_Customer'
 OWNER_ROLE='RutaCargo_Customer_Owner'
 NETWORK_NAME='RutaCargo'
 SITE_NAMES="'RutaCargo','RutaCargo1'"
+EXPECTED_SITES='RutaCargo RutaCargo1'
 # Object permissions the platform keeps on the profile although its file does
 # not grant them. Empty: any object permission row is a violation.
 LICENSE_DEFAULT_OBJECTS=''
+# User permissions (API names without the "Permissions" prefix), field
+# permissions (FieldPermissions.Field) and tab settings the platform keeps on
+# the profile although its file revokes every other license default. Anything
+# else enabled, any other field permission row and any tab setting row is a
+# violation.
+#   EnableNotifications ("Send Outbound Messages"): the deploy refuses to turn
+#     it off ("You may not turn off permission Send Outbound Messages for this
+#     License Type"); the profile file declares it enabled.
+#   Event.LocationId: the Metadata API has no such field ("no CustomField named
+#     Event.LocationId found"), so the file cannot revoke it; Event has no
+#     object permission on the profile.
+#   ContactPointTypeConsent: a FieldPermissions row on ContactPointConsent with
+#     no Object.Field name; the Metadata API refuses the name ("Need to specify
+#     full name") and the describe has no such field; ContactPointConsent has
+#     no object permission on the profile.
+LICENSE_DEFAULT_USER_PERMISSIONS='EnableNotifications'
+LICENSE_DEFAULT_FIELDS='ContactPointTypeConsent Event.LocationId'
+LICENSE_DEFAULT_TABS=''
 # Objects and fields a customer must never reach through the profile or the
 # permission set in this requirement.
 SENSITIVE_OBJECTS='Account Contact Shipment__c'
@@ -104,6 +128,12 @@ query() {
     ROWS="$(jq -c '.result.records' <<<"$out")"
 }
 
+# Prints the lines of $1 (newline-separated) that are not in the allow-list $2
+# (space- or comma-separated).
+beyond() {
+    comm -23 <(printf '%s\n' "$1" | grep -v '^$' | sort -u || true) <(tr ' ,' '\n\n' <<<"$2" | grep -v '^$' | sort -u || true)
+}
+
 # ─── 1. The customer profile ────────────────────────────────────────────────
 query "SELECT Id, Name, UserLicense.Name FROM Profile WHERE Name = '$CUSTOMER_PROFILE'"; profile="$ROWS"
 if [[ "$(jq 'length' <<<"$profile")" -ne 1 ]]; then
@@ -127,6 +157,44 @@ else
         pass "profile $CUSTOMER_PROFILE has no View All Data, Modify All Data or View All Users"
     else
         fail "profile $CUSTOMER_PROFILE grants View All Data, Modify All Data or View All Users: $(jq -c '.[0] | del(.attributes)' <<<"$pset")"
+    fi
+    # Every user permission of the profile: the Permissions* fields of its
+    # permission set, read from the describe and validated before the query.
+    describe="$(sf sobject describe --sobject PermissionSet --target-org "$ORG" --json 2>/dev/null || true)"
+    if [[ "$(jq -r '.status // 1' <<<"$describe" 2>/dev/null)" != "0" ]]; then
+        echo "ERROR: describe of PermissionSet failed" >&2
+        exit 3
+    fi
+    perm_fields="$(jq -r '[.result.fields[].name | select(startswith("Permissions"))] | join(",")' <<<"$describe")"
+    [[ "$perm_fields" =~ ^Permissions[A-Za-z0-9_]+(,Permissions[A-Za-z0-9_]+)*$ ]] || { echo "ERROR: unexpected PermissionSet permission fields" >&2; exit 3; }
+    [[ ",$perm_fields," == *",PermissionsApiEnabled,"* ]] || { echo "ERROR: PermissionSet has no PermissionsApiEnabled field" >&2; exit 3; }
+    query "SELECT $perm_fields FROM PermissionSet WHERE Profile.Name = '$CUSTOMER_PROFILE'"; user_perms="$ROWS"
+    [[ "$(jq 'length' <<<"$user_perms")" -eq 1 ]] || { echo "ERROR: expected one permission set for the profile" >&2; exit 3; }
+    enabled="$(jq -r '.[0] | to_entries[] | select(.value == true) | .key | sub("^Permissions"; "")' <<<"$user_perms")"
+    extra="$(beyond "$enabled" "$LICENSE_DEFAULT_USER_PERMISSIONS")"
+    if [[ -z "$extra" ]]; then
+        pass "profile $CUSTOMER_PROFILE: no user permission beyond the license defaults ($(grep -c . <<<"$enabled" || true) enabled)"
+    else
+        fail "profile $CUSTOMER_PROFILE: user permissions beyond the license defaults: $(tr '\n' ' ' <<<"$extra")"
+    fi
+    if jq -e '.[0].PermissionsApiEnabled == false' <<<"$user_perms" >/dev/null; then
+        pass "profile $CUSTOMER_PROFILE: API Enabled is off"
+    else
+        fail "profile $CUSTOMER_PROFILE: API Enabled is on"
+    fi
+    # Tab settings: a hidden tab has no row; DefaultOn is never allowed.
+    query "SELECT Name, Visibility FROM PermissionSetTabSetting WHERE Parent.Profile.Name = '$CUSTOMER_PROFILE'"; tabs="$ROWS"
+    extra="$(beyond "$(jq -r '.[].Name' <<<"$tabs")" "$LICENSE_DEFAULT_TABS")"
+    if [[ -z "$extra" ]]; then
+        pass "profile $CUSTOMER_PROFILE: no tab setting beyond the license defaults ($(jq 'length' <<<"$tabs") row(s))"
+    else
+        fail "profile $CUSTOMER_PROFILE: $(grep -c . <<<"$extra") tab setting(s) beyond the license defaults, e.g. $(head -5 <<<"$extra" | tr '\n' ' ')"
+    fi
+    on_tabs="$(jq -r '[.[] | select(.Visibility == "DefaultOn")] | length' <<<"$tabs")"
+    if [[ "$on_tabs" -eq 0 ]]; then
+        pass "profile $CUSTOMER_PROFILE: no DefaultOn tab"
+    else
+        fail "profile $CUSTOMER_PROFILE: $on_tabs DefaultOn tab(s)"
     fi
 fi
 
@@ -167,6 +235,13 @@ check_grants() {
 # ─── 2. No object or field permission on the profile ───────────────────────
 if [[ -n "$profile_id" ]]; then
     check_grants "profile $CUSTOMER_PROFILE" "Parent.Profile.Name = '$CUSTOMER_PROFILE'" "$LICENSE_DEFAULT_OBJECTS"
+    query "SELECT Field FROM FieldPermissions WHERE Parent.Profile.Name = '$CUSTOMER_PROFILE'"; profile_fields="$ROWS"
+    extra="$(beyond "$(jq -r '.[].Field' <<<"$profile_fields")" "$LICENSE_DEFAULT_FIELDS")"
+    if [[ -z "$extra" ]]; then
+        pass "profile $CUSTOMER_PROFILE: no field permission beyond the license defaults ($(jq 'length' <<<"$profile_fields") row(s))"
+    else
+        fail "profile $CUSTOMER_PROFILE: $(grep -c . <<<"$extra") field permission(s) beyond the license defaults, e.g. $(head -5 <<<"$extra" | tr '\n' ' ')"
+    fi
 fi
 
 # ─── 3. The actor permission set grants nothing yet ────────────────────────
@@ -221,9 +296,11 @@ fi
 
 # ─── 5. The guest default record owner has the owner role ──────────────────
 query "SELECT Name, GuestRecordDefaultOwnerId FROM Site WHERE Name IN ($SITE_NAMES)"; sites="$ROWS"
-if [[ "$(jq 'length' <<<"$sites")" -eq 0 ]]; then
-    fail "sites $SITE_NAMES not found"
-else
+missing_sites="$(beyond "$(tr ' ' '\n' <<<"$EXPECTED_SITES")" "$(jq -r '[.[].Name] | join(" ")' <<<"$sites")")"
+if [[ -n "$missing_sites" ]]; then
+    fail "site(s) not found: $(tr '\n' ' ' <<<"$missing_sites")"
+fi
+if [[ "$(jq 'length' <<<"$sites")" -gt 0 ]]; then
     while IFS=$'\t' read -r site_name owner_id; do
         if [[ ! "$owner_id" =~ ^005[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
             fail "site $site_name has no guest default record owner"
