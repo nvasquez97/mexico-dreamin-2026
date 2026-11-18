@@ -160,3 +160,9 @@
 - What: (Correction: REQ-002+003 is archived as odd/tasks/archive/2026-11-17-req-002-003-recipient-delivery.md.) REQ-005 T1 1938f82 fixed in 25b3df5 (customer profile revokes 709 license-default field permissions, 21 user permissions, all 287 tabs; allow-lists: 2 fields, EnableNotifications); T1 open item EXP-001 → T3 live negative self-registration test (F9). T2 d609edc ticked with batched Close items and F11 (sign-up does not prove email ownership: owner decision, Hardening). Customer Community licenses: 2/5 used (Ana, Marta).
 - Why / evidence: odd/tasks/req-005-customer-signup.md task lines, F9-F11.
 - Next: T3 review; REQ-005 Close (batched items: password passed to Site not asserted, one-input reset case, nickname from the email local part, inner-class sharing keywords); REQ-006+007.
+
+## 2026-11-18 04:40 — Owner live sign-up works; owner asked for a session restart
+- Type: verification
+- What: The owner's "accountId parameter value is not valid" came from a cached old standard selfRegister page; on the published new page (/rutacargo/SelfRegister, rcSignUp) the owner's sign-up worked. T4's reproduction sign-up (t4-repro-…@example.com, Account "T4 Prueba SA", 03:26:52Z) also succeeded. Customer Community licenses about 4/5 used (Ana, Marta, t4-repro, the owner's test user): no more live sign-ups. T3 ticked (6482a72). Owner asked to stop after the running agents finish and restart with fresh context.
+- Why / evidence: owner message in the session; org query of RutaCargo Customer users.
+- Next: T4 worker wraps up (allow-list of known messages in rcSignUp, evidence); then a new session resumes at T4 review.
