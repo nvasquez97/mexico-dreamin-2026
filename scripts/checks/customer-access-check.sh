@@ -26,7 +26,9 @@
 #      (NetworkMemberGroup), self-registration on, the profile as its
 #      self-registration profile, and no default self-registration account
 #      (no NetworkSelfRegistration row): a user can be created only by code
-#      that names the account;
+#      that names the account; and direct messages off
+#      (OptionsDirectMessagesEnabled false: no requirement asks for messaging,
+#      sf-security-auditor SEC-002, X11);
 #   5. both sites RutaCargo and RutaCargo1 exist and the guest default record
 #      owner of each (Site.GuestRecordDefaultOwnerId) is set and has the role
 #      RutaCargo_Customer_Owner (an account that owns external users must be
@@ -41,9 +43,21 @@
 #      classes enabled in the org for the guest profile "RutaCargo Profile" and
 #      every permission set assigned to its users are exactly that list: the
 #      system-mode helper CustomerRegistration and the CustomerPermissionAssigner
-#      job are never guest entry points.
+#      job are never guest entry points;
+#   8. (source, AC-005.7) in force-app/main/default/classes: the guest
+#      controllers CustomerSignUpController and CustomerLoginController are
+#      declared `with sharing` and never say `without sharing`; the system-mode
+#      helpers CustomerRegistration and CustomerPermissionAssigner are declared
+#      `without sharing` right below a `// SECURITY-JUSTIFICATION:` comment
+#      block that ends with "(<approver>, <YYYY-MM-DD>)", and build no dynamic
+#      query (binds only); every class, inner ones included, of the six
+#      req-005 classes declares a sharing keyword (P11); only the files in
+#      REGISTRATION_CALLERS name CustomerRegistration and only those in
+#      ASSIGNER_CALLERS name CustomerPermissionAssigner (Apex classes and
+#      triggers), and no LWC or Aura component imports either.
 #
-# A failed query or retrieve stops the check with exit code 3; violations exit 1.
+# A failed query, retrieve or source scan stops the check with exit code 3;
+# violations exit 1.
 #
 # Usage: scripts/checks/customer-access-check.sh <org-alias>
 set -uo pipefail
@@ -92,6 +106,14 @@ SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
 GUEST_PROFILE='RutaCargo Profile'
 EXPECTED_GUEST_CLASSES='CustomerLoginController,CustomerSignUpController,PublicTrackingController,RecipientDeliveryController'
 GUEST_CHECK="$REPO_ROOT/scripts/checks/guest-access-check.sh"
+# Source check (section 8).
+SOURCE_ROOT="$REPO_ROOT/force-app/main/default"
+WITH_SHARING_CLASSES='CustomerSignUpController CustomerLoginController'
+WITHOUT_SHARING_CLASSES='CustomerRegistration CustomerPermissionAssigner'
+KEYWORD_CLASSES='CustomerSignUpController CustomerLoginController CustomerRegistration CustomerPermissionAssigner CustomerSignUpControllerTest CustomerLoginControllerTest'
+# CustomerPermissionAssigner reads only the constant CUSTOMER_PROFILE_NAME.
+REGISTRATION_CALLERS='CustomerRegistration.cls CustomerSignUpController.cls CustomerLoginController.cls CustomerPermissionAssigner.cls CustomerSignUpControllerTest.cls CustomerLoginControllerTest.cls'
+ASSIGNER_CALLERS='CustomerPermissionAssigner.cls CustomerRegistration.cls CustomerSignUpControllerTest.cls'
 # Expected password policy (S1).
 EXPECTED_POLICY='minimumPasswordLength=10
 passwordComplexity=1
@@ -264,7 +286,7 @@ else
 fi
 
 # ─── 4. Network membership and self-registration ───────────────────────────
-query "SELECT Id, OptionsSelfRegistrationEnabled, SelfRegProfileId FROM Network WHERE Name = '$NETWORK_NAME'"; network="$ROWS"
+query "SELECT Id, OptionsSelfRegistrationEnabled, SelfRegProfileId, OptionsDirectMessagesEnabled FROM Network WHERE Name = '$NETWORK_NAME'"; network="$ROWS"
 if [[ "$(jq 'length' <<<"$network")" -ne 1 ]]; then
     fail "Network $NETWORK_NAME not found"
 else
@@ -291,6 +313,11 @@ else
         pass "Network $NETWORK_NAME has no default self-registration account"
     else
         fail "Network $NETWORK_NAME has a default self-registration account: $(jq -r '[.[].AccountId] | join(" ")' <<<"$default_account")"
+    fi
+    if [[ "$(jq -r '.[0].OptionsDirectMessagesEnabled' <<<"$network")" == "false" ]]; then
+        pass "Network $NETWORK_NAME has direct messages off"
+    else
+        fail "Network $NETWORK_NAME has direct messages on (OptionsDirectMessagesEnabled $(jq -r '.[0].OptionsDirectMessagesEnabled' <<<"$network")), expected false"
     fi
 fi
 
@@ -374,6 +401,98 @@ if [[ "$org_classes" == "$EXPECTED_GUEST_CLASSES" ]]; then
     pass "the guest profile $GUEST_PROFILE enables exactly the Apex classes $EXPECTED_GUEST_CLASSES"
 else
     fail "the guest profile $GUEST_PROFILE enables the Apex classes '${org_classes:-none}', expected $EXPECTED_GUEST_CLASSES"
+fi
+
+# ─── 8. Sharing keywords and callers of the system-mode helpers (source) ───
+classes_dir="$SOURCE_ROOT/classes"
+[[ -d "$classes_dir" ]] || { echo "ERROR: no Apex classes directory $classes_dir" >&2; exit 3; }
+# Prints the code lines of an Apex file: comment lines (//, /*, *) removed.
+code_lines() {
+    grep -vE '^[[:space:]]*(//|/\*|\*)' "$1" || true
+}
+for name in $WITH_SHARING_CLASSES $WITHOUT_SHARING_CLASSES $KEYWORD_CLASSES; do
+    [[ -f "$classes_dir/$name.cls" ]] || { echo "ERROR: $classes_dir/$name.cls is missing" >&2; exit 3; }
+done
+for name in $WITH_SHARING_CLASSES; do
+    file="$classes_dir/$name.cls"
+    declared="$(code_lines "$file" | grep -cE "^public[[:space:]]+with[[:space:]]+sharing[[:space:]]+class[[:space:]]+$name([[:space:]{]|$)" || true)"
+    without="$(code_lines "$file" | grep -cE '(^|[[:space:]])without[[:space:]]+sharing([[:space:]]|$)' || true)"
+    if [[ "$declared" -eq 1 && "$without" -eq 0 ]]; then
+        pass "$name is declared with sharing and has no without sharing class"
+    else
+        fail "$name: expected one 'public with sharing class $name' and no 'without sharing' (found $declared declaration(s), $without without sharing)"
+    fi
+done
+for name in $WITHOUT_SHARING_CLASSES; do
+    file="$classes_dir/$name.cls"
+    line="$(grep -nE "^public[[:space:]]+without[[:space:]]+sharing[[:space:]]+class[[:space:]]+$name([[:space:]{]|$)" "$file" | cut -d: -f1 || true)"
+    if [[ -z "$line" || "$line" == *$'\n'* ]]; then
+        fail "$name: expected one 'public without sharing class $name' declaration"
+        continue
+    fi
+    # The // comment block right above the declaration.
+    block="$(head -n "$((line - 1))" "$file" | awk '{ lines[NR] = $0 } END { for (i = NR; i >= 1 && lines[i] ~ /^[[:space:]]*\/\//; i--) start = i; if (start) for (i = start; i <= NR; i++) print lines[i] }')"
+    if grep -q '^// SECURITY-JUSTIFICATION: ' <<<"$block" \
+        && grep -qE '\([^()]+, [0-9]{4}-[0-9]{2}-[0-9]{2}\)[[:space:]]*$' <<<"$block"; then
+        pass "$name is without sharing right below its SECURITY-JUSTIFICATION comment (approver and date)"
+    else
+        fail "$name is without sharing with no SECURITY-JUSTIFICATION comment block (with approver and date) right above its declaration"
+    fi
+    dynamic="$(code_lines "$file" | grep -cE 'Database\.(query|countQuery|queryWithBinds|getQueryLocator)|Search\.query' || true)"
+    if [[ "$dynamic" -eq 0 ]]; then
+        pass "$name builds no dynamic SOQL or SOSL (binds only)"
+    else
+        fail "$name has $dynamic dynamic SOQL or SOSL call(s)"
+    fi
+done
+for name in $KEYWORD_CLASSES; do
+    missing="$(code_lines "$classes_dir/$name.cls" | grep -E '(^|[[:space:]])class[[:space:]]+[A-Za-z_]' | grep -vE '(with|without|inherited)[[:space:]]+sharing[[:space:]]+class[[:space:]]' | sed -E 's/^[[:space:]]+//; s/[[:space:]]*\{.*$//' || true)"
+    if [[ -z "$missing" ]]; then
+        pass "every class in $name.cls declares a sharing keyword"
+    else
+        fail "$name.cls: class(es) without a sharing keyword: $(paste -sd ';' - <<<"$missing")"
+    fi
+done
+# Names a class (whole word) in the Apex source: every .cls and .trigger file;
+# grep exits 1 when nothing matches and 2 on an error, which stops the check.
+apex_files_naming() {
+    local dirs=("$classes_dir") out status=0
+    [[ -d "$SOURCE_ROOT/triggers" ]] && dirs+=("$SOURCE_ROOT/triggers")
+    out="$(grep -rlw --include='*.cls' --include='*.trigger' -- "$1" "${dirs[@]}" 2>&1)" || status=$?
+    if [[ "$status" -gt 1 ]]; then
+        echo "ERROR: could not scan the Apex source for $1: $out" >&2
+        exit 3
+    fi
+    sed '/^$/d; s#.*/##' <<<"$out" | sort -u
+}
+for pair in "CustomerRegistration:$REGISTRATION_CALLERS" "CustomerPermissionAssigner:$ASSIGNER_CALLERS"; do
+    helper="${pair%%:*}"
+    allowed="${pair#*:}"
+    files="$(apex_files_naming "$helper")" || exit 3
+    others="$(comm -23 <(printf '%s\n' "$files" | sed '/^$/d') <(tr ' ' '\n' <<<"$allowed" | sort -u) | paste -sd ',' -)"
+    if [[ -z "$others" ]]; then
+        pass "only $(tr ' ' ',' <<<"$allowed") name $helper in the Apex source"
+    else
+        fail "Apex source outside the allow-list names the without-sharing $helper: $others"
+    fi
+done
+ui_imports=''
+ui_status=0
+ui_dirs=()
+for dir in lwc aura; do
+    [[ -d "$SOURCE_ROOT/$dir" ]] && ui_dirs+=("$SOURCE_ROOT/$dir")
+done
+if [[ "${#ui_dirs[@]}" -gt 0 ]]; then
+    ui_imports="$(grep -rlE '(@salesforce/apex/|c\.)(CustomerRegistration|CustomerPermissionAssigner)\.' "${ui_dirs[@]}" 2>&1)" || ui_status=$?
+    if [[ "$ui_status" -gt 1 ]]; then
+        echo "ERROR: could not scan the LWC and Aura source: $ui_imports" >&2
+        exit 3
+    fi
+fi
+if [[ -z "$ui_imports" ]]; then
+    pass "no LWC or Aura component imports CustomerRegistration or CustomerPermissionAssigner"
+else
+    fail "LWC or Aura source imports a without-sharing helper: $(sed 's#.*/force-app/#force-app/#' <<<"$ui_imports" | paste -sd ',' -)"
 fi
 
 finish

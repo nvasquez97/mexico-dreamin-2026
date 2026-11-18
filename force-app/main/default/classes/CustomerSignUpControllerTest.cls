@@ -10,9 +10,13 @@
  *              (3 free Customer Community seats, F7).
  */
 @IsTest
-private class CustomerSignUpControllerTest {
+private with sharing class CustomerSignUpControllerTest {
 
+    // Test values of the password rule (AC-005.4), not credentials.
     private static final String VALID_PASS = 'abcd12345X';
+    // Mixed case, inner and outer spaces: a lower-cased, trimmed or hard-coded
+    // password reaching the platform turns the password tests red.
+    private static final String OTHER_VALID_PASS = '  Zx9 Clave 7Q  ';
     private static final String BUSINESS_NAME = 'Ferretería Norte SA';
     private static final String TYPED_EMAIL = ' Luis.Garza@Example.com ';
     private static final String NORMALIZED_EMAIL = 'luis.garza@example.com';
@@ -23,8 +27,10 @@ private class CustomerSignUpControllerTest {
     private static Integer lastEnqueuedJobs = 0;
 
     /** @description The seam: records what the server passes to the platform. */
-    private class FakeSite implements CustomerRegistration.SiteGateway {
+    private inherited sharing class FakeSite implements CustomerRegistration.SiteGateway {
         List<User> createdUsers = new List<User>();
+        List<String> validatedPasswords = new List<String>();
+        List<String> createdPasswords = new List<String>();
         List<Id> accountIds = new List<Id>();
         Boolean rejectPolicy = false;
         Boolean failCreate = false;
@@ -33,6 +39,7 @@ private class CustomerSignUpControllerTest {
         Id userIdToReturn;
 
         public void validatePassword(User newUser, String pass) {
+            validatedPasswords.add(pass);
             if (rejectPolicy) {
                 throw new CustomerRegistration.RegistrationException('Policy rejected the test value.');
             }
@@ -44,12 +51,13 @@ private class CustomerSignUpControllerTest {
             }
             createdUsers.add(newUser);
             accountIds.add(accountId);
+            createdPasswords.add(pass);
             return returnNoUser ? null : userIdToReturn;
         }
     }
 
     /** @description The sign-up form, valid for a Business unless a test overrides a field. */
-    private class SignUpForm {
+    private inherited sharing class SignUpForm {
         String customerType = 'Business';
         String accountName = BUSINESS_NAME;
         String firstName = 'Luis';
@@ -248,6 +256,30 @@ private class CustomerSignUpControllerTest {
         assertRejected(form, 'phone', CustomerSignUpController.MESSAGE_PHONE);
     }
 
+    @IsTest
+    static void signUp_nullCustomerType_isRejected() {
+        // AC-005.1: the guest calls the @AuraEnabled method directly with no customer type
+        SignUpForm form = new SignUpForm();
+        form.customerType = null;
+        assertRejected(form, 'customerType', CustomerSignUpController.MESSAGE_CUSTOMER_TYPE);
+    }
+
+    @IsTest
+    static void signUp_nullPassword_isRejected() {
+        // AC-005.4: the guest calls the @AuraEnabled method directly with no password
+        SignUpForm form = new SignUpForm();
+        form.pass = null;
+        assertRejected(form, 'password', CustomerSignUpController.MESSAGE_PASS_RULES);
+    }
+
+    @IsTest
+    static void signUp_nullConfirmPassword_isRejected() {
+        // AC-005.4: the guest calls the @AuraEnabled method directly with no confirmation
+        SignUpForm form = new SignUpForm();
+        form.confirmation = null;
+        assertRejected(form, 'confirmPassword', CustomerSignUpController.MESSAGE_CONFIRMATION);
+    }
+
     // ─── AC-005.2: records and user built on the server ───────────────────
 
     @IsTest
@@ -347,9 +379,25 @@ private class CustomerSignUpControllerTest {
         assertCreated(submitAsGuest(second));
         String firstNickname = fake.createdUsers[0].CommunityNickname;
         String secondNickname = fake.createdUsers[1].CommunityNickname;
-        Assert.isTrue(firstNickname.startsWith('ana-'), 'Nickname = local part + "-": ' + firstNickname);
-        Assert.areEqual(10, firstNickname.length(), 'Local part + "-" + 6 characters: ' + firstNickname);
         Assert.areNotEqual(firstNickname, secondNickname, 'Nicknames differ for the same local part');
+    }
+
+    @IsTest
+    static void signUp_nickname_neverContainsTheEmailLocalPart() {
+        // AC-005.2 (F11): the site displays nicknames, so the nickname is random, not the email's local part
+        FakeSite fake = installFakeSite();
+        SignUpForm first = new SignUpForm();
+        first.email = 'ana@x.com';
+        SignUpForm second = new SignUpForm();
+        assertCreated(submitAsGuest(first));
+        assertCreated(submitAsGuest(second));
+        assertRandomNickname(fake.createdUsers[0].CommunityNickname, 'ana');
+        assertRandomNickname(fake.createdUsers[1].CommunityNickname, 'luis.garza');
+    }
+
+    private static void assertRandomNickname(String nickname, String localPart) {
+        Assert.isTrue(Pattern.matches('customer-[0-9a-f]{12}', nickname), 'Nickname = "customer-" + 12 random hex characters: ' + nickname);
+        Assert.isFalse(nickname.containsIgnoreCase(localPart), 'The email local part "' + localPart + '" is not in the nickname: ' + nickname);
     }
 
     @IsTest
@@ -521,10 +569,42 @@ private class CustomerSignUpControllerTest {
 
     @IsTest
     static void signUp_passwordOfTenWithLettersAndDigits_isAccepted() {
-        // AC-005.4: "abcd12345X" is accepted and reaches createExternalUser unchanged
+        // AC-005.4: "abcd12345X" is accepted and reaches the platform unchanged
+        assertPasswordReachesPlatformUnchanged(VALID_PASS);
+    }
+
+    @IsTest
+    static void signUp_passwordWithSpacesAndMixedCase_reachesPlatformUnchanged() {
+        // AC-005.4: a second accepted password (spaces, mixed case) reaches the platform unchanged
+        assertPasswordReachesPlatformUnchanged(OTHER_VALID_PASS);
+    }
+
+    @IsTest
+    static void signUp_passwordOf128Characters_isAccepted() {
+        // AC-005.1: a password at its maximum length (128) is accepted
+        assertPasswordReachesPlatformUnchanged('a'.repeat(127) + '9');
+    }
+
+    @IsTest
+    static void signUp_passwordOf129Characters_isRejected() {
+        // AC-005.1: a password longer than its maximum (129) is rejected
+        SignUpForm form = new SignUpForm();
+        form.pass = 'a'.repeat(128) + '9';
+        form.confirmation = form.pass;
+        assertRejected(form, 'password', CustomerSignUpController.MESSAGE_PASS_RULES);
+    }
+
+    /** @description Signs up with the password and checks both seam calls got exactly it (case-sensitive). */
+    private static void assertPasswordReachesPlatformUnchanged(String typed) {
         FakeSite fake = installFakeSite();
-        assertCreated(submitAsGuest(new SignUpForm()));
-        Assert.areEqual(1, fake.createdUsers.size(), 'The user is created');
+        SignUpForm form = new SignUpForm();
+        form.pass = typed;
+        form.confirmation = typed;
+        assertCreated(submitAsGuest(form));
+        Assert.areEqual(1, fake.validatedPasswords.size(), 'Site.validatePassword is called once');
+        Assert.areEqual(1, fake.createdPasswords.size(), 'Site.createExternalUser is called once');
+        Assert.isTrue(typed.equals(fake.validatedPasswords[0]), 'Site.validatePassword gets the typed password exactly');
+        Assert.isTrue(typed.equals(fake.createdPasswords[0]), 'Site.createExternalUser gets the typed password exactly');
     }
 
     @IsTest

@@ -1,3 +1,8 @@
+/**
+ * @jest-environment-options {"url": "https://rutacargo-test.my.site.com/rutacargo/login"}
+ */
+// The page runs on an https site origin (as the published site does), so the
+// redirect rule "same origin only" (F13, X4) can be tested.
 // Covers odd/tasks/req-005-customer-signup.md, the login form of S4 and
 // AC-005.9 (labels and errors as text only, the password never logged or
 // stored, one column below 768 px), with the client side of AC-005.5: the
@@ -44,8 +49,8 @@ const LOGIN_FAILED_MESSAGE = "Your email or password is incorrect.";
 const GENERIC_ERROR = "We could not log you in. Please try again later.";
 const MESSAGE_EMAIL = "Enter your email address.";
 const MESSAGE_PASSWORD = "Enter your password.";
-const REDIRECT_A =
-  "https://data-energy-2854-dev-ed.scratch.my.site.com/rutacargo/secur/frontdoor.jsp?sid=TOKEN_A";
+const SITE_ORIGIN = "https://rutacargo-test.my.site.com";
+const REDIRECT_A = `${SITE_ORIGIN}/rutacargo/secur/frontdoor.jsp?sid=TOKEN_A`;
 const REDIRECT_B = "/rutacargo/secur/frontdoor.jsp?sid=TOKEN_B";
 
 function render() {
@@ -181,10 +186,28 @@ describe("c-rc-login", () => {
   );
 
   it.each([
+    "/rutacargo/my-shipments",
+    "/rutacargo/request-shipment",
+    "/rutacargo/"
+  ])(
+    'AC-005.5 (F13): the site base path form "%s" of a listed page is sent for the server to map',
+    async (startUrl) => {
+      openPage(`?startURL=${encodeURIComponent(startUrl)}`);
+
+      await logIn(ANA);
+
+      expect(login).toHaveBeenCalledTimes(1);
+      expect(login.mock.calls[0][0].startUrl).toBe(startUrl);
+    }
+  );
+
+  it.each([
     "https://evil.example",
     "//evil.example",
     "/secur/frontdoor.jsp",
-    "/my-shipments/../admin"
+    "/my-shipments/../admin",
+    "/rutacargox/my-shipments",
+    "/rutacargo/secur/frontdoor.jsp"
   ])(
     'AC-005.5: the startURL "%s" outside the list is sent as "/"',
     async (startUrl) => {
@@ -209,6 +232,28 @@ describe("c-rc-login", () => {
         type: "standard__webPage",
         attributes: { url: redirectUrl }
       });
+    }
+  );
+
+  it("AC-005.5: the test page runs on the https site origin", () => {
+    expect(window.location.origin).toBe(SITE_ORIGIN);
+  });
+
+  it.each([
+    "https://evil.example/rutacargo/secur/frontdoor.jsp?sid=TOKEN_C",
+    "https://rutacargo-test.my.site.com.evil.example/rutacargo/secur/frontdoor.jsp",
+    "http://rutacargo-test.my.site.com/rutacargo/secur/frontdoor.jsp"
+  ])(
+    'AC-005.5 (X4): a redirect URL "%s" outside the site\'s own https origin is not opened',
+    async (redirectUrl) => {
+      login.mockResolvedValue({ success: true, redirectUrl, message: null });
+
+      const element = await logIn(ANA);
+
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(text(query(element, '[data-id="form-error"]'))).toBe(
+        GENERIC_ERROR
+      );
     }
   );
 

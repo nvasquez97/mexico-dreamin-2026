@@ -13,8 +13,18 @@ public with sharing class CustomerLoginController {
 
     public static final String LOGIN_FAILED_MESSAGE = 'Your email or password is incorrect.';
     public static final String DEFAULT_START_URL = '/';
-    // REQ-006/007 pages, listed before they exist (F6): until then they resolve to the site's 404.
-    private static final Set<String> START_URLS = new Set<String>{ '/', '/my-shipments', '/request-shipment' };
+    // The closed list of pages after login, each also in its site base path form
+    // (/rutacargo/...), mapped to the page passed to Site.login. REQ-006/007
+    // pages, listed before they exist (F6): until then they resolve to the site's 404.
+    private static final Map<String, String> START_URLS = new Map<String, String>{
+        '/' => '/',
+        '/my-shipments' => '/my-shipments',
+        '/request-shipment' => '/request-shipment',
+        '/rutacargo' => '/',
+        '/rutacargo/' => '/',
+        '/rutacargo/my-shipments' => '/my-shipments',
+        '/rutacargo/request-shipment' => '/request-shipment'
+    };
 
     /**
      * @description The platform calls of login and reset. Tests replace it
@@ -43,7 +53,7 @@ public with sharing class CustomerLoginController {
     private static SiteAuthGateway gateway = new PlatformSiteAuthGateway();
 
     /** @description The answer of a login. */
-    public class LoginResult {
+    public inherited sharing class LoginResult {
         /** @description True when the platform logged the customer in. */
         @AuraEnabled public Boolean success;
         /** @description The URL to open after a successful login, or null. */
@@ -57,7 +67,8 @@ public with sharing class CustomerLoginController {
      * @param email the email (any case, trimmed on the server)
      * @param password the password
      * @param startUrl the requested page; only "/", "/my-shipments" and
-     *        "/request-shipment" are kept, anything else becomes "/"
+     *        "/request-shipment" (also with the site base path "/rutacargo")
+     *        are kept, anything else becomes "/"
      * @return the redirect URL, or the one failure message
      */
     @AuraEnabled
@@ -101,7 +112,7 @@ public with sharing class CustomerLoginController {
     }
 
     private static String safeStartUrl(String startUrl) {
-        return START_URLS.contains(startUrl) ? startUrl : DEFAULT_START_URL;
+        return START_URLS.containsKey(startUrl) ? START_URLS.get(startUrl) : DEFAULT_START_URL;
     }
 
     private static LoginResult loginResult(String redirectUrl) {

@@ -43,7 +43,7 @@ public with sharing class CustomerSignUpController {
     private static final Pattern HAS_DIGIT = Pattern.compile('.*[0-9].*');
 
     /** @description The answer of a sign-up. */
-    public class SignUpResult {
+    public inherited sharing class SignUpResult {
         /** @description True when the customer was created. */
         @AuraEnabled public Boolean success;
         /** @description CREATED, INVALID, EMAIL_REGISTERED or FAILED. */

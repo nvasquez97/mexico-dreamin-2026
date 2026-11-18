@@ -29,8 +29,10 @@ public without sharing class CustomerRegistration {
     public static final String CUSTOMER_PROFILE_NAME = 'RutaCargo Customer';
 
     private static final Integer MAX_EMAIL_LENGTH = 80;
-    private static final Integer NICKNAME_PREFIX_LENGTH = 30;
-    private static final Integer NICKNAME_RANDOM_LENGTH = 6;
+    // The site displays nicknames (enableNicknameDisplay): a random one never
+    // shows the email. 12 hex characters (48 bits) keep it unique in practice.
+    private static final String NICKNAME_PREFIX = 'customer-';
+    private static final Integer NICKNAME_RANDOM_LENGTH = 12;
     private static final Integer ALIAS_LETTERS = 4;
     private static final Integer ALIAS_RANDOM_LENGTH = 4;
 
@@ -63,13 +65,13 @@ public without sharing class CustomerRegistration {
     private static SiteGateway gateway = new PlatformSiteGateway();
 
     /** @description A registration failure (and the seam's failures in tests). */
-    public class RegistrationException extends Exception {}
+    public inherited sharing class RegistrationException extends Exception {}
 
     /**
      * @description The validated sign-up values, built by CustomerSignUpController
      *              on the server from individual fields (never an SObject).
      */
-    public class Applicant {
+    public inherited sharing class Applicant {
         public String customerType;
         public String accountName;
         public String firstName;
@@ -198,7 +200,7 @@ public without sharing class CustomerRegistration {
             LastName = applicant.lastName,
             Email = applicant.email,
             Username = applicant.email + '.' + UserInfo.getOrganizationId().toLowerCase(),
-            CommunityNickname = localPart.left(NICKNAME_PREFIX_LENGTH) + '-' + randomCharacters(NICKNAME_RANDOM_LENGTH),
+            CommunityNickname = NICKNAME_PREFIX + randomCharacters(NICKNAME_RANDOM_LENGTH),
             Alias = localPart.replaceAll('[^a-z]', '').left(ALIAS_LETTERS) + randomCharacters(ALIAS_RANDOM_LENGTH),
             ProfileId = profileId,
             LanguageLocaleKey = 'en_US',

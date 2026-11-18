@@ -182,6 +182,25 @@ describe("c-rc-sign-up", () => {
       ]);
     });
 
+    it("AC-005.1 (F13): the name or legal name autocompletes as an organization and the contact names as given and family name", () => {
+      const element = render();
+
+      // [field, autocomplete] pairs, in form order.
+      const autocomplete = FIELDS.slice(1).map((field) => [
+        field,
+        query(element, `[data-field="${field}"]`).getAttribute("autocomplete")
+      ]);
+      expect(autocomplete).toEqual([
+        ["accountName", "organization"],
+        ["firstName", "given-name"],
+        ["lastName", "family-name"],
+        ["email", "email"],
+        ["phone", "tel"],
+        ["password", "new-password"],
+        ["confirmPassword", "new-password"]
+      ]);
+    });
+
     it("AC-005.1: asks for name or legal name, contact first and last name, email, phone, password and confirmation, each with a label", () => {
       const element = render();
 
@@ -446,6 +465,30 @@ describe("c-rc-sign-up", () => {
       }
     );
 
+    it("AC-005.1: a password longer than its maximum (129 characters) is rejected with the password message", async () => {
+      const password = `${"a".repeat(128)}9`;
+      expect(password.length).toBe(129);
+
+      const element = await signUpWith({
+        ...BUSINESS,
+        password,
+        confirmPassword: password
+      });
+
+      expect(errorOf(element, "password")).toBe(MESSAGE_PASS_RULES);
+      expect(signUp).not.toHaveBeenCalled();
+    });
+
+    it("AC-005.1: a password at its maximum (128 characters) is accepted and sent", async () => {
+      const password = `${"a".repeat(127)}9`;
+      expect(password.length).toBe(128);
+
+      await signUpWith({ ...BUSINESS, password, confirmPassword: password });
+
+      expect(signUp).toHaveBeenCalledTimes(1);
+      expect(signUp.mock.calls[0][0].password).toBe(password);
+    });
+
     it("AC-005.4: a confirmation that differs is rejected under the confirmation", async () => {
       const element = await signUpWith({
         ...BUSINESS,
@@ -481,6 +524,64 @@ describe("c-rc-sign-up", () => {
 
       expect(errorOf(element, "password")).toBe(MESSAGE_PASS_POLICY);
     });
+  });
+
+  describe("AC-005.10 (F14): the known messages are the Apex constants", () => {
+    // Every MESSAGE_* constant of CustomerSignUpController.cls, read from the
+    // source: the copy in this test and the component's allow-list must match it.
+    const APEX_SOURCE = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "classes",
+        "CustomerSignUpController.cls"
+      ),
+      "utf8"
+    );
+    const APEX_MESSAGES = Object.fromEntries(
+      Array.from(
+        APEX_SOURCE.matchAll(
+          /public static final String (MESSAGE_[A-Z_]+) = '((?:[^'\\]|\\.)*)';/g
+        ),
+        ([, name, value]) => [name, value.replace(/\\(.)/g, "$1")]
+      )
+    );
+    const TEST_COPY = {
+      MESSAGE_CREATED,
+      MESSAGE_CUSTOMER_TYPE,
+      MESSAGE_ACCOUNT_NAME,
+      MESSAGE_FIRST_NAME,
+      MESSAGE_LAST_NAME,
+      MESSAGE_EMAIL,
+      MESSAGE_PHONE,
+      MESSAGE_PASS_RULES,
+      MESSAGE_CONFIRMATION,
+      MESSAGE_PASS_POLICY,
+      MESSAGE_EMAIL_REGISTERED,
+      MESSAGE_FAILED
+    };
+
+    it("AC-005.10: the test's copy of the server messages equals the MESSAGE_* constants of CustomerSignUpController.cls", () => {
+      expect(Object.keys(APEX_MESSAGES).length).toBe(12);
+      expect(APEX_MESSAGES).toEqual(TEST_COPY);
+    });
+
+    it.each(Object.entries(APEX_MESSAGES))(
+      "AC-005.10: the component shows the Apex constant %s as it is (it is in the allow-list)",
+      async (name, apexMessage) => {
+        signUp.mockResolvedValue(
+          serverResult({ code: "FAILED", message: apexMessage })
+        );
+
+        const element = await signUpWith(BUSINESS);
+
+        expect(text(query(element, '[data-id="form-error"]'))).toBe(
+          apexMessage
+        );
+      }
+    );
   });
 
   describe("AC-005.10: only the server's known messages are shown", () => {

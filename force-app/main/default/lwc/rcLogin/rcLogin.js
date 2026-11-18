@@ -3,9 +3,16 @@ import { NavigationMixin } from "lightning/navigation";
 import login from "@salesforce/apex/CustomerLoginController.login";
 import BASE_PATH from "@salesforce/community/basePath";
 
-// The pages a customer may land on after login (CustomerLoginController, S3):
-// the server enforces the same closed list; anything else becomes "/".
-const START_URLS = ["/", "/my-shipments", "/request-shipment"];
+// The pages a customer may land on after login (CustomerLoginController, S3),
+// also in their site base path form (/rutacargo/my-shipments), which the
+// server maps to the listed page: the server enforces the same closed list;
+// anything else becomes "/".
+const PAGES = ["/", "/my-shipments", "/request-shipment"];
+const START_URLS = [
+  ...PAGES,
+  BASE_PATH,
+  ...PAGES.map((page) => `${BASE_PATH}${page}`)
+];
 const DEFAULT_START_URL = "/";
 const LOGIN_FAILED_MESSAGE = "Your email or password is incorrect.";
 const GENERIC_ERROR = "We could not log you in. Please try again later.";
@@ -17,8 +24,9 @@ function requestedStartUrl() {
   return START_URLS.includes(value) ? value : DEFAULT_START_URL;
 }
 
-// Only an https URL or a site-relative path (not "//host") is opened: never a
-// javascript:, data: or protocol-relative URL, whatever the server returns.
+// Only a site-relative path (not "//host") or an https URL of the site's own
+// origin is opened: never another host, nor a javascript:, data: or
+// protocol-relative URL, whatever the server returns (X4).
 function isOpenableUrl(url) {
   if (typeof url !== "string" || url === "") {
     return false;
@@ -26,7 +34,14 @@ function isOpenableUrl(url) {
   if (url.startsWith("/")) {
     return !url.startsWith("//") && !url.startsWith("/\\");
   }
-  return /^https:\/\/[^/\\]/i.test(url);
+  if (!/^https:\/\/[^/\\]/i.test(url)) {
+    return false;
+  }
+  try {
+    return new URL(url).origin === window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 /**

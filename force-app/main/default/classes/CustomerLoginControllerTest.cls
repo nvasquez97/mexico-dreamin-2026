@@ -8,14 +8,14 @@
  *              Ana López (tests never insert portal users, F7).
  */
 @IsTest
-private class CustomerLoginControllerTest {
+private with sharing class CustomerLoginControllerTest {
 
     private static final String RIGHT_PASS = 'abcd12345X';
     private static final String WRONG_PASS = 'abcd12345Y';
     private static final String REDIRECT_BASE = '/rutacargo/secur/frontdoor.jsp?startURL=';
 
     /** @description The seam: a fake platform that knows one right password. */
-    private class FakeSite implements CustomerLoginController.SiteAuthGateway {
+    private inherited sharing class FakeSite implements CustomerLoginController.SiteAuthGateway {
         List<String> loginUsernames = new List<String>();
         List<String> loginStartUrls = new List<String>();
         List<String> resetUsernames = new List<String>();
@@ -65,6 +65,19 @@ private class CustomerLoginControllerTest {
         return TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL).Username;
     }
 
+    private static String martaUsername() {
+        return TestDataFactory.seededCustomerUser(TestDataFactory.SECOND_SEEDED_CUSTOMER_EMAIL).Username;
+    }
+
+    /** @description Logs in as the guest with the right password and returns the startUrl the platform got. */
+    private static String listedStartUrlPassedFor(String startUrl) {
+        FakeSite fake = installFakeSite();
+        CustomerLoginController.LoginResult result = loginAsGuest(TestDataFactory.SEEDED_CUSTOMER_EMAIL, RIGHT_PASS, startUrl);
+        Assert.isTrue(result.success, 'The login succeeds: ' + result.message);
+        Assert.areEqual(1, fake.loginStartUrls.size(), 'Site.login is called once');
+        return fake.loginStartUrls[0];
+    }
+
     private static void assertLoginFailed(CustomerLoginController.LoginResult result) {
         Assert.isFalse(result.success, 'The login must fail');
         Assert.isNull(result.redirectUrl, 'No redirect URL on a failure');
@@ -89,6 +102,7 @@ private class CustomerLoginControllerTest {
         CustomerLoginController.LoginResult result = loginAsGuest('ANA.LOPEZ@EXAMPLE.COM', RIGHT_PASS, '/my-shipments');
         Assert.isTrue(result.success, 'The login succeeds: ' + result.message);
         Assert.areEqual(REDIRECT_BASE + EncodingUtil.urlEncode('/my-shipments', 'UTF-8'), result.redirectUrl, 'The platform redirect URL');
+        Assert.isNull(result.message, 'No failure message on a successful login');
         Assert.areEqual(anaUsername(), fake.loginUsernames[0], 'Site.login gets the customer username');
         Assert.areEqual('/my-shipments', fake.loginStartUrls[0], 'The listed startUrl is passed');
     }
@@ -100,7 +114,38 @@ private class CustomerLoginControllerTest {
         CustomerLoginController.LoginResult result = loginAsGuest(' Ana.Lopez@Example.com ', RIGHT_PASS, '/request-shipment');
         Assert.isTrue(result.success, 'The login succeeds: ' + result.message);
         Assert.areEqual(REDIRECT_BASE + EncodingUtil.urlEncode('/request-shipment', 'UTF-8'), result.redirectUrl, 'The platform redirect URL');
+        Assert.isNull(result.message, 'No failure message on a successful login');
         Assert.areEqual('/request-shipment', fake.loginStartUrls[0], 'The listed startUrl is passed');
+    }
+
+    @IsTest
+    static void login_basePathPrefixedShipmentsStartUrl_passesTheListedPage() {
+        // AC-005.5 (F13): the site base path form of a listed page (/rutacargo/my-shipments) is the same page
+        Assert.areEqual('/my-shipments', listedStartUrlPassedFor('/rutacargo/my-shipments'), 'The prefixed form maps to the listed page');
+    }
+
+    @IsTest
+    static void login_basePathPrefixedRequestStartUrl_passesTheListedPage() {
+        // AC-005.5 (F13): a second prefixed page (/rutacargo/request-shipment)
+        Assert.areEqual('/request-shipment', listedStartUrlPassedFor('/rutacargo/request-shipment'), 'The prefixed form maps to the listed page');
+    }
+
+    @IsTest
+    static void login_basePathHomeStartUrl_passesTheSiteHome() {
+        // AC-005.5 (F13): the site base path itself (/rutacargo/) is the site home
+        Assert.areEqual('/', listedStartUrlPassedFor('/rutacargo/'), 'The prefixed home maps to "/"');
+    }
+
+    @IsTest
+    static void login_otherPrefixStartUrl_becomesSiteHome() {
+        // AC-005.5: a look-alike prefix (/rutacargox/my-shipments) is outside the list
+        Assert.areEqual('/', startUrlPassedFor('/rutacargox/my-shipments'), 'Only the site base path is accepted as a prefix');
+    }
+
+    @IsTest
+    static void login_prefixedUnlistedPathStartUrl_becomesSiteHome() {
+        // AC-005.5: the prefix does not open pages outside the list (/rutacargo/secur/frontdoor.jsp)
+        Assert.areEqual('/', startUrlPassedFor('/rutacargo/secur/frontdoor.jsp'), 'A prefixed path outside the list is replaced');
     }
 
     @IsTest
@@ -145,6 +190,22 @@ private class CustomerLoginControllerTest {
     }
 
     @IsTest
+    static void login_emptyPassword_failsWithoutCallingSiteLogin() {
+        // AC-005.5: an empty password never reaches the platform
+        FakeSite fake = installFakeSite();
+        assertLoginFailed(loginAsGuest(TestDataFactory.SEEDED_CUSTOMER_EMAIL, '', '/'));
+        Assert.areEqual(0, fake.loginUsernames.size(), 'Site.login is not called for an empty password');
+    }
+
+    @IsTest
+    static void login_passwordOfSpaces_failsWithoutCallingSiteLogin() {
+        // AC-005.5: a password of only spaces is blank (second input)
+        FakeSite fake = installFakeSite();
+        assertLoginFailed(loginAsGuest(TestDataFactory.SEEDED_CUSTOMER_EMAIL, '   ', '/'));
+        Assert.areEqual(0, fake.loginUsernames.size(), 'Site.login is not called for a blank password');
+    }
+
+    @IsTest
     static void login_wrongPassword_failsWithTheSameMessage() {
         // AC-005.5: wrong password → the same message
         FakeSite fake = installFakeSite();
@@ -179,6 +240,15 @@ private class CustomerLoginControllerTest {
         FakeSite fake = installFakeSite();
         Assert.isTrue(forgotAsGuest(' Ana.Lopez@Example.com '), 'The same result for every email');
         Assert.areEqual(new List<String>{ anaUsername() }, fake.resetUsernames, 'Site.forgotPassword gets the username once');
+    }
+
+    @IsTest
+    static void forgotPassword_secondRegisteredCustomer_resetsHerUsername() {
+        // AC-005.6: a second registered customer (Marta), any case, gets the reset with her own username
+        FakeSite fake = installFakeSite();
+        Assert.isTrue(forgotAsGuest(' MARTA.Ruiz@Example.COM '), 'The same result for every email');
+        Assert.areEqual(new List<String>{ martaUsername() }, fake.resetUsernames, 'Site.forgotPassword gets Marta\'s username once');
+        Assert.areNotEqual(anaUsername(), fake.resetUsernames[0], 'Not another customer\'s username');
     }
 
     @IsTest

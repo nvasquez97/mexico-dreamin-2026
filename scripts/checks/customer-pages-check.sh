@@ -3,9 +3,12 @@
 # (odd/tasks/req-005-customer-signup.md S3, S4; AC-005.5 live logout,
 # AC-005.7 T3 part, AC-005.9 published views, assumption F9).
 # Reads the source, runs constant SOQL queries and anonymous HTTP requests.
-# Section 4 sends the STANDARD self-registration action twice with a fake
-# example.com email and a random password that is never printed; it must
-# create nothing. It never submits the rcSignUp form.
+# It never submits the rcSignUp form. Section 4 is OPT-IN
+# (--probe-standard-selfreg): it sends the STANDARD self-registration action
+# twice, live, with a fake example.com email and a random password that is
+# never printed nor put on a command line (the request body goes to curl on
+# stdin); every call emails the site admin a platform alert, so the default
+# run skips it.
 #
 # Exits non-zero unless:
 #   1. in source, the register, login and forgotPassword views each place
@@ -19,7 +22,7 @@
 #      rcHeader.js), requested with no session, never answers 404 or 5xx,
 #      redirects only within the site host and ends in the platform's logout
 #      page that sends the visitor back to the LWR site (base path);
-#   4. F9: the standard self-registration action
+#   4. (only with --probe-standard-selfreg) F9: the standard self-registration action
 #      (applauncher.SelfRegisterController.selfRegisterGetRedirectUrl, called
 #      directly as the guest, with no account and with the account of a
 #      RutaCargo customer) creates no User, Contact or Account for its email,
@@ -28,15 +31,24 @@
 #
 # A failed query stops the check with exit code 3; violations exit 1.
 #
-# Usage: scripts/checks/customer-pages-check.sh <org-alias>
+# Usage: scripts/checks/customer-pages-check.sh <org-alias> [--probe-standard-selfreg]
 set -uo pipefail
 export LC_ALL=C
 
-ORG="${1:-}"
-if [[ -z "$ORG" ]]; then
-    echo "Usage: $0 <org-alias>" >&2
+usage() {
+    echo "Usage: $0 <org-alias> [--probe-standard-selfreg]" >&2
     exit 2
-fi
+}
+ORG=''
+PROBE_STANDARD_SELFREG=0
+for arg in "$@"; do
+    case "$arg" in
+        --probe-standard-selfreg) PROBE_STANDARD_SELFREG=1 ;;
+        -*) echo "Unknown option: $arg" >&2; usage ;;
+        *) [[ -z "$ORG" ]] || usage; ORG="$arg" ;;
+    esac
+done
+[[ -n "$ORG" ]] || usage
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VIEWS="$REPO_ROOT/force-app/main/default/digitalExperiences/site/RutaCargo1/sfdc_cms__view"
@@ -182,7 +194,12 @@ else
     fi
 fi
 
-# ─── 4. F9: the standard self-registration action creates nothing ──────────
+# ─── 4. F9: the standard self-registration action creates nothing (opt-in) ─
+if [[ "$PROBE_STANDARD_SELFREG" -ne 1 ]]; then
+    echo "skip: section 4 (F9, the standard self-registration action called live) is opt-in: run with --probe-standard-selfreg"
+    finish
+fi
+
 counts() {
     local email="$1"
     query "SELECT COUNT() FROM User"; local users="$TOTAL"
@@ -206,10 +223,13 @@ for account in "" "$customer_account"; do
     password="F9$(openssl rand -hex 12)x7"
     # counts() calls query(), which may exit: run it without a subshell.
     counts "$email" >"$tmp/before"; before="$(cat "$tmp/before")"
-    body="$(jq -nc --arg e "$email" --arg p "$password" --arg a "$account" '{namespace:"applauncher",classname:"SelfRegisterController",method:"selfRegisterGetRedirectUrl",isContinuation:false,params:{firstname:"Fnine",lastname:"Check",email:$e,password:$p,confirmPassword:$p,accountId:$a,regConfirmUrl:"./CheckPasswordResetEmail",extraFields:"[]",startUrl:"",includePassword:true,redirect:false},cacheable:false}')"
-    answer="$(curl -s --max-time "$TIMEOUT" -X POST -H 'Content-Type: application/json' -H "Origin: https://$HOST" \
-        --data "$body" "$SITE_URL/webruntime/api/apex/execute?language=en-US&asGuest=true&htmlEncode=false" || true)"
-    unset password body
+    # The password reaches jq on stdin (printf is a shell builtin) and the body
+    # reaches curl on stdin (--data @-): neither is ever a process argument.
+    answer="$(printf '%s' "$password" \
+        | jq -Rc --arg e "$email" --arg a "$account" '{namespace:"applauncher",classname:"SelfRegisterController",method:"selfRegisterGetRedirectUrl",isContinuation:false,params:{firstname:"Fnine",lastname:"Check",email:$e,password:.,confirmPassword:.,accountId:$a,regConfirmUrl:"./CheckPasswordResetEmail",extraFields:"[]",startUrl:"",includePassword:true,redirect:false},cacheable:false}' \
+        | curl -s --max-time "$TIMEOUT" -X POST -H 'Content-Type: application/json' -H "Origin: https://$HOST" \
+            --data @- "$SITE_URL/webruntime/api/apex/execute?language=en-US&asGuest=true&htmlEncode=false" || true)"
+    unset password
     returned="$(jq -r '.returnValue // empty' <<<"$answer" 2>/dev/null || true)"
     echo "      standard selfRegister ($label, $email) answered: ${returned:-<no returnValue>}"
     counts "$email" >"$tmp/after"; after="$(cat "$tmp/after")"
