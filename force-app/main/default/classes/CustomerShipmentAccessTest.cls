@@ -9,8 +9,10 @@
  *              the AC-006.1 entered fields the customer may read, never on the four
  *              recipient-owned fields (Recipient_Address__c, Recipient_Phone__c,
  *              Recipient_Email__c, Delivery_Instructions__c: BR-02, G7, T2 fix), so a
- *              customer reads neither them nor their field history. No portal user
- *              is inserted (req-005 F7): the seeded users are queried.
+ *              customer reads neither them nor, by the platform's FLS rule on field
+ *              history (hardening-1 H5), their field history. No portal user is
+ *              inserted (req-005 F7): the seeded users are queried; no test reads
+ *              org data (no SeeAllData).
  */
 @IsTest
 private with sharing class CustomerShipmentAccessTest {
@@ -45,17 +47,13 @@ private with sharing class CustomerShipmentAccessTest {
         'Recipient_Address__c', 'Recipient_Phone__c', 'Recipient_Email__c', 'Delivery_Instructions__c'
     };
 
-    private static final String INSTRUCTIONS_HISTORY_FIELD = 'Delivery_Instructions__c';
-    private static final String CREATED_HISTORY_FIELD = 'created';
-
     // Two fields the customer must read on the same shipment: the control that
     // a refused field query is FLS, not a missing record.
     private static final List<String> CUSTOMER_READABLE_CONTROL_FIELDS = new List<String>{
         'Recipient_Name__c', 'Destination_City__c'
     };
 
-    // Not a @TestSetup: anaReadsNoHistoryOfTheDeliveryInstructions needs
-    // SeeAllData=true, which a class with @TestSetup cannot have.
+    // Shipments of both seeded accounts, inserted by the record-access tests.
     private static void insertShipmentsOfBothAccounts() {
         List<Shipment__c> shipments = new List<Shipment__c>();
         shipments.addAll(TestDataFactory.newShipments(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL), SHIPMENTS_PER_ACCOUNT));
@@ -239,38 +237,25 @@ private with sharing class CustomerShipmentAccessTest {
             'Ana must read the recipient name and destination city of her own shipment');
     }
 
-    // SeeAllData=true: field tracking writes no history row inside a test and
-    // Shipment__History refuses DML ("DML operation INSERT not allowed"), so the
-    // proof reads the history already in the org: recipient reschedules of
-    // seeded Abarrotes Acme shipments (scripts/checks/reschedule-history-check.sh
-    // runs RecipientDeliveryController.rescheduleDelivery, which changes
-    // Delivery_Instructions__c). Without SeeAllData the test sees no history
-    // row at all (checked 2026-11-18: the precondition fails), so the
-    // ApexUnitTestShouldNotUseSeeAllDataTrue finding is accepted for this one
-    // read-only method. Read-only: the test writes nothing.
-    @IsTest(SeeAllData=true)
-    static void anaReadsNoHistoryOfTheDeliveryInstructions() {
-        // AC-006.7 (BR-02, P4, G7): Shipment__History follows FLS: on her own
-        // shipment whose Delivery_Instructions__c the recipient changed, Ana reads
-        // in user mode the "created" history row but no Delivery_Instructions__c
-        // row; the administrator reads both
+    // H5 (hardening-1, CA-002): the platform shows a field-history entry only
+    // to a user who can read the field, so Ana, who has no read FLS on
+    // Delivery_Instructions__c, reads none of its history rows. This test needs
+    // no org data: it proves the FLS side by describe; the user-mode refusal is
+    // proven by anaCannotReadTheRecipientOwnedFieldsOfHerOwnShipment. The former
+    // SeeAllData history test last ran green in the gate @ 56bac29.
+    @IsTest
+    static void anaCannotAccessTheDeliveryInstructionsByDescribe() {
+        // AC-006.7 / AC-H5.2 (BR-02, P4, G7, G9): as Ana the describe reports
+        // Delivery_Instructions__c not accessible, so no history of it is shown
         User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
-        Id shipmentId = shipmentWithInstructionHistory(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL));
-        Map<String, Integer> adminCounts = historyCountsInUserMode(shipmentId);
-        Map<String, Integer> anaCounts;
+        Boolean instructionsAccessible;
         Test.startTest();
         System.runAs(ana) {
-            anaCounts = historyCountsInUserMode(shipmentId);
+            instructionsAccessible = Schema.SObjectType.Shipment__c.fields.Delivery_Instructions__c.isAccessible();
         }
         Test.stopTest();
-        Integer adminInstructions = adminCounts.get(INSTRUCTIONS_HISTORY_FIELD) ?? 0;
-        Integer adminCreated = adminCounts.get(CREATED_HISTORY_FIELD) ?? 0;
-        Assert.isTrue(adminInstructions > 0 && adminCreated > 0,
-            'Precondition: the administrator must read the seeded instructions and created history rows');
-        Assert.areEqual(INSTRUCTIONS_HISTORY_FIELD + '=0|' + CREATED_HISTORY_FIELD + '=' + adminCreated,
-            INSTRUCTIONS_HISTORY_FIELD + '=' + (anaCounts.get(INSTRUCTIONS_HISTORY_FIELD) ?? 0) + '|'
-                + CREATED_HISTORY_FIELD + '=' + (anaCounts.get(CREATED_HISTORY_FIELD) ?? 0),
-            'Ana must read the created history row but no Delivery_Instructions__c history row');
+        Assert.isFalse(instructionsAccessible,
+            'Ana must not have read access to Delivery_Instructions__c, so its field history stays hidden from her');
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
@@ -287,7 +272,7 @@ private with sharing class CustomerShipmentAccessTest {
         return new Map<Id, Shipment__c>([
             SELECT Id FROM Shipment__c WHERE Account__c = :accountId
             // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
-            // System.runAs: the fixture's Ids, account or history row the customer cannot
+            // System.runAs: the fixture's Ids or account the customer cannot
             // read. Scope: this test class only; compensating control: every check under
             // test runs inside System.runAs as a customer, in user mode.
             // (pending owner approval, 2026-11-18)
@@ -300,7 +285,7 @@ private with sharing class CustomerShipmentAccessTest {
         return [
             SELECT AccountId FROM User WHERE Id = :userId
             // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
-            // System.runAs: the fixture's Ids, account or history row the customer cannot
+            // System.runAs: the fixture's Ids or account the customer cannot
             // read. Scope: this test class only; compensating control: every check under
             // test runs inside System.runAs as a customer, in user mode.
             // (pending owner approval, 2026-11-18)
@@ -331,36 +316,5 @@ private with sharing class CustomerShipmentAccessTest {
         List<Shipment__c> shipments = TestDataFactory.newShipments(accountIdOf(TestDataFactory.SEEDED_CUSTOMER_EMAIL), 1);
         TestDataFactory.insertShipmentsWithCodes(shipments);
         return shipments[0].Id;
-    }
-
-    // A shipment of the account with a seeded Delivery_Instructions__c history row.
-    private static Id shipmentWithInstructionHistory(Id accountId) {
-        List<Shipment__History> rows = [
-            SELECT ParentId FROM Shipment__History
-            WHERE Field = :INSTRUCTIONS_HISTORY_FIELD AND Parent.Account__c = :accountId
-            // SECURITY-JUSTIFICATION: test setup read as the test's administrator, outside
-            // System.runAs: the fixture's Ids, account or history row the customer cannot
-            // read. Scope: this test class only; compensating control: every check under
-            // test runs inside System.runAs as a customer, in user mode.
-            // (pending owner approval, 2026-11-18)
-            WITH SYSTEM_MODE
-            ORDER BY ParentId
-            LIMIT 1
-        ];
-        if (rows.isEmpty()) {
-            Assert.fail('The org must hold a Delivery_Instructions__c history row of an Abarrotes Acme shipment (run scripts/checks/reschedule-history-check.sh)');
-        }
-        return rows[0].ParentId;
-    }
-
-    // History rows of the shipment the running user reads in user mode, by Field.
-    private static Map<String, Integer> historyCountsInUserMode(Id shipmentId) {
-        Map<String, Integer> counts = new Map<String, Integer>();
-        for (Shipment__History row : [
-            SELECT Field FROM Shipment__History WHERE ParentId = :shipmentId WITH USER_MODE
-        ]) {
-            counts.put(row.Field, (counts.get(row.Field) ?? 0) + 1);
-        }
-        return counts;
     }
 }

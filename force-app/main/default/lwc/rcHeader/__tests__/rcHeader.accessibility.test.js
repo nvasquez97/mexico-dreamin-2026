@@ -37,7 +37,9 @@ jest.mock(
 
 // Resolves after the pending promise callbacks (loadStyle) have run.
 function flushPromises() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 describe("c-rc-header accessibility", () => {
