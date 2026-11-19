@@ -250,3 +250,9 @@
 - What: Architecture review (salesforce-code-quality:architecture-review): Trusted FAIL (SEC-001 only; code controls strong), Easy WARN, Adaptable WARN (no CI, hard-coded rules, Queueable without Finalizer, controller-trigger static staging). odd/final-report.md written: requirements, gates, hardening counts (SEC Critical 1→1 owner, High 2→0; CA High 2→0), open findings, owner list.
 - Why / evidence: odd/final-report.md.
 - Next: owner — rotate the EntregaYa key before pushing this branch; human test; AC-004.6 live POST; approvals; delivery. The run is finished.
+
+## 2026-11-18 20:55 — Owner bug: logged-in customers cannot track
+- Type: status
+- What: Owner's manual test: logged in as a customer, public tracking (and the recipient flow) fails with the generic error — RutaCargo_Customer lacks class access to PublicTrackingController and RecipientDeliveryController (guest-only today). Owner approved the fix (Tier 2, Mode auto). Plan odd/tasks/bug-customer-public-tracking.md (Base b0d7e0c, plan af939c3), plan-reviewer a4e5ffac6c792d365 running. Owner was also given manual test data (tracking numbers, postal codes, access codes from .seed-output) and the steps to run simulate-status.sh (not run yet).
+- Why / evidence: anonymous Apex search returned RC000001124; permission set file lines 4, 8.
+- Next: plan review, T1 worker, reviews, Close (gate + reviewers), archive; ask the owner to retest logged in.
