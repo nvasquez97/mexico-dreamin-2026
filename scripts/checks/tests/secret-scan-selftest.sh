@@ -288,6 +288,15 @@ put certs/server.key "$(printf 'material')"
 refused "private key file (.key)" "certs/server.key" 0 "SECRET-FILE" "material"
 printf '\000\001%s\000' "$P12_MARK" >store.jks
 refused "java keystore (.jks)" "store.jks" 0 "SECRET-FILE" "$P12_MARK"
+mkdir -p certs
+printf '\060\202%s\000' "$P12_MARK" >certs/client.der
+refused "DER-encoded key or certificate (.der)" "certs/client.der" 0 "SECRET-FILE" "$P12_MARK"
+# X14 (access-auditor T4 residual): the repository's .gitignore keeps *.der out of git add.
+if git -C "$ROOT" check-ignore -q --no-index certs/client.der; then
+  pass "the repository .gitignore ignores *.der files"
+else
+  fail "the repository .gitignore ignores *.der files"
+fi
 
 # ---- near misses, references and placeholders are accepted (no false positive)
 put docs/near.txt "$(printf 'id: %s' "$KEY_NEAR")"

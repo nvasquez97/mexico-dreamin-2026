@@ -3,7 +3,8 @@
  *              (T2, S2): AC-H2.1 (guard rows without an active lock last touched
  *              more than a day ago are deleted, legacy per-shipment rows
  *              included, while active locks and recent rows stay; a row that is
- *              locked or touched after the batch started is never deleted; the
+ *              locked, or unlocked but touched, after the batch started is never
+ *              deleted (one test per condition of the re-read); the
  *              scheduled job starts the batch; scheduling is idempotent).
  *              Rows are inserted now, so "more than a day ago" is reached through
  *              the purge's test clock (the asOf constructor); the recent-row tests
@@ -110,14 +111,31 @@ private with sharing class RecipientAccessGuardPurgeTest {
     }
 
     @IsTest
-    static void shouldNotDelete_WhenScopeRowIsLockedOrTouchedAfterTheBatchStarted() {
-        // AC-H2.1 (hard rule): execute re-reads its scope; a row in the scope that is now locked
-        // and recently touched (a guest failed on it after start) is not deleted.
-        List<Recipient_Access_Guard__c> lockedSinceStart = newGuards(2, 'T', Datetime.now().addMinutes(15));
+    static void shouldNotDelete_WhenScopeRowIsUnlockedButTouchedAfterTheBatchStarted() {
+        // AC-H2.1 (hard rule): execute re-reads its scope; rows in the scope with no lock but
+        // touched now (a guest failed on them after start) are not deleted on the real clock.
+        // Only the date condition of the re-read keeps them.
+        List<Recipient_Access_Guard__c> touchedSinceStart = newGuards(2, 'U', null);
+        TestDataFactory.insertRecipientAccessGuards(touchedSinceStart);
+
+        Test.startTest();
+        new RecipientAccessGuardPurge().execute((Database.BatchableContext) null, touchedSinceStart);
+        Test.stopTest();
+
+        Assert.areEqual(2, remaining(idsOf(touchedSinceStart)), 'An unlocked row touched after the batch started is not deleted');
+    }
+
+    @IsTest
+    static void shouldNotDelete_WhenScopeRowIsLockedAfterTheBatchStartedButOld() {
+        // AC-H2.1 (hard rule): execute re-reads its scope; rows in the scope locked until
+        // asOf + 10 minutes are not deleted by a purge whose clock is two days ahead, although
+        // they were last touched more than a day before it. Only the lock condition keeps them.
+        Datetime asOf = Datetime.now().addDays(2);
+        List<Recipient_Access_Guard__c> lockedSinceStart = newGuards(2, 'T', asOf.addMinutes(10));
         TestDataFactory.insertRecipientAccessGuards(lockedSinceStart);
 
         Test.startTest();
-        new RecipientAccessGuardPurge().execute((Database.BatchableContext) null, lockedSinceStart);
+        new RecipientAccessGuardPurge(asOf).execute((Database.BatchableContext) null, lockedSinceStart);
         Test.stopTest();
 
         Assert.areEqual(2, remaining(idsOf(lockedSinceStart)), 'A row locked after the batch started is never deleted');

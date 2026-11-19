@@ -744,6 +744,17 @@ private with sharing class RecipientDeliveryControllerTest {
         return guards.isEmpty() ? null : guards[0];
     }
 
+    // The one guard row of a pair: asserts there is exactly one before it is read.
+    private static Recipient_Access_Guard__c onlyGuardOfPair(Id shipmentId, String typedPostalCode) {
+        List<Recipient_Access_Guard__c> guards = [
+            SELECT Failed_Attempts__c, Locked_Until__c FROM Recipient_Access_Guard__c
+            WHERE Shipment_Key__c = :TestDataFactory.recipientAccessGuardKey(shipmentId, typedPostalCode)
+            WITH SYSTEM_MODE
+        ];
+        Assert.areEqual(1, guards.size(), 'Exactly one guard row for the pair of "' + typedPostalCode + '"');
+        return guards[0];
+    }
+
     // The response is the AC-002.5 failure, with no proof and no response text.
     private static void assertUnavailable(RecipientDeliveryController.ProofResponse response) {
         Assert.areEqual(RecipientDeliveryController.OUTCOME_UNAVAILABLE, response.outcome, 'The proof is unavailable');
@@ -1039,7 +1050,7 @@ private with sharing class RecipientDeliveryControllerTest {
         Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient still reschedules');
         Assert.areEqual(Date.newInstance(2026, 12, 12), reload(fixture.shipmentId).Estimated_Delivery__c, 'The new date is saved');
         Assert.isNull(guardOfPair(fixture.shipmentId, POSTAL_CODE), 'The recipient\'s pair has no failure recorded');
-        Assert.isNotNull(guardOfPair(fixture.shipmentId, '11111').Locked_Until__c, 'The guest\'s own pair is locked');
+        Assert.isNotNull(onlyGuardOfPair(fixture.shipmentId, '11111').Locked_Until__c, 'The guest\'s own pair is locked');
     }
 
     @IsTest
@@ -1073,7 +1084,7 @@ private with sharing class RecipientDeliveryControllerTest {
         Assert.areEqual(PDF_BASE64, response.pdfBase64, 'The recipient gets the PDF');
         Assert.areEqual(new List<String>{ 'callout:EntregaYa_API/proofs/PRF-88231' }, mock.endpoints, 'One callout, the recipient\'s');
         Assert.isNull(guardOfPair(fixture.shipmentId, POSTAL_CODE), 'The recipient\'s pair has no failure recorded');
-        Assert.areEqual(5, guardOfPair(fixture.shipmentId, '64001').Failed_Attempts__c, 'The guest\'s failures are on its own pair');
+        Assert.areEqual(5, onlyGuardOfPair(fixture.shipmentId, '64001').Failed_Attempts__c, 'The guest\'s failures are on its own pair');
     }
 
     // ─── AC-002.7: the real site guest user ──────────────────────────────

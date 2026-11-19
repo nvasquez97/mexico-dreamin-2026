@@ -246,7 +246,8 @@ private with sharing class CustomerShipmentAccessTest {
     @IsTest
     static void anaCannotAccessTheDeliveryInstructionsByDescribe() {
         // AC-006.7 / AC-H5.2 (BR-02, P4, G7, G9): as Ana the describe reports
-        // Delivery_Instructions__c not accessible, so no history of it is shown
+        // Delivery_Instructions__c not accessible (the field history itself is
+        // not read here; it follows FLS, see the comment above)
         User ana = TestDataFactory.seededCustomerUser(TestDataFactory.SEEDED_CUSTOMER_EMAIL);
         Boolean instructionsAccessible;
         Test.startTest();
@@ -255,7 +256,7 @@ private with sharing class CustomerShipmentAccessTest {
         }
         Test.stopTest();
         Assert.isFalse(instructionsAccessible,
-            'Ana must not have read access to Delivery_Instructions__c, so its field history stays hidden from her');
+            'As Ana, the describe must report Delivery_Instructions__c as not accessible (no read FLS)');
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────

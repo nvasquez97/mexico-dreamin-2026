@@ -316,8 +316,19 @@ secret_scan 'API key, access token or secret literal' \
     "(api[_-]?key|access[_-]?token|client[_-]?secret|secret)[\"']?[[:space:]]*[:=][[:space:]]*[\"'][A-Za-z0-9_+/=.-]{16,}[\"']"
 # A password literal (assignment or metadata element) other than the placeholder
 # (written literally or through guest-proof-access.sh's PLACEHOLDER_PASSWORD).
+# A variable reference is not a literal, the same rule as secret-scan.sh: a value
+# that is exactly $UPPER_CASE_VAR, or starts with ${ or $( is skipped; any other
+# value starting with "$" is still reported. A line is reported when at least one
+# of its password values is a literal.
 password_literals="$(git -C "$REPO_ROOT" grep --untracked -nIiE \
     -e "password[\"']?[[:space:]]*[:=][[:space:]]*[\"'][^\"'[:space:]]{8,}[\"']" -e '<password>[^<]+</password>' -- . 2>/dev/null \
+    | perl -ne '
+        my ($c) = /^[^:]*:\d+:(.*)$/s or next;
+        my $ref = sub { $_[0] =~ /^\$[{(]/ || $_[0] =~ /^\$[A-Z_][A-Z0-9_]*$/ };
+        my $lit = 0;
+        while ($c =~ /password["\x27]?\s*[:=]\s*["\x27]([^"\x27\s]{8,})["\x27]/gi) { $lit = 1 unless $ref->($1) }
+        while ($c =~ /<password>([^<]+)<\/password>/gi) { $lit = 1 unless $ref->($1) }
+        print if $lit;' \
     | grep -vF -e "$PLACEHOLDER_PASSWORD" -e '<password>$PLACEHOLDER_PASSWORD</password>' || true)"
 if [[ -z "$password_literals" ]]; then
     pass "no password literal in the repository besides the placeholder"

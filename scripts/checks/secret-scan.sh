@@ -49,7 +49,7 @@
 #                        references (a password like "$..." ) IS reported.
 #   SECRET-FILE          (line 0 = the whole file) a file that holds secrets by its name:
 #                        .env and .env.* (except .env.example/.sample/.template/.dist, which
-#                        are content-scanned), *.p12, *.pfx, *.jks, *.keystore, *.key, *.p8,
+#                        are content-scanned), *.p12, *.pfx, *.jks, *.keystore, *.key, *.p8, *.der,
 #                        id_rsa / id_dsa / id_ecdsa / id_ed25519.
 #
 # Paths are handled NUL-delimited end to end (git -z output parsed by perl), so a path with a
@@ -273,7 +273,7 @@ for my $p (@paths) {
   (my $base = $p) =~ s{.*/}{}s;
   if ($base eq '.env'
     || ($base =~ /^\.env\./ && $base !~ /^\.env\.(?:example|sample|template|dist)$/i)
-    || $base =~ /\.(?:p12|pfx|jks|keystore|key|p8)$/i
+    || $base =~ /\.(?:p12|pfx|jks|keystore|key|p8|der)$/i
     || $base =~ /^id_(?:rsa|dsa|ecdsa|ed25519)$/) {
     hit($p, 0, 'SECRET-FILE');
   }

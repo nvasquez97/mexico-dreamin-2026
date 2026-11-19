@@ -9,6 +9,16 @@
 # and as that user: run it as an admin who can see every guard row.
 # Run it after force-app is deployed (scripts/setup/DEPLOY-ORDER.md).
 #
+# P7 / H3 (sf-security-auditor note 2): RecipientAccessGuardPurge is `with
+# sharing`, so it deletes only the guard rows its running user can see. The
+# script refuses (exit 1, nothing scheduled) unless the user it runs as holds
+# View All Data (PermissionsViewAllData, through the profile or a permission
+# set; read-only query on PermissionSetAssignment), and, when the job exists
+# already, unless the job's owner (the user it runs as) holds it too.
+# Test seam: GUARD_PURGE_ALSO_CHECK_USERNAME=<username> checks that user as well,
+# so the refusal can be shown without changing any user; it can only add a
+# refusal, never remove one.
+#
 # Usage: scripts/setup/schedule-guard-purge.sh <org-alias>
 set -euo pipefail
 
@@ -35,7 +45,60 @@ purge_jobs() {
     jq -c '.result.records' <<<"$out"
 }
 
-before="$(purge_jobs | jq 'length')"
+# Exits 1 unless the active user matching the SOQL condition holds View All Data.
+# $1: a label for the messages; $2: a condition on Assignee (a quoted username or an Id).
+require_view_all_data() {
+    local label="$1" condition="$2" out
+    out="$(sf data query --target-org "$ORG" --json \
+        --query "SELECT COUNT() FROM PermissionSetAssignment WHERE $condition AND Assignee.IsActive = true AND PermissionSet.PermissionsViewAllData = true" \
+        2>/dev/null || true)"
+    if [[ "$(jq -r '.status // 1' <<<"$out" 2>/dev/null)" != "0" ]]; then
+        echo "schedule-guard-purge: View All Data query failed for $label in $ORG" >&2
+        jq -r '.message // empty' <<<"$out" >&2 2>/dev/null || true
+        exit 1
+    fi
+    if [[ "$(jq -r '.result.totalSize // 0' <<<"$out")" -lt 1 ]]; then
+        echo "schedule-guard-purge: refused: $label has no View All Data in $ORG; the purge is with sharing and would not see every guard row. Run it as an admin with View All Data." >&2
+        exit 1
+    fi
+    echo "schedule-guard-purge: $label holds View All Data"
+}
+
+# A username for a SOQL string literal: only the characters of a username.
+quoted_username() {
+    if [[ ! "$1" =~ ^[A-Za-z0-9._%+@-]+$ ]]; then
+        echo "schedule-guard-purge: not a username: refusing to query it" >&2
+        exit 1
+    fi
+    printf "'%s'" "$1"
+}
+
+RUN_AS="$(sf org display --target-org "$ORG" --json 2>/dev/null | jq -r '.result.username // empty' 2>/dev/null || true)"
+if [[ -z "$RUN_AS" ]]; then
+    echo "schedule-guard-purge: could not read the user of $ORG" >&2
+    exit 1
+fi
+# Assigned first, so a refused username stops the script (set -e).
+run_as_literal="$(quoted_username "$RUN_AS")"
+require_view_all_data "the user this script runs as ($RUN_AS)" "Assignee.Username = $run_as_literal"
+if [[ -n "${GUARD_PURGE_ALSO_CHECK_USERNAME:-}" ]]; then
+    also_literal="$(quoted_username "$GUARD_PURGE_ALSO_CHECK_USERNAME")"
+    require_view_all_data "the user to check ($GUARD_PURGE_ALSO_CHECK_USERNAME)" "Assignee.Username = $also_literal"
+fi
+
+existing="$(purge_jobs)"
+owner_id="$(sf data query --target-org "$ORG" --json \
+    --query "SELECT OwnerId FROM CronTrigger WHERE CronJobDetail.Name = '$JOB_NAME'" 2>/dev/null \
+    | jq -r '.result.records[0].OwnerId // empty' 2>/dev/null || true)"
+if [[ "$(jq 'length' <<<"$existing")" != "0" ]]; then
+    if [[ ! "$owner_id" =~ ^005[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$ ]]; then
+        echo "schedule-guard-purge: could not read the owner of the scheduled job in $ORG" >&2
+        exit 1
+    fi
+    require_view_all_data "the owner of the scheduled job ($owner_id)" "AssigneeId = '$owner_id'"
+fi
+
+before="$(jq 'length' <<<"$existing")"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
