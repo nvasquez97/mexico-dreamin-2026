@@ -88,11 +88,15 @@ public without sharing class RecipientAccess {
     private static final String KEY_SEPARATOR = ':';
     private static final String BLANK_POSTAL_CODE_TOKEN = '';
     private static final String PAIR_DIGEST = 'SHA-256';
-    // A typed postal code longer than the stored field after normalization can
-    // equal no stored code, so all of them share the pair of this fixed token: at
-    // most one more guard row per shipment (hardening-1 S2, P3). The token is
-    // longer than the field, so no value of the field's length or fewer, which
-    // keeps its own pair, can share it.
+    // A typed postal code longer than the stored field once its whitespace is
+    // removed, measured BEFORE upper casing, shares the pair of this fixed token:
+    // at most one more guard row per shipment (hardening-1 S2, P3). Measuring
+    // before upper casing keeps a stored code that grows when upper cased
+    // ("stra\u00DFe1234" to "STRASSE1234", T2 CODE-001, X16) out of this shared
+    // pair, so a guest cannot lock that recipient out through it. No typed value
+    // of the field's length or fewer, which keeps its own pair, upper cases to
+    // this 21-character token: of its letters only "ST" has a one-character
+    // source (U+FB06).
     private static final String MALFORMED_POSTAL_CODE_TOKEN = 'MALFORMED-POSTAL-CODE';
     private static final Integer MAX_POSTAL_CODE_LENGTH =
         Shipment__c.Destination_Postal_Code__c.getDescribe().getLength();
@@ -298,11 +302,14 @@ public without sharing class RecipientAccess {
 
     // The guard key of the pair (shipment, typed postal code): the 18-character
     // shipment Id, ":" and the hex SHA-256 of exactly normalizedPostalCode(typed),
-    // of a fixed token when it is blank, or of the malformed token when it is
-    // longer than the stored field. Never returned or logged.
+    // of a fixed token when it is blank, or of the malformed token when the typed
+    // value without whitespace, before upper casing, is longer than the stored
+    // field. Never returned or logged.
     private static String pairKeyOf(Id shipmentId, String typedPostalCode) {
-        String normalized = normalizedPostalCode(typedPostalCode) ?? BLANK_POSTAL_CODE_TOKEN;
-        String token = normalized.length() > MAX_POSTAL_CODE_LENGTH ? MALFORMED_POSTAL_CODE_TOKEN : normalized;
+        String compact = compactPostalCode(typedPostalCode);
+        String token = compact == null
+            ? BLANK_POSTAL_CODE_TOKEN
+            : (compact.length() > MAX_POSTAL_CODE_LENGTH ? MALFORMED_POSTAL_CODE_TOKEN : compact.toUpperCase());
         Blob digest = Crypto.generateDigest(PAIR_DIGEST, Blob.valueOf(token));
         return String.valueOf(shipmentId) + KEY_SEPARATOR + EncodingUtil.convertToHex(digest);
     }
@@ -337,8 +344,13 @@ public without sharing class RecipientAccess {
         }
     }
 
+    // The typed postal code without whitespace, or null when it is blank.
+    private static String compactPostalCode(String value) {
+        return String.isBlank(value) ? null : value.replaceAll(WHITESPACE, '');
+    }
+
     private static String normalizedPostalCode(String value) {
-        return String.isBlank(value) ? null : value.replaceAll(WHITESPACE, '').toUpperCase();
+        return compactPostalCode(value)?.toUpperCase();
     }
 
     private static Verification verified(Shipment__c row, Recipient_Access_Guard__c guard, String pairKey) {

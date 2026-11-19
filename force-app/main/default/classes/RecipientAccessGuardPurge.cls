@@ -9,9 +9,11 @@
  *              guest locked or touched after start is kept. Scheduled daily by
  *              scheduleDaily (scripts/setup/schedule-guard-purge.sh), idempotently.
  */
-// SECURITY-JUSTIFICATION: no user holds any object permission on
-// Recipient_Access_Guard__c (it is written only by RecipientAccess in system
-// mode), so the purge reads and deletes it in system mode. The class stays with
+// SECURITY-JUSTIFICATION: no non-admin user holds any object permission on
+// Recipient_Access_Guard__c (no project permission set grants it; only System
+// Administrator has it, through the profile; it is written only by
+// RecipientAccess in system mode), so the purge reads and deletes it in system
+// mode. The class stays with
 // sharing, so it deletes only rows its running user can see (the admin who
 // scheduled it). Scope: Recipient_Access_Guard__c rows with no active lock, last
 // modified more than one day ago; no other object, no field written, no input

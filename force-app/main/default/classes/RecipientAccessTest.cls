@@ -893,6 +893,66 @@ private with sharing class RecipientAccessTest {
         Assert.areEqual(1, allGuardsOf(fixture.shipmentId).size(), 'Only the malformed row exists');
     }
 
+    // ─── T2 Low CODE-001 (X16): a stored code that grows when upper-cased ─
+
+    // Five failing over-long values from the guest, then the recipient's own stored code.
+    private static RecipientDeliveryController.DeliveryResponse grantAfterGuestLocksMalformed(
+        Fixture fixture, String typedPostalCode
+    ) {
+        System.runAs(TestDataFactory.siteGuestUser()) {
+            wrongCodeAnswers(fixture, overLongValues(MAX_FAILURES));
+        }
+        return details(fixture, typedPostalCode, fixture.code);
+    }
+
+    @IsTest
+    static void shouldGrantAccess_WhenStoredSharpSPostalCodeGrowsPastTenWhenUpperCased() {
+        // AC-H2.1 / T2 CODE-001 (X16): stored "straße1234" (10 characters, "STRASSE1234" upper
+        // cased); the guest locks the malformed key with 5 over-long values; the recipient
+        // sending "straße1234" and the right code is still granted access.
+        String stored = 'straße1234';
+        Fixture fixture = insertShipment(stored);
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = grantAfterGuestLocksMalformed(fixture, stored);
+        Test.stopTest();
+
+        Assert.areEqual(10, stored.length(), 'Fixture: ten characters as stored');
+        Assert.areEqual(11, stored.toUpperCase().length(), 'Fixture: eleven characters upper cased');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual(DEFAULT_RECIPIENT, response.details.recipientName, 'The details are returned');
+    }
+
+    @IsTest
+    static void shouldGrantAccess_WhenStoredLigaturePostalCodeGrowsPastTenWhenUpperCased() {
+        // AC-H2.1 / T2 CODE-001 (X16), a second input: stored "ﬃ-1234567" (9 characters, the
+        // ligature U+FB03 upper cases to "FFI", 11 characters); the recipient types it with spaces.
+        String stored = 'ﬃ-1234567';
+        Fixture fixture = insertShipment(stored, 'Maria Lopez');
+
+        Test.startTest();
+        RecipientDeliveryController.DeliveryResponse response = grantAfterGuestLocksMalformed(fixture, ' ' + stored + ' ');
+        Test.stopTest();
+
+        Assert.areEqual(11, stored.toUpperCase().length(), 'Fixture: eleven characters upper cased');
+        Assert.areEqual(RecipientDeliveryController.OUTCOME_SUCCESS, response.outcome, 'The recipient is granted access');
+        Assert.areEqual('Maria Lopez', response.details.recipientName, 'The details are returned');
+    }
+
+    @IsTest
+    static void shouldKeepOwnPair_WhenTypedValueOfTenCharactersGrowsWhenUpperCased() {
+        // AC-H2.1 / T2 CODE-001 (X16): "malformed" is decided on the typed value before upper
+        // casing: "straße1234" fails on its own pair; "STRASSE1234" (11 typed) on the malformed key.
+        Fixture fixture = insertShipment(POSTAL_CODE);
+
+        Test.startTest();
+        wrongCodeAnswers(fixture, new List<String>{ 'straße1234', 'STRASSE1234' });
+        Test.stopTest();
+
+        Assert.areEqual(1, guardsOf(fixture.shipmentId, 'straße1234').size(), 'Ten typed characters keep their own pair');
+        Assert.areEqual(2, allGuardsOf(fixture.shipmentId).size(), 'Its own pair and the malformed row');
+    }
+
     // ─── T1 Low CODE-001 (X16): exact postal-code comparison ──────────────
 
     @IsTest

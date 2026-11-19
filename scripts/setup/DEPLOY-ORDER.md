@@ -89,6 +89,25 @@ Replace `<alias>` with the target org. Run each command on its own.
    The owner then enters the real URL and the rotated key in Setup (README,
    "EntregaYa proof of delivery").
 
+1c. The Deployment settings, alone, before any deploy that includes Apex
+   classes (hardening-1 T2). `force-app/main/default/settings/Deployment.settings-meta.xml`
+   sets `doesSkipAsyncApexValidation` to true ("Allow deployments of components
+   when corresponding Apex jobs are pending or in progress" in Setup,
+   Deployment Settings). Without it, once the daily purge of step 5e is
+   scheduled, every deploy that includes `RecipientAccessGuardPurge.cls` fails
+   as a whole ("This schedulable class has jobs pending or in progress"), even
+   when that class is unchanged. Deploy it on its own: the setting must already
+   be in effect when step 2 validates the classes, so it does not help inside
+   the same deploy. Idempotent; check it with `--dry-run` first:
+
+   ```bash
+   sf project deploy start --dry-run --source-dir force-app/main/default/settings/Deployment.settings-meta.xml --target-org <alias> --wait 30
+   sf project deploy start --source-dir force-app/main/default/settings/Deployment.settings-meta.xml --target-org <alias> --wait 30
+   ```
+
+   In an org where it was never deployed (cargo-opus-t1 included), run this
+   step once before the next `force-app` or `classes` deploy.
+
 2. Everything else, the guest profile included (it now exists, so the deploy
    updates it; `EntregaYa_API` now exists, so the deploy updates it without a
    password), and with it `Shipment__c`, the permission set
@@ -215,13 +234,14 @@ Replace `<alias>` with the target org. Run each command on its own.
    were last modified more than a day ago, the legacy rows keyed on the shipment
    Id alone included. An active lock is never deleted.
 
-   Once the job is scheduled, the platform refuses any deploy that includes
-   `RecipientAccessGuardPurge.cls` ("This schedulable class has jobs pending
-   or in progress"), so a later `--source-dir force-app` or
-   `force-app/main/default/classes` deploy fails as a whole, even when that
-   class is unchanged (seen in cargo-opus-t1, hardening-1 T2). Until the owner
-   decides how to handle it, deploy other classes by file, or allow
-   deployments with Apex jobs in Setup, Deployment Settings.
+   The job stays scheduled across deploys. A later `--source-dir force-app` or
+   `force-app/main/default/classes` deploy succeeds while it is scheduled
+   because step 1c set `doesSkipAsyncApexValidation`; without that setting the
+   platform refuses any deploy that includes `RecipientAccessGuardPurge.cls`
+   ("This schedulable class has jobs pending or in progress"), even when that
+   class is unchanged (seen in cargo-opus-t1, hardening-1 T2). If such a deploy
+   fails with that message, run step 1c and deploy again; do not unschedule
+   the job.
 
 6. EntregaYa integration (REQ-004, AC-004.6), after step 2 deployed the
    External Client App "EntregaYa Status", the permission set and the group
