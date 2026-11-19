@@ -61,6 +61,7 @@ Design impact confirmed: no — checked: BR-01, REQ-002/003, REQ-005/006/007.
 Open findings (Low): RecipientAccess and PublicTrackingSelector SECURITY-JUSTIFICATION comments still name only the guest as caller (logged-in customers now reach them; reasoning unchanged); no purge-specific mutation and no mutation for the details/proof success tests; CustomerPublicAccessTest 568 lines; Info N1 (assert no customer permission on Recipient_Access_Guard__c in the check script).
 Pre-existing (from reviewer notes): Analytics Cloud Integration User View All Data; tests depend on the seeded customer users; B4 history/LastModifiedBy exposure (accepted, unverified).
 Skills not available: none.
-Pending for the owner: retest logged in as a customer (tracking RC000001124 and the recipient flow) — B5, the end-to-end proof; human test; delivery.
+Owner retest (B5, 2026-11-19): logged in as a customer on the live site, tracking and the recipient flow work ("everything is working right now") — end-to-end proof of the class grant recorded.
+Pending for the owner: human test of the rest; delivery.
 Next step: none (run finished; final report updated).
 Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ 181bce2 (deploy 0AfEk00000h8Ia6KAE, --ignore-conflicts), Succeeded, 554/554 · Jest 375/375 · customer-access-check, guest-access-check, org-security-check passed · secret-scan.sh --tree 0 findings · Coverage: org 96.17% (no production class changed)

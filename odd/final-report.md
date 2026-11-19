@@ -18,7 +18,7 @@ Every requirement of docs/functional-design.md is built, reviewed and archived; 
 
 Every Close ran test-reviewer, sf-security-auditor and access-auditor (tier 2), plus brand-reviewer where there was interface, and one fix round; every task was reviewed after its commit, with the security lens on every security task.
 
-**After the run — owner bug (2026-11-18):** logged-in customers could not use public tracking or the recipient flow (RutaCargo_Customer lacked class access to PublicTrackingController and RecipientDeliveryController). Fixed in odd/tasks/archive/2026-11-18-bug-customer-public-tracking.md: class access granted, check script updated, 13 tests as a logged-in customer; gate 554/554 @ 181bce2, org 96.17%; reviews clean. Pending: the owner's retest while logged in.
+**After the run — owner bug (2026-11-18):** logged-in customers could not use public tracking or the recipient flow (RutaCargo_Customer lacked class access to PublicTrackingController and RecipientDeliveryController). Fixed in odd/tasks/archive/2026-11-18-bug-customer-public-tracking.md: class access granted, check script updated, 13 tests as a logged-in customer; gate 554/554 @ 181bce2, org 96.17%; reviews clean. The owner retested while logged in on 2026-11-19: tracking and the recipient flow work.
 
 ## 2. Hardening
 
