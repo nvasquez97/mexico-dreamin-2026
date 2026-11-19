@@ -237,3 +237,10 @@
 - What: Round 1 closed. Audit 1 counts before: Critical 1 (SEC-001), High 2 (SEC-002, SEC-003), CA High 2. Fixed: SEC-002 (per-pair guard, malformed key, purge), SEC-003 config side (MFA setting; "Require MFA…" row Salesforce-side), SEC-001 repo side (secret scan + pre-commit; rotation owner), CA-001, CA-002. Gate re-run @ f81c86e 541/541, org 96.17%, Jest 375/375, all checks green. Owner items in the Close section.
 - Why / evidence: odd/tasks/archive/<date>-hardening-1.md.
 - Next: audit 2 (sf-security-audit --org cargo-opus-t1 + quality CA pass); SEC-001 will reappear (history, owner) — not taskable by an agent; stop check after audit 2 (max 3 audits).
+- Update 21:50: audit 2 running in .security-reports/20261118-195136-hardening-audit-2; automated: quality sev-2 only GlobalVariable ×134 (dismissed false positive) → CA High 0; security CA/sfge 8 sev-2 on the justified recipient system-mode reads (specialists triage). Specialists: code ac3517d3bfaa31c19, access a34aa34ae0fc40335, exposure acccc326e2a247ebf.
+
+## 2026-11-18 22:30 — Hardening done after audit 2
+- Type: hardening
+- What: Audit 2 (report .security-reports/20261118-195136-hardening-audit-2/security-audit.md): Critical 1 (SEC-001 key in history — owner rotation only), High 0, Medium 9 (incl. SEC-026 guard rows per distinct short postal code, regression of hardening-1; SEC-002/SEC-003 residuals lowered from High; SEC-024 no login IP ranges), Low 9, Info 8; CA High 0. Before → after: Critical 1→1 (owner), High 2→0; CA High 2→0.
+- Why / evidence: decision (Mode auto): Hardening stops after audit 2 — the only Critical left cannot be fixed by an agent (rotation at EntregaYa; history purge needs force-push, owner), so a hardening-2 round would have no task; a third audit would find the same. Medium/Low go to the final report.
+- Next: End of run — salesforce-code-quality:architecture-review, then odd/final-report.md, commit "end of run". Warn the owner: do not push ODD-Opus-Cargo-Test-1 before deciding on SEC-001 (it carries the key in history).
