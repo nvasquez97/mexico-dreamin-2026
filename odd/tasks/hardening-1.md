@@ -77,5 +77,7 @@ Order: T1 → T2 (both edit RecipientAccess) → T3 → T4 → T5; one committin
 - H6: The secret-scan pattern for the EntregaYa key encodes only its shape (prefix length and character classes), never the real prefix text, so the scanner never matches its own source.
 
 ## Close
-Stage: reviews
+Stage: fix round
 Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ cc92228 (deploy 0AfEk00000h85o9KAA, --ignore-conflicts), Succeeded, 539/539 · Jest 375/375 · secret-scan.sh --tree 0 findings · org-security-check.sh passed · customer-access-check.sh passed · guest-access-check.sh 1 violation (false positive: `password literal` at scripts/checks/tests/secret-scan-selftest.sh:301, a `$`-variable near-miss fixture added by T4's fix → Close fix round) · Coverage: org 96.17%, RecipientAccess 95.27%, RecipientAccessGuardPurge 94.59%
+Reviewers: test-reviewer a82ae7037a87b6bf5, sf-security-auditor a28596953c66ef0f8, access-auditor a64290c72055344c7 (brand-reviewer n/a: no interface change)
+Reviews: test-reviewer changes required (Medium: guest-access-check.sh false positive on the selftest's `$`-variable fixture; Lows: pairReadForUpdate step name, rows indexed without count, RecipientAccessTest NCSS split, describe-test message, purge test conditions not isolated, MFA-permission clause never seen red) · sf-security-auditor pass with notes (SEC-002, SEC-003, SEC-001 repo part, CA-001, CA-002 closed; Info: purge and RecipientAccess justification approvers pending; notes: Deployment setting needs owner sign-off before production, schedule script should refuse a scheduler without View All Data) · access-auditor approved (only the known guest-check false positive)
