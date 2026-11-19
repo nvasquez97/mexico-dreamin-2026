@@ -52,5 +52,15 @@ Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed 
 - B5: the owner's retest while logged in (tracking and recipient flow) is the end-to-end proof of the class grant; record it at Close.
 
 ## Close
-Stage: reviews
+Stage: filled
+Reviewers: test-reviewer a51c4b8d51826fcf8, sf-security-auditor a20f2223ed2e865c1, access-auditor aefb1713f0154cfb9 (brand-reviewer n/a: no interface change)
+Reviews: test-reviewer approved (Lows: no purge-specific mutation and no mutation for the details/proof success tests) · sf-security-auditor pass, no findings (a logged-in customer gets nothing beyond the guest; Info N1: customer-owned guard rows hold another account's shipment Id + unsalted postal hash, safe while customers have no permission on the guard object — suggest asserting it in customer-access-check.sh) · access-auditor approved (org in sync, 4 classes, no guard permission)
+Fix round: none (no blocking findings).
+Observed: the defect slipped through every earlier review because each requirement tested its own actor (tracking as the guest, customer pages as the customer); the fix adds class access only — no production Apex changed. Apex tests cannot enforce class access (B1); the grant is proven by customer-access-check.sh in the org.
+Design impact confirmed: no — checked: BR-01, REQ-002/003, REQ-005/006/007.
+Open findings (Low): RecipientAccess and PublicTrackingSelector SECURITY-JUSTIFICATION comments still name only the guest as caller (logged-in customers now reach them; reasoning unchanged); no purge-specific mutation and no mutation for the details/proof success tests; CustomerPublicAccessTest 568 lines; Info N1 (assert no customer permission on Recipient_Access_Guard__c in the check script).
+Pre-existing (from reviewer notes): Analytics Cloud Integration User View All Data; tests depend on the seeded customer users; B4 history/LastModifiedBy exposure (accepted, unverified).
+Skills not available: none.
+Pending for the owner: retest logged in as a customer (tracking RC000001124 and the recipient flow) — B5, the end-to-end proof; human test; delivery.
+Next step: none (run finished; final report updated).
 Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ 181bce2 (deploy 0AfEk00000h8Ia6KAE, --ignore-conflicts), Succeeded, 554/554 · Jest 375/375 · customer-access-check, guest-access-check, org-security-check passed · secret-scan.sh --tree 0 findings · Coverage: org 96.17% (no production class changed)
