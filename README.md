@@ -381,8 +381,16 @@ Owner items:
   `.husky/pre-commit` runs lint-staged and then
   `scripts/checks/secret-scan.sh --staged`, which refuses a commit that stages
   a value shaped like the EntregaYa key, a PEM private-key header, an SFDX
-  auth URL or a `consumerSecret`/password-like literal. It names the file, the
-  line and the rule, never the value.
+  auth URL, a Salesforce access token, a JWT, a literal `Bearer`/`Basic`
+  Authorization value, or a secret-like literal (`consumerSecret`, password,
+  API key, `x-api-key` header, a legacy Named Credential `oauthToken`, a
+  Custom Metadata `*Key__c` value, unquoted `KEY=value` in `.env*`/YAML
+  files). It also refuses secret files by name (`.env`, `.env.*` other than
+  `.env.example`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.p8`,
+  `id_rsa`), binary ones included. It names the file, the line (0 for a whole
+  file) and the rule, never the value. A Named Credential merge field such as
+  `Bearer {!$Credential.Password}` and references such as `${VAR}` are not
+  values. `.gitignore` also ignores those files and `*.pem`.
 - Run `bash scripts/checks/secret-scan.sh --tree` in the gate: it scans every
   tracked file at HEAD and must report 0 findings (exit 0 clean, 1 findings,
   2 usage). `bash scripts/checks/tests/secret-scan-selftest.sh` proves the
