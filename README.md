@@ -310,10 +310,11 @@ the PDF to the browser. Nothing is stored in Salesforce. Any failure shows
    file has no password, and nobody has tested whether a deploy keeps the
    password you entered.
 
-The now-unused External Credential `EntregaYa` and permission set
-`RutaCargo_Guest_Proof_Download` of the discarded design stay deployed in
-cargo-opus-t1 and are not in this repository. Removing them from the org is
-your decision (a destructive deploy).
+The unused External Credential `EntregaYa` and permission set
+`RutaCargo_Guest_Proof_Download` of the discarded design were removed from
+cargo-opus-t1 on 2026-11-19 at the owner's request (destructive deploy
+0AfEk00000hA2z3KAC, validated first with every local test). A new org never
+gets them: they were never in this repository.
 
 ## Security settings (MFA for direct UI logins)
 
@@ -418,8 +419,6 @@ Owner items:
   18a2aa5, but it remains in the git history. Then enter the rotated key and
   the real base URL in the Named Credential EntregaYa API (see "EntregaYa proof
   of delivery") and try a live download (E6).
-- Decide whether to remove the unused External Credential `EntregaYa` and
-  permission set `RutaCargo_Guest_Proof_Download` from cargo-opus-t1 (E11).
 - Approve or reject every `// SECURITY-JUSTIFICATION:` comment (find them with
   `grep -rn "SECURITY-JUSTIFICATION" force-app scripts`). Those marked "pending
   owner approval" wait for you; the one in `ShipmentSchemaTest.cls` names

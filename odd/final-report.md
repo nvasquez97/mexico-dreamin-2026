@@ -62,7 +62,7 @@ Hardening stopped after audit 2 (decision in .mem/memory.md, 2026-11-18): the on
 **Low**
 - SEC-027 (X16): a locked pair stays locked with one failure per 15 minutes (RecipientAccess.cls:399-408).
 - SEC-025 (X10): Health Check password-lifetime, secret-answer, lookup-name items.
-- SEC-011 (parallel bursts on a brand-new pair), SEC-012 (sharing keyword on some inner classes), SEC-013 (support agents can edit credit, price, reschedule count), SEC-014 (leftover permission set RutaCargo_Guest_Proof_Download and orphan External Credential EntregaYa in the org), SEC-015 (http Remote Site ApexDevNet), SEC-016 (VF site pages without anti-framing headers), SEC-017 (no rate limits on sign-up, reset, shipment requests).
+- SEC-011 (parallel bursts on a brand-new pair), SEC-012 (sharing keyword on some inner classes), SEC-013 (support agents can edit credit, price, reschedule count), SEC-016 (VF site pages without anti-framing headers), SEC-017 (no rate limits on sign-up, reset, shipment requests).
 
 **Info**: SEC-018 justified system-mode elevations (approvers pending), SEC-019 two admins (40%), SEC-020 Analytics Cloud Integration User View All (platform), SEC-021 guest platform-default FLS (inert), SEC-022 no non-admin agent provisioned, SEC-023 drift, SEC-028 purge job runs as a personal admin + Deployment setting doesSkipAsyncApexValidation needs sign-off before production, SEC-029 temporary MFA-probe permission set (removed).
 
@@ -90,6 +90,6 @@ None at the end of the run. At the start (foundation), the Salesforce plugin ski
 3. **AC-004.6**: run scripts/entregaya/simulate-status.sh live with the ECA key and secret from Setup; hand the consumer key and secret to EntregaYa; add EntregaYa's login IP ranges (SEC-024).
 4. **MFA**: each admin registers a verification method at the next UI login.
 5. **Approvals and decisions**: sign every SECURITY-JUSTIFICATION marked "pending owner approval"; decide SEC-009 (who receives the access code), SEC-010/SEC-005 (email ownership and enumeration), SEC-013 (agent edit rights, Reschedule_Count__c); sign off the Deployment setting doesSkipAsyncApexValidation before production; brand questions (state colors, data weights).
-6. **Org cleanup**: delete RutaCargo_Guest_Proof_Download and the External Credential EntregaYa (SEC-014); delete Remote Site ApexDevNet (SEC-015); deactivate the two non-seeded customer test users (4 of 5 Customer Community licenses used); confirm secure guest record access and guest API access in Setup.
+6. **Org cleanup**: done on 2026-11-19 at the owner's request — permission set RutaCargo_Guest_Proof_Download, External Credential EntregaYa (SEC-014) and Remote Site ApexDevNet (SEC-015) deleted from cargo-opus-t1 (destructive deploy 0AfEk00000hA2z3KAC, validated with 554/554 tests; guest and customer access checks pass). Still open: deactivate the two non-seeded customer test users (4 of 5 Customer Community licenses used); confirm secure guest record access and guest API access in Setup.
 7. **Repository**: enable Husky (`npm install`) in every clone; add a CI pipeline (tests, Jest, Code Analyzer, `secret-scan.sh --tree`).
 8. **Delivery**: pull request, merge and any deploy beyond the dev org belong to the owner.
