@@ -5,7 +5,7 @@ Branch: ODD-Opus-Cargo-Test-1
 Org: cargo-opus-t1
 Approved: the owner, 2026-11-18 ("si, arreglalo", after the Problems and Solutions summary)
 Base: b0d7e0c
-Plan review: 
+Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed at c04f4b5, closing check clean; leftover wording Lows applied by the main session
 
 ## Findings
 - Owner report (manual test, 2026-11-18): logged in as a customer, tracking RC000001124 (a shipment the owner created as customer user, CspLitePortal) shows the generic error; logged out it works. The shipment exists and `PublicTrackingController.search('TRACKING_NUMBER', ['RC000001124'])` returns it (anonymous Apex, rolled back).
@@ -45,10 +45,10 @@ Plan review:
 
 ## Assumptions
 - B1: Apex unit tests do not enforce Apex class access on direct static calls; the class grant itself is proven by customer-access-check.sh against the org (AC-BUG.3) and by the owner's manual retest while logged in; the Apex tests prove the behaviour as a CspLitePortal user.
-- B2: A guard row created by a logged-in customer's failed attempt is owned by that customer user; customers have no object permission on Recipient_Access_Guard__c, so they still cannot read it (proved in AC-BUG.2); the daily purge (System Administrator) still sees and deletes it.
+- B2: A guard row created by a logged-in customer's failed attempt is owned by that customer user; customers have no object permission on Recipient_Access_Guard__c, so they still cannot read it (proved in AC-BUG.5); the daily purge (System Administrator) still sees and deletes it.
 
 - B3: CustomerLoginController and CustomerSignUpController stay guest-only on purpose: a logged-in customer has no need to sign up or log in, and rcHeader hides those links from logged-in users.
-- B4: a reschedule by Ana on another account's shipment writes field history on Estimated_Delivery__c and sets LastModifiedBy to Ana, so that shipment's customer may see Ana's name where the site guest appeared before (external user visibility is off; accepted, same as any recipient who is also a customer). Recorded for the owner.
+- B4: a reschedule by Ana on another account's shipment writes field history on Estimated_Delivery__c and sets LastModifiedBy to Ana, so that shipment's customer could see Ana's name where the site guest appeared before, if the site shows field history or LastModifiedBy to customers (not verified; accepted, same as any recipient who is also a customer). Recorded for the owner.
 - B5: the owner's retest while logged in (tracking and recipient flow) is the end-to-end proof of the class grant; record it at Close.
 
 ## Close
