@@ -225,8 +225,10 @@ The design questions the owner delegated, decided on 2026-11-17. Details in
 - D2: EntregaYa sends status updates to Apex REST
   `POST /services/apexrest/entregaya/v1/status`, authenticated with OAuth client
   credentials (External Client App) as a dedicated integration user.
-- D3: calls to EntregaYa use a Named Credential and an External Credential; the
-  API key is entered by hand in the org, never in the repository.
+- D3: calls to EntregaYa use the legacy password Named Credential
+  `EntregaYa_API` (E11 replaced the planned External Credential, which the site
+  guest could not use); the API key is entered by hand in the org, never in
+  the repository.
 - D4: the reschedule window is measured from the first estimated delivery date
   (`Original_Estimated_Delivery__c`); field history tracks the date and the
   delivery instructions.
