@@ -25,15 +25,15 @@ Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed 
 
 ## Acceptance
 - AC-BUG.1 (BR-01) — Given a logged-in customer (Ana López, System.runAs), When PublicTrackingController.search runs with a tracking number of hers and one of Marta's, Then both return exactly the BR-01 fields a guest gets (same JSON as the same call as the site guest), and nothing else.
-  *Mutation:* make search refuse non-guest users (or drop a returned field for customers) — observed: <filled at tick>
+  *Mutation:* make search refuse non-guest users (or drop a returned field for customers) — observed (T1): M1 `search` throws for non-Guest → both tracking tests red (AuraHandledException)
 - AC-BUG.2 (REQ-002/003) — Given a logged-in customer (Ana) holding the tracking number, destination postal code and access code of a shipment of another account, When she calls getDeliveryDetails, rescheduleDelivery (a valid date) and downloadProof (mocked callout), Then each succeeds exactly as for the guest, and the reschedule passes ShipmentTriggerHandler.beforeUpdate.
-  *Mutation:* make beforeUpdate add an error for non-Standard users (the reschedule test red) — observed: <filled at tick>
+  *Mutation:* make beforeUpdate add an error for non-Standard users (the reschedule test red) — observed (T1): M2 → both reschedule tests red
 - AC-BUG.4 (X16, BR-02/G9) — Given Ana with her OWN shipment's tracking number and postal code (she is the sender) and a wrong access code, When getDeliveryDetails, rescheduleDelivery and downloadProof run, Then NOT_MATCHED, no details, and no recipient-owned value (address, phone, email, instructions) returned; and with a wrong code on another account's shipment the same NOT_MATCHED; the 5th wrong code is followed by LOCKED, and the correct code then also returns LOCKED (per-pair limit).
-  *Mutation:* skip the access-code check when the caller's account owns the shipment (own-shipment case red); separately, skip it for non-guest users (wrong-code case red) — observed: <filled at tick>
+  *Mutation:* skip the access-code check when the caller's account owns the shipment (own-shipment case red); separately, skip it for non-guest users (wrong-code case red) — observed (T1): M3a owner bypass → the 3 own-shipment tests red (NOT_MATCHED expected, SUCCESS returned); M3b non-guest bypass → 7 red incl. the wrong code on Marta's shipment and the lock (Fail Rate 54%)
 - AC-BUG.5 (P2, X11) — Given Ana (System.runAs), When she queries Recipient_Access_Guard__c in user mode after her failed attempts created a guard row she owns, Then the query is refused (no object permission); and the daily purge (as the scheduling admin) still deletes an expired guard row owned by Ana.
-  *Mutation:* give RutaCargo_Customer Read on Recipient_Access_Guard__c in a dry-run deploy with RunSpecifiedTests (the refusal test red), never a real grant — observed: <filled at tick>
+  *Mutation:* give RutaCargo_Customer Read on Recipient_Access_Guard__c in a dry-run deploy with RunSpecifiedTests (the refusal test red), never a real grant — observed (T1): M4 dry run (checkOnly true) → the refusal test red, "she saw 1 row(s)"; org has no guard permission for customers afterwards
 - AC-BUG.3 (P2, X11) — Given scripts/checks/customer-access-check.sh, When it runs, Then RutaCargo_Customer's Apex class access is exactly {MyShipmentsController, PublicTrackingController, RecipientDeliveryController, ShipmentRequestController}, the guest still cannot call the two customer controllers, and every other existing assertion still passes; exits non-zero otherwise. guest-access-check.sh still passes unchanged.
-  *Mutation:* remove PublicTrackingController from the permission set and deploy (script red), redeploy the file — observed: <filled at tick>
+  *Mutation:* remove PublicTrackingController from the permission set and deploy (script red), redeploy the file — observed (T1): red before the change (the script's new class list, exit 1); M5 → script exit 1, file redeployed, green
 
 ## Task analysis
 | Task | Solves | Acceptance | Scope (files to touch) | Security | Executor | Skills | Reviewers |
@@ -41,7 +41,7 @@ Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed 
 | T1 | S1 | AC-BUG.1, AC-BUG.2, AC-BUG.3, AC-BUG.4, AC-BUG.5 | force-app/main/default/permissionsets/RutaCargo_Customer.permissionset-meta.xml (two classAccesses and the description, which names the classes), scripts/checks/customer-access-check.sh (CUSTOMER_CLASSES and its comments), force-app/main/default/classes/CustomerPublicAccessTest.cls(+meta, new), force-app/main/default/classes/TestDataFactory.cls (only if a helper is needed), odd/evidence/bug-customer-public-tracking/T1.md | yes | task-worker | salesforce-development:platform-permission-set-generate, salesforce-development:platform-metadata-api-context-get, salesforce-development:platform-metadata-deploy, salesforce-development:platform-apex-test-generate, salesforce-development:platform-apex-test-run, salesforce-development:platform-soql-query, sf-security-access-review | task-reviewer, security-reviewer, access-auditor |
 
 ## Tasks
-- [ ] T1 (S1): Customer class access to the two public controllers, check script, tests as a logged-in customer — test first
+- [x] T1 (S1): Customer class access to the two public controllers, check script, tests as a logged-in customer (Lows to Close: RecipientAccess and PublicTrackingSelector justifications still name only the guest as caller; test class 568 lines) — 3609e85 · evidence: odd/evidence/bug-customer-public-tracking/T1.md · review: clean · reviewers: task-reviewer a56def9e2ba0da205, security-reviewer adb80d5510520b48a, access-auditor a090f8db1f3d98f0f
 
 ## Assumptions
 - B1: Apex unit tests do not enforce Apex class access on direct static calls; the class grant itself is proven by customer-access-check.sh against the org (AC-BUG.3) and by the owner's manual retest while logged in; the Apex tests prove the behaviour as a CspLitePortal user.
@@ -52,4 +52,4 @@ Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed 
 - B5: the owner's retest while logged in (tracking and recipient flow) is the end-to-end proof of the class grant; record it at Close.
 
 ## Close
-Stage: pending
+Stage: gate
