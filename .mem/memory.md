@@ -244,3 +244,9 @@
 - What: Audit 2 (report .security-reports/20261118-195136-hardening-audit-2/security-audit.md): Critical 1 (SEC-001 key in history — owner rotation only), High 0, Medium 9 (incl. SEC-026 guard rows per distinct short postal code, regression of hardening-1; SEC-002/SEC-003 residuals lowered from High; SEC-024 no login IP ranges), Low 9, Info 8; CA High 0. Before → after: Critical 1→1 (owner), High 2→0; CA High 2→0.
 - Why / evidence: decision (Mode auto): Hardening stops after audit 2 — the only Critical left cannot be fixed by an agent (rotation at EntregaYa; history purge needs force-push, owner), so a hardening-2 round would have no task; a third audit would find the same. Medium/Low go to the final report.
 - Next: End of run — salesforce-code-quality:architecture-review, then odd/final-report.md, commit "end of run". Warn the owner: do not push ODD-Opus-Cargo-Test-1 before deciding on SEC-001 (it carries the key in history).
+
+## 2026-11-18 23:00 — End of run
+- Type: status
+- What: Architecture review (salesforce-code-quality:architecture-review): Trusted FAIL (SEC-001 only; code controls strong), Easy WARN, Adaptable WARN (no CI, hard-coded rules, Queueable without Finalizer, controller-trigger static staging). odd/final-report.md written: requirements, gates, hardening counts (SEC Critical 1→1 owner, High 2→0; CA High 2→0), open findings, owner list.
+- Why / evidence: odd/final-report.md.
+- Next: owner — rotate the EntregaYa key before pushing this branch; human test; AC-004.6 live POST; approvals; delivery. The run is finished.
