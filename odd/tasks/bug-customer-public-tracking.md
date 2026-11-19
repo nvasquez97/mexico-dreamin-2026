@@ -52,4 +52,5 @@ Plan review: fixed (plan-reviewer a4e5ffac6c792d365) — 2 Medium + 4 Low fixed 
 - B5: the owner's retest while logged in (tracking and recipient flow) is the end-to-end proof of the class grant; record it at Close.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ 181bce2 (deploy 0AfEk00000h8Ia6KAE, --ignore-conflicts), Succeeded, 554/554 · Jest 375/375 · customer-access-check, guest-access-check, org-security-check passed · secret-scan.sh --tree 0 findings · Coverage: org 96.17% (no production class changed)
