@@ -77,4 +77,5 @@ Order: T1 → T2 (both edit RecipientAccess) → T3 → T4 → T5; one committin
 - H6: The secret-scan pattern for the EntregaYa key encodes only its shape (prefix length and character classes), never the real prefix text, so the scanner never matches its own source.
 
 ## Close
-Stage: gate
+Stage: reviews
+Gate: `sf project deploy start --source-dir force-app --test-level RunLocalTests` from a clean worktree @ cc92228 (deploy 0AfEk00000h85o9KAA, --ignore-conflicts), Succeeded, 539/539 · Jest 375/375 · secret-scan.sh --tree 0 findings · org-security-check.sh passed · customer-access-check.sh passed · guest-access-check.sh 1 violation (false positive: `password literal` at scripts/checks/tests/secret-scan-selftest.sh:301, a `$`-variable near-miss fixture added by T4's fix → Close fix round) · Coverage: org 96.17%, RecipientAccess 95.27%, RecipientAccessGuardPurge 94.59%
