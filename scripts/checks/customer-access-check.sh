@@ -31,8 +31,9 @@
 #      margin, notes, hash, Proof_Id__c, the credit fields; never on
 #      RECIPIENT_OWNED_FIELDS: the recipient's address, phone, email and the
 #      delivery instructions, BR-02, G7), Apex class access
-#      to exactly CUSTOMER_CLASSES (the two customer controllers), nor View All
-#      Data, Modify All Data or View All Users;
+#      to exactly CUSTOMER_CLASSES (the two customer controllers and the two
+#      public controllers of the site, bug-customer-public-tracking S1), nor
+#      View All Data, Modify All Data or View All Users;
 #   4. the Network "RutaCargo" has the profile as a member
 #      (NetworkMemberGroup), self-registration on, the profile as its
 #      self-registration profile, and no default self-registration account
@@ -130,7 +131,12 @@ SENSITIVE_FIELDS="'Account.Credit_Limit__c','Account.Credit_Risk__c'"
 # address, phone, email or the delivery instructions: create FLS would make
 # them readable through the API, and BR-02 makes them the recipient's;
 # ShipmentRequestController stores them through the trigger guard, T2 fix of
-# G7) and class access to the two customer controllers. Object grants are
+# G7) and class access to the two customer controllers. bug-customer-public-
+# tracking S1: plus class access to the two public controllers of the site
+# (PublicTrackingController, RecipientDeliveryController), so a logged-in
+# customer tracks and acts as a recipient exactly like the guest, with the same
+# server checks and fields; CustomerLoginController and CustomerSignUpController
+# stay guest-only (B3). Object grants are
 # "Object:Read,Create,Edit,Delete,ViewAll,ModifyAll,ViewAllFields" as
 # true/false (View All Fields would make every Shipment__c field readable,
 # cost, margin, notes and hash included, whatever the FLS says).
@@ -140,8 +146,11 @@ CUSTOMER_EDIT_FIELDS='Shipment__c.Pickup_Address__c Shipment__c.Origin_City__c S
 # BR-02 (G7): the fields the recipient owns; no read or edit FLS for customers.
 RECIPIENT_OWNED_FIELDS='Shipment__c.Recipient_Address__c Shipment__c.Recipient_Phone__c Shipment__c.Recipient_Email__c Shipment__c.Delivery_Instructions__c'
 CUSTOMER_FORBIDDEN_FIELDS='Shipment__c.Carrier_Cost__c Shipment__c.Margin__c Shipment__c.Internal_Notes__c Shipment__c.Delivery_Access_Code_Hash__c Shipment__c.Proof_Id__c Account.Credit_Limit__c Account.Credit_Risk__c'
-CUSTOMER_CLASSES='MyShipmentsController ShipmentRequestController'
-# The customer controllers of req-006-007 (T2): never guest entry points.
+# Sorted: the customer controllers of req-006-007 (T2) and the public
+# controllers of bug-customer-public-tracking (S1).
+CUSTOMER_CLASSES='MyShipmentsController PublicTrackingController RecipientDeliveryController ShipmentRequestController'
+# The customer controllers of req-006-007 (T2): never guest entry points (the
+# public controllers in CUSTOMER_CLASSES are guest entry points by design).
 CUSTOMER_CONTROLLERS='ShipmentRequestController MyShipmentsController'
 # The sharing set of req-006-007 S2 (section 9): "object|objectField|userField|accessLevel".
 SHARING_SET='RutaCargo_Customer_Shipments'

@@ -5,10 +5,18 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>PublicTrackingController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecipientDeliveryController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>ShipmentRequestController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
-    <description>Registered customers (req-005 S1). Shipment__c Read, Create (req-006-007 S2): read FLS for My shipments, create FLS on readable request fields, two controllers; no FLS on recipient address, phone, email, instructions (BR-02).</description>
+    <description>Registered customers (req-005). Shipment__c Read, Create; read/create FLS of req-006-007, no recipient-owned FLS (BR-02). Apex: MyShipmentsController, ShipmentRequestController, PublicTrackingController, RecipientDeliveryController.</description>
     <fieldPermissions>
         <editable>true</editable>
         <field>Shipment__c.Customer_Reference__c</field>
